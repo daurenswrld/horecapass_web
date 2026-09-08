@@ -1,0 +1,267 @@
+import type { Profession } from "./types";
+import { VENUE_TYPES, APPEARANCE, COMMON_TAIL } from "./universal";
+
+/**
+ * Параметры шефа.
+ *
+ * Заказчица голосом: «я давала вопросы, где мы чётко определяем не скиллы,
+ * а специфику этого шефа. Есть которые работали в кейтеринге, в fine dining,
+ * в casual dining, у них специальные техники — grill, cold section — нужно
+ * определить, какая у него».
+ *
+ * Отсюда section_experience и techniques: это не «навыки» галочками, а разрез
+ * опыта, по которому шефа реально отбирают на позицию.
+ */
+
+const SECTIONS = [
+  "Garde manger / Cold section",
+  "Grill",
+  "Saute",
+  "Butcher",
+  "Fish",
+  "Pastry",
+  "Bakery",
+  "Larder",
+  "Pass",
+  "Prep / CPU",
+] as const;
+
+/** Уровни, на которых уже отвечают за деньги и меню, а не только за станцию. */
+const SENIOR_LEVELS = [
+  "Sous Chef",
+  "Senior Sous Chef",
+  "Head Chef",
+  "Executive Chef",
+  "Executive Pastry Chef",
+];
+
+export const chef: Profession = {
+  id: "chef",
+  title: "Chef",
+  family: "kitchen",
+  blurb: "Кухня, секции, техники, меню, food cost.",
+  levels: [
+    "Commis Chef",
+    "Demi Chef de Partie",
+    "Chef de Partie",
+    "Junior Sous Chef",
+    "Sous Chef",
+    "Senior Sous Chef",
+    "Head Chef",
+    "Executive Chef",
+    "Executive Pastry Chef",
+  ],
+  questions: [
+    {
+      id: "level",
+      ask: "Какой у вас уровень позиции на кухне?",
+      label: "Уровень позиции",
+      kind: "single",
+      slot: "summary",
+      options: [
+        "Commis Chef",
+        "Demi Chef de Partie",
+        "Chef de Partie",
+        "Junior Sous Chef",
+        "Sous Chef",
+        "Senior Sous Chef",
+        "Head Chef",
+        "Executive Chef",
+        "Executive Pastry Chef",
+      ],
+      required: true,
+      hint: "От уровня зависит, о чём спросим дальше.",
+    },
+    {
+      id: "years",
+      ask: "Сколько лет на кухне?",
+      label: "Опыт",
+      kind: "number",
+      slot: "experience",
+      unit: "лет",
+      min: 0,
+      max: 50,
+      required: true,
+    },
+    {
+      id: "cuisines",
+      ask: "Какие кухни вы знаете?",
+      label: "Кухни",
+      kind: "multi",
+      slot: "specifics",
+      options: [
+        "French",
+        "Italian",
+        "Mediterranean",
+        "Pan-Asian",
+        "Japanese",
+        "Chinese",
+        "Indian",
+        "Middle Eastern",
+        "Levantine",
+        "Kazakh",
+        "Georgian",
+        "Turkish",
+        "Modern European",
+        "Pastry & Bakery",
+        "Steakhouse",
+        "Seafood",
+        "Vegan / Plant-based",
+      ],
+      required: true,
+    },
+    {
+      id: "operation_types",
+      ask: "С какими типами операций работали?",
+      label: "Типы операций",
+      kind: "multi",
+      slot: "specifics",
+      options: [
+        "Fine dining",
+        "Casual dining",
+        "Catering",
+        "Banqueting",
+        "Hotel kitchen",
+        "Resort",
+        "Central production / CPU",
+        "QSR",
+        "Cloud kitchen",
+        "Cruise",
+        "Events",
+      ],
+      required: true,
+      hint: "Кейтеринг и fine dining — разная работа; это первое, что смотрит работодатель.",
+    },
+    {
+      id: "section_experience",
+      ask: "Какие секции вы проходили?",
+      label: "Секции",
+      kind: "multi",
+      slot: "specifics",
+      options: [...SECTIONS, "Banquet line"],
+      required: true,
+    },
+    {
+      id: "main_section",
+      ask: "А какая секция ваша основная — где вы сильнее всего?",
+      label: "Основная секция",
+      kind: "single",
+      slot: "specifics",
+      options: SECTIONS,
+      required: true,
+      showIf: (a) =>
+        Array.isArray(a.section_experience) && a.section_experience.length > 0,
+    },
+    {
+      id: "techniques",
+      ask: "Какими техниками владеете?",
+      label: "Техники",
+      kind: "multi",
+      slot: "skills",
+      options: [
+        "Sous-vide",
+        "Josper / charcoal",
+        "Smoking",
+        "Fermentation",
+        "Curing",
+        "Butchery",
+        "Fish filleting",
+        "Pasta making",
+        "Bread & viennoiserie",
+        "Chocolate & sugar work",
+        "Plating & garnish",
+        "Molecular",
+      ],
+    },
+    {
+      id: "venue_types",
+      ask: "В заведениях какого типа это было?",
+      label: "Типы заведений",
+      kind: "multi",
+      slot: "specifics",
+      options: VENUE_TYPES,
+      required: true,
+    },
+    {
+      id: "covers",
+      ask: "Сколько covers выдавала кухня за смену?",
+      label: "Covers за смену",
+      kind: "number",
+      slot: "scale",
+      unit: "covers",
+      min: 0,
+      max: 10000,
+      required: true,
+    },
+    {
+      id: "team_size",
+      ask: "Сколько человек было у вас в подчинении?",
+      label: "Команда",
+      kind: "number",
+      slot: "scale",
+      unit: "чел.",
+      min: 0,
+      max: 500,
+      required: true,
+      // Комми ни за кем не смотрит — вопрос ему не задаём.
+      showIf: (a) => a.level !== "Commis Chef",
+    },
+    {
+      id: "menu_development",
+      ask: "Разрабатывали меню? Расскажите, что именно было на вас.",
+      label: "Menu development",
+      kind: "text",
+      slot: "specifics",
+      showIf: (a) =>
+        a.level !== "Commis Chef" && a.level !== "Demi Chef de Partie",
+      hint: "Сезонные обновления, дегустационные сеты, инжиниринг меню.",
+    },
+    {
+      id: "food_cost",
+      ask: "Отвечали за food cost? Какой процент держали?",
+      label: "Food cost",
+      kind: "text",
+      slot: "specifics",
+      showIf: (a) =>
+        typeof a.level === "string" && SENIOR_LEVELS.includes(a.level),
+    },
+    {
+      id: "opening_experience",
+      ask: "Участвовали в открытии заведения с нуля?",
+      label: "Opening experience",
+      kind: "single",
+      slot: "specifics",
+      options: ["Да, вёл открытие", "Да, участвовал", "Нет"],
+      required: true,
+    },
+    {
+      id: "haccp",
+      ask: "Как у вас с HACCP и пищевой безопасностью?",
+      label: "HACCP / Food safety",
+      kind: "single",
+      slot: "skills",
+      options: [
+        "Сертификат есть, внедрял систему",
+        "Сертификат есть",
+        "Работал по стандарту",
+        "Нет опыта",
+      ],
+      required: true,
+    },
+    {
+      /**
+       * Правка Алдияра: «Для шефов фото блюд, с возможностью добавить много
+       * фоток с телефона одним заходом».
+       */
+      id: "dish_photos",
+      ask: "Загрузите фотографии ваших блюд — это портфолио шефа, его смотрят раньше текста.",
+      label: "Фото блюд",
+      kind: "photos",
+      slot: "portfolio",
+      required: true,
+      hint: "Можно выбрать сразу много снимков — загрузятся одним заходом.",
+    },
+    ...APPEARANCE,
+    ...COMMON_TAIL,
+  ],
+};
