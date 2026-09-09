@@ -38,15 +38,15 @@ export const STORES: readonly StoreLink[] = [
   {
     id: 'ios',
     name: 'App Store',
-    caption: 'Загрузить в',
+    caption: 'Download on the',
     url: APP_STORE_URL,
-    requirement: 'iOS 15 и новее',
+    requirement: 'iOS 15 and later',
   },
   {
     id: 'android',
     name: 'Google Play',
-    caption: 'Доступно в',
+    caption: 'Get it on',
     url: GOOGLE_PLAY_URL,
-    requirement: 'Android 5.0 и новее',
+    requirement: 'Android 5.0 and later',
   },
 ];

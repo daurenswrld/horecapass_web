@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthState {
   const v = React.useContext(Ctx);
-  if (!v) throw new Error('useAuth вызван вне AuthProvider');
+  if (!v) throw new Error('useAuth was called outside AuthProvider');
   return v;
 }
 

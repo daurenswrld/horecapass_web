@@ -113,7 +113,7 @@ export function Spinner({ className }: { className?: string }) {
   return (
     <span
       role="status"
-      aria-label="Загрузка"
+      aria-label="Loading"
       className={cn(
         'inline-block h-5 w-5 animate-spin rounded-full border-2 border-line-strong border-t-accent',
         className,
@@ -172,7 +172,7 @@ export function Progress({ value, className }: { value: number; className?: stri
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label="Заполненность профиля"
+      aria-label="Profile completeness"
     >
       <div
         className="h-full rounded-full bg-accent transition-[width] duration-500 ease-out"

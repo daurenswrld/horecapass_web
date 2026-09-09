@@ -80,11 +80,11 @@ const candidate: ChatUser = {
 
 const recruiter: ChatUser = {
   id: -12,
-  firstName: 'Вы',
+  firstName: 'You',
   lastName: '',
   role: 'COMPANY_OWNER',
   avatar: null,
-  displayName: 'Вы',
+  displayName: 'You',
 };
 
 const msg = (id: number, sender: ChatUser, text: string, offset: number): ChatMessage => ({
@@ -100,10 +100,10 @@ const msg = (id: number, sender: ChatUser, text: string, offset: number): ChatMe
 });
 
 export const SAMPLE_MESSAGES: ChatMessage[] = [
-  msg(-101, candidate, 'Отклик на вакансию: Banquet Supervisor', 2),
-  msg(-102, recruiter, 'Здравствуйте! Спасибо за отклик. Есть опыт банкетов на 200+ гостей?', 1),
-  msg(-103, candidate, 'Добрый день! Да, вела банкеты до 300 гостей, последние три года.', 1),
-  msg(-104, recruiter, 'Отлично. Сможете подойти на собеседование в четверг к 15:00?', 0),
+  msg(-101, candidate, 'Application for: Banquet Supervisor', 2),
+  msg(-102, recruiter, 'Hello! Thanks for applying. Do you have experience with banquets for 200+ guests?', 1),
+  msg(-103, candidate, 'Hello! Yes, I have run banquets for up to 300 guests over the past three years.', 1),
+  msg(-104, recruiter, 'Great. Could you come in for an interview on Thursday at 3pm?', 0),
 ];
 
 export const SAMPLE_ROOMS: ChatRoom[] = [

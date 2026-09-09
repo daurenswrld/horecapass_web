@@ -71,7 +71,7 @@ function parseUser(json: unknown): ChatUser {
     lastName,
     role: str(j.role),
     avatar: str(j.avatar) || null,
-    displayName: full || 'Пользователь',
+    displayName: full || 'Unknown user',
   };
 }
 
@@ -83,7 +83,7 @@ export function parseMessage(json: Json): ChatMessage {
     sender: parseUser(json.sender),
     // Тот же подмен текста, что в мобилке: сервер шлёт русскую подпись
     // автосообщения об отклике.
-    text: str(json.text).replace('Отклик на вакансию:', 'Отклик на вакансию:'),
+    text: str(json.text),
     createdAt: new Date(str(json.created_at) || Date.now()),
     suggestions: Array.isArray(json.suggestions) ? json.suggestions.map(String) : [],
     audioUrl,

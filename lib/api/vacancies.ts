@@ -158,10 +158,10 @@ export const vacanciesApi = {
 /** «от 250 000 до 400 000 ₸» — как в карточке мобилки. */
 export function formatSalary(v: Pick<Vacancy, 'salaryMin' | 'salaryMax' | 'currency'>): string | null {
   const sign = CURRENCY_SIGNS[v.currency] ?? v.currency;
-  const num = (s: string) => Number(s).toLocaleString('ru-RU');
+  const num = (s: string) => Number(s).toLocaleString('en-US');
   if (v.salaryMin && v.salaryMax) return `${num(v.salaryMin)} – ${num(v.salaryMax)} ${sign}`;
-  if (v.salaryMin) return `от ${num(v.salaryMin)} ${sign}`;
-  if (v.salaryMax) return `до ${num(v.salaryMax)} ${sign}`;
+  if (v.salaryMin) return `from ${num(v.salaryMin)} ${sign}`;
+  if (v.salaryMax) return `up to ${num(v.salaryMax)} ${sign}`;
   return null;
 }
 

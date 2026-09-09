@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Ассистент — «маленький человечек, такой подсказочный, который выходит
+ * Assistant — «маленький человечек, такой подсказочный, который выходит
  * и говорит: вот тут у тебя нужна, если ты вот это добавишь, будет лучше».
  *
  * Это не чат-бот и не всплывающая реклама. Правила поведения:
@@ -108,7 +108,7 @@ export function AssistantNudge({ message, action, className }: Props) {
       <button
         type="button"
         onClick={() => setDismissed(message)}
-        aria-label="Скрыть подсказку"
+        aria-label="Dismiss hint"
         className="-m-1 shrink-0 rounded p-1 text-text-secondary transition-colors hover:text-text-primary focus-ring"
       >
         <X size={16} />

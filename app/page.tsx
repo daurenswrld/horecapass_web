@@ -31,13 +31,13 @@ import { plural } from '@/lib/utils';
  */
 
 export const metadata: Metadata = {
-  title: 'HorecaPass — работа в отелях и ресторанах',
+  title: 'HorecaPass, hospitality jobs',
   description:
-    'Платформа найма для HoReCa: соискатели находят работу в отелях и ресторанах, компании публикуют вакансии и ведут кандидатов по воронке подбора.',
+    'A hiring platform built for hospitality: candidates find work in hotels and restaurants, companies post jobs and move candidates through the pipeline.',
   openGraph: {
-    title: 'HorecaPass — работа в отелях и ресторанах',
+    title: 'HorecaPass, hospitality jobs',
     description:
-      'Вакансии в отелях и ресторанах, отклики, видео-интервью и переписка с работодателем. Веб и мобильное приложение с общим аккаунтом.',
+      'Hotel and restaurant jobs, applications, video interviews and direct chat with employers. Web and mobile app share one account.',
     type: 'website',
   },
 };
@@ -107,25 +107,25 @@ function Hero({ vacancies }: { vacancies: Vacancy[] }) {
     <section className="border-b border-line">
       <div className="mx-auto max-w-6xl px-6 py-20 lg:px-10 lg:py-28">
         <h1 className="max-w-4xl text-4xl font-bold leading-[1.1] tracking-tight text-text-primary lg:text-6xl">
-          Работа в отелях и ресторанах — без резюме в почте и переписки в мессенджерах
+          Hospitality jobs without CVs by email and hiring over messengers
         </h1>
 
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary lg:text-xl">
-          Соискатель заполняет профиль один раз и видит подходящие вакансии. Работодатель получает
-          отклики уже отсортированными и ведёт кандидатов по этапам, не теряя никого в таблицах.
+          Candidates fill in their profile once and see the jobs that fit. Employers get
+          applications already sorted and move candidates through stages without losing anyone.
         </p>
 
         {vacancies.length > 0 && (
           <p className="mt-6 text-sm text-text-secondary">
             <span className="font-semibold text-text-primary">
-              {vacancies.length} {plural(vacancies.length, 'вакансия', 'вакансии', 'вакансий')}
+              {vacancies.length} {plural(vacancies.length, 'job')}
             </span>{' '}
-            открыто прямо сейчас
+            open right now
             {companies > 0 && (
               <>
-                {' в '}
+                {' at '}
                 <span className="font-semibold text-text-primary">
-                  {companies} {plural(companies, 'компании', 'компаниях', 'компаниях')}
+                  {companies} {plural(companies, 'company', 'companies')}
                 </span>
               </>
             )}
@@ -142,19 +142,19 @@ function Vacancies({ vacancies }: { vacancies: Awaited<ReturnType<typeof fetchPu
   return (
     <Section
       id="vacancies"
-      eyebrow="Открытые вакансии"
-      title="Кого ищут прямо сейчас"
-      lead="Живой список с платформы. Чтобы откликнуться и переписываться с работодателем, нужен аккаунт."
+      eyebrow="Open jobs"
+      title="Who is hiring right now"
+      lead="A live list from the platform. You need an account to apply and chat with the employer."
     >
       {vacancies.length === 0 ? (
         <Card className="p-8 text-center">
-          <p className="font-medium text-text-primary">Список вакансий сейчас недоступен</p>
+          <p className="font-medium text-text-primary">The job list is unavailable right now</p>
           <p className="mt-1 text-sm text-text-secondary">
-            Загляните чуть позже или{' '}
+            Check back a little later, or{' '}
             <Link href="/register?role=applicant" className="font-semibold text-accent-text underline-offset-4 hover:underline">
-              заведите профиль
+              create a profile
             </Link>
-            {' '}— пришлём подходящие, как только появятся.
+            {' '}and we will send matching ones as soon as they appear.
           </p>
         </Card>
       ) : (
@@ -167,7 +167,7 @@ function Vacancies({ vacancies }: { vacancies: Awaited<ReturnType<typeof fetchPu
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="font-semibold leading-snug text-text-primary">{v.title}</h3>
                     {v.isVerified && (
-                      <BadgeCheck size={16} className="mt-0.5 shrink-0 text-info" aria-label="Проверенная компания" />
+                      <BadgeCheck size={16} className="mt-0.5 shrink-0 text-info" aria-label="Verified company" />
                     )}
                   </div>
                   <p className="mt-1 text-sm text-text-secondary">{v.companyName}</p>
@@ -217,40 +217,40 @@ function ForCandidates() {
     <Section
       id="candidates"
       muted
-      eyebrow="Соискателям"
-      title="Один профиль вместо десяти писем с резюме"
-      lead="Заполняете профиль один раз — дальше платформа сама показывает, где вы подходите, и держит вас в курсе по каждому отклику."
+      eyebrow="For candidates"
+      title="One profile instead of ten emails with a CV"
+      lead="Fill in your profile once. The platform then shows where you fit and keeps you posted on every application."
     >
       <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         <Feature
           Icon={Bot}
-          title="Подбор под ваш опыт"
-          text="Вакансии сортируются по совпадению с профилем: должность, город, зарплатные ожидания, навыки."
+          title="Matched to your experience"
+          text="Jobs are ranked by how well they match your profile: position, city, salary expectations, skills."
         />
         <Feature
           Icon={FileText}
-          title="Резюме и сертификаты"
-          text="Резюме собирается внутри платформы, выгружается в PDF. Можно перенести данные из LinkedIn."
+          title="CV and certificates"
+          text="Your CV is built inside the platform and exports to PDF. You can import data from LinkedIn."
         />
         <Feature
           Icon={Video}
-          title="Видео-презентация"
-          text="Часть работодателей просит короткое видео вместо первого созвона. Записывается в мобильном приложении."
+          title="Video intro"
+          text="Some employers ask for a short video instead of a first call. Recorded in the mobile app."
         />
         <Feature
           Icon={MessageSquare}
-          title="Переписка напрямую"
-          text="Чат с работодателем внутри платформы — без обмена номерами и поиска сообщения в мессенджерах."
+          title="Chat directly"
+          text="Chat with the employer inside the platform, with no swapping phone numbers and no digging through messengers."
         />
         <Feature
           Icon={CalendarClock}
-          title="Понятный статус"
-          text="Видно, на каком этапе ваш отклик: рассмотрение, шорт-лист, интервью, предложение."
+          title="A clear status"
+          text="You can see where your application stands: review, shortlist, interview, offer."
         />
         <Feature
           Icon={BadgeCheck}
-          title="Проверенные компании"
-          text="У части работодателей пройдена верификация — значок стоит прямо в карточке вакансии."
+          title="Verified companies"
+          text="Some employers are verified, and the badge sits right on the job card."
         />
       </div>
     </Section>
@@ -261,40 +261,40 @@ function ForEmployers() {
   return (
     <Section
       id="employers"
-      eyebrow="Работодателям"
-      title="Отклики приходят разобранными, а не кучей"
-      lead="Вместо папки с письмами — список кандидатов по каждой вакансии, с оценкой соответствия и этапами подбора."
+      eyebrow="For employers"
+      title="Applications arrive sorted, not in a pile"
+      lead="Instead of a folder of emails, a candidate list for every job, with a match score and hiring stages."
     >
       <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         <Feature
           Icon={PenLine}
-          title="Публикация с помощью ИИ"
-          text="Описание вакансии и требования можно не писать с нуля — платформа предложит черновик."
+          title="AI-assisted posting"
+          text="No need to write the description and requirements from scratch: the platform drafts them for you."
         />
         <Feature
           Icon={Users}
-          title="Кандидаты по этапам"
-          text="Отклик, шорт-лист, интервью, предложение. Видно, кто где, и никто не теряется."
+          title="Candidates by stage"
+          text="Applied, shortlisted, interview, offer. You see who is where, and nobody gets lost."
         />
         <Feature
           Icon={Bot}
-          title="Оценка соответствия"
-          text="Каждому отклику считается совпадение с вакансией, к нему есть краткая сводка по кандидату."
+          title="Match score"
+          text="Every application gets a match score against the job, with a short summary of the candidate."
         />
         <Feature
           Icon={MessageSquare}
-          title="Чат с шаблонами"
-          text="Переписка с кандидатом и заготовки частых ответов, чтобы не печатать одно и то же."
+          title="Chat with templates"
+          text="Chat with the candidate plus saved replies, so you do not retype the same things."
         />
         <Feature
           Icon={CalendarClock}
-          title="Назначение встреч"
-          text="Интервью планируются внутри платформы, с проверкой занятости по календарю."
+          title="Interview scheduling"
+          text="Interviews are scheduled inside the platform, with calendar availability checked."
         />
         <Feature
           Icon={Briefcase}
-          title="Команда рекрутеров"
-          text="Коллег можно пригласить в компанию и работать над подбором вместе."
+          title="Recruiting team"
+          text="Invite colleagues to the company and hire together."
         />
       </div>
     </Section>
@@ -303,14 +303,14 @@ function ForEmployers() {
 
 function HowItWorks() {
   const steps = [
-    ['Регистрация по коду', 'Вводите почту и получаете шестизначный код. Пароль придумывать не нужно.'],
-    ['Профиль или вакансия', 'Соискатель заполняет профиль, работодатель публикует вакансию.'],
-    ['Отклик и переписка', 'Отклик уходит в один клик, дальше — чат и приглашение на интервью.'],
-    ['Выход на работу', 'Обе стороны видят этап подбора, вплоть до предложения о работе.'],
+    ['Sign up with a code', 'Enter your email and get a six-digit code. No password to invent.'],
+    ['Profile or job post', 'Candidates fill in a profile, employers post a job.'],
+    ['Apply and chat', 'Applying takes one click, then comes the chat and an interview invitation.'],
+    ['Start work', 'Both sides see the hiring stage, all the way to the offer.'],
   ];
 
   return (
-    <Section id="how" muted eyebrow="Как это работает" title="Четыре шага от регистрации до выхода на работу">
+    <Section id="how" muted eyebrow="How it works" title="Four steps from sign-up to your first day">
       <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map(([title, text], i) => (
           <li key={title}>
@@ -329,9 +329,9 @@ function HowItWorks() {
 function MobileApp() {
   return (
     <Section
-      eyebrow="Приложение"
-      title="Тот же аккаунт в телефоне"
-      lead="HorecaPass для iOS и Android. Отсканируйте код камерой — откроется страница приложения в магазине."
+      eyebrow="Mobile app"
+      title="The same account on your phone"
+      lead="HorecaPass for iOS and Android. Scan the code with your camera to open the app in the store."
     >
       <AppDownload />
     </Section>

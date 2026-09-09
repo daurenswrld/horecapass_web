@@ -9,7 +9,7 @@ import { Field } from '@/components/ui/primitives';
 import type { BackendRole } from '@/lib/api/auth';
 
 /**
- * Регистрация.
+ * Sign up.
  *
  * Роль в интерфейсе — «applicant» / «company», на сервер уходит
  * 'APPLICANT' / 'COMPANY_OWNER'. Соответствие взято из мобилки
@@ -27,13 +27,13 @@ function RegisterInner() {
       {isCompany && (
         <div className="mb-6">
           <Field
-            label="Название компании"
-            placeholder="Например, Grand Hotel Almaty"
+            label="Company name"
+            placeholder="e.g. Grand Hotel Almaty"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
           />
           <p className="mt-1.5 text-xs text-text-secondary">
-            Уедет вместе с подтверждением кода — так же, как в мобильном приложении.
+            Sent together with the code confirmation, the same way the mobile app does it.
           </p>
         </div>
       )}
@@ -42,23 +42,23 @@ function RegisterInner() {
         purpose="REGISTER"
         role={role}
         companyName={isCompany ? companyName : undefined}
-        title={isCompany ? 'Регистрация компании' : 'Регистрация'}
-        subtitle="Введите рабочую почту — пришлём шестизначный код. Пароль придумывать не нужно."
+        title={isCompany ? 'Employer sign-up' : 'Sign up'}
+        subtitle="Enter your work email and we will send a six-digit code. No password to invent."
       />
 
       <p className="mt-6 text-sm text-text-secondary">
         {isCompany ? (
           <>
-            Ищете работу?{' '}
+            Looking for a job?{' '}
             <Link href="/register?role=applicant" className="font-semibold text-accent-text underline-offset-4 hover:underline">
-              Регистрация соискателя
+              Candidate sign-up
             </Link>
           </>
         ) : (
           <>
-            Нанимаете?{' '}
+            Hiring?{' '}
             <Link href="/register?role=company" className="font-semibold text-accent-text underline-offset-4 hover:underline">
-              Регистрация компании
+              Employer sign-up
             </Link>
           </>
         )}

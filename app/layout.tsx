@@ -4,7 +4,7 @@ import { AuthProvider } from '@/lib/auth/context';
 import './globals.css';
 
 const raleway = Raleway({
-  subsets: ['latin', 'cyrillic'],
+  subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-raleway',
   display: 'swap',
@@ -12,12 +12,12 @@ const raleway = Raleway({
 
 export const metadata: Metadata = {
   title: { default: 'HorecaPass', template: '%s · HorecaPass' },
-  description: 'Работа в отелях и ресторанах: вакансии, отклики, подбор персонала.',
+  description: 'Hospitality jobs: vacancies, applications and hiring.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={raleway.variable} suppressHydrationWarning>
+    <html lang="en" className={raleway.variable} suppressHydrationWarning>
       <head>
         {/* Тема применяется до первого кадра, иначе страница моргает светлым. */}
         <script

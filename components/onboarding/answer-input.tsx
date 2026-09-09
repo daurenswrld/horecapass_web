@@ -44,7 +44,7 @@ function createRecognition(): SpeechRecognitionLike | null {
     (new () => SpeechRecognitionLike) | undefined;
   if (!Ctor) return null;
   const r = new Ctor();
-  r.lang = "ru-RU";
+  r.lang = "en-US";
   r.interimResults = true;
   r.continuous = true;
   return r;
@@ -97,11 +97,11 @@ function VoiceButton({
       onClick={toggle}
       disabled={disabled}
       aria-pressed={listening}
-      aria-label={listening ? "Остановить запись" : "Ответить голосом"}
+      aria-label={listening ? "Stop recording" : "Answer by voice"}
       className="shrink-0"
     >
       {listening ? <MicOff size={18} /> : <Mic size={18} />}
-      <span className="hidden sm:inline">{listening ? "Стоп" : "Голосом"}</span>
+      <span className="hidden sm:inline">{listening ? "Stop" : "Voice"}</span>
     </Button>
   );
 }
@@ -166,7 +166,7 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
             ))}
           </div>
           <Button onClick={() => onAnswer(multi)} disabled={multi.length === 0}>
-            Готово{multi.length > 0 ? ` · ${multi.length}` : ""}
+            Done{multi.length > 0 ? ` · ${multi.length}` : ""}
           </Button>
         </>
       )}
@@ -190,8 +190,8 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
 
       {question.kind === "bool" && (
         <div className="flex gap-2">
-          <ChoiceChip onClick={() => onAnswer(true)}>Да</ChoiceChip>
-          <ChoiceChip onClick={() => onAnswer(false)}>Нет</ChoiceChip>
+          <ChoiceChip onClick={() => onAnswer(true)}>Yes</ChoiceChip>
+          <ChoiceChip onClick={() => onAnswer(false)}>No</ChoiceChip>
         </div>
       )}
 
@@ -202,7 +202,7 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              placeholder="Напишите или нажмите «Голосом»"
+              placeholder="Type, or press Voice"
               className="min-h-24 flex-1 resize-y rounded border border-line bg-surface px-3 py-2 text-text-primary placeholder:text-text-tertiary focus-ring"
             />
           ) : (
@@ -235,7 +235,7 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
             )}
             <Button onClick={submitText} disabled={!text.trim()}>
               <Send size={16} />
-              Ответить
+              Answer
             </Button>
           </div>
         </div>
@@ -250,11 +250,11 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
             )}
           >
             <Upload size={22} className="text-text-secondary" />
-            <span className="text-sm font-medium text-text-primary">Выбрать файлы</span>
+            <span className="text-sm font-medium text-text-primary">Choose files</span>
             <span className="text-xs text-text-secondary">
               {/* Правка Алдияра: много фото с телефона одним заходом.
                   multiple + capture даёт выбор «камера или галерея» на телефоне. */}
-              Можно выбрать сразу несколько — с камеры или из галереи
+              You can pick several at once, from the camera or the gallery
             </span>
             <input
               type="file"
@@ -279,7 +279,7 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
           )}
 
           <DemoNotice
-            what="Файлы остаются в браузере: сохраняются только их имена, чтобы показать, как будет выглядеть портфолио."
+            what="Files stay in the browser: only their names are stored, to show what the portfolio will look like."
             endpoint="POST /api/resumes/my/<id>/portfolio/"
           />
 
@@ -288,7 +288,7 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
               onClick={() => onAnswer(files.map((f) => f.name))}
               disabled={files.length === 0}
             >
-              Загрузить{files.length > 0 ? ` · ${files.length}` : ""}
+              Upload{files.length > 0 ? ` · ${files.length}` : ""}
             </Button>
           </div>
         </div>
@@ -301,7 +301,7 @@ export function AnswerInput({ question, onAnswer, onSkip }: Props) {
           className="inline-flex items-center gap-1.5 text-xs text-text-secondary underline-offset-4 hover:text-text-secondary hover:underline focus-ring"
         >
           <SkipForward size={13} />
-          Пропустить — вернёмся позже
+          Skip, we will come back to it
         </button>
       )}
     </div>

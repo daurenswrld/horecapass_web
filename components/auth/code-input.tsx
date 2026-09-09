@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
  * Ввод шестизначного кода — как в мобилке: отдельные ячейки, автопереход
  * вперёд, Backspace возвращает назад.
  *
- * Отдельно обработана вставка: код приходит письмом, и первое, что делает
+ * Departmentьно обработана вставка: код приходит письмом, и первое, что делает
  * человек за компьютером, — копирует его целиком. Без этого вставка попадёт
  * в одну ячейку и обрежется до символа.
  */
@@ -64,7 +64,7 @@ export function CodeInput({ value, onChange, onComplete, length = 6, disabled, i
   };
 
   return (
-    <div className="flex gap-2" role="group" aria-label="Код из письма">
+    <div className="flex gap-2" role="group" aria-label="Code from the email">
       {Array.from({ length }, (_, i) => (
         <input
           key={i}
@@ -78,7 +78,7 @@ export function CodeInput({ value, onChange, onComplete, length = 6, disabled, i
           disabled={disabled}
           inputMode="numeric"
           autoComplete={i === 0 ? 'one-time-code' : 'off'}
-          aria-label={`Цифра ${i + 1}`}
+          aria-label={`Digit ${i + 1}`}
           maxLength={length}
           className={cn(
             'h-14 w-12 rounded border bg-surface text-center text-xl font-semibold text-text-primary',

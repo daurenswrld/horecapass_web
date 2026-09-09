@@ -17,14 +17,14 @@ import {
 import { cn, plural } from '@/lib/utils';
 
 /**
- * Отклики соискателя — экран applicant_responses_screen.dart мобилки.
+ * Applications соискателя — экран applicant_responses_screen.dart мобилки.
  *
  * Раздел заказчица не правила: прозрачность статусов ей как раз нравится,
  * поэтому здесь ровно то же поведение, что в приложении, только в раскладке
  * под широкий экран.
  */
 
-const DATE_FMT = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+const DATE_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
 function StatusBadge({ status }: { status: ApplicationStatus }) {
   return (
@@ -35,7 +35,7 @@ function StatusBadge({ status }: { status: ApplicationStatus }) {
 }
 
 /**
- * Этапы отклика.
+ * Application stages.
  *
  * Показываем все шаги с названиями, а не одну полосу: кандидату важно видеть
  * не только где он сейчас, но и сколько осталось. Это то же требование
@@ -49,7 +49,7 @@ function Funnel({ status }: { status: ApplicationStatus }) {
     return (
       <p className="mt-4 flex items-center gap-2 rounded-sm bg-danger-surface px-3 py-2 text-sm text-danger">
         <X size={15} className="shrink-0" />
-        Работодатель отказал по этому отклику
+        The employer declined this application
       </p>
     );
   }
@@ -63,7 +63,7 @@ function Funnel({ status }: { status: ApplicationStatus }) {
     // и появляется горизонтальная прокрутка на телефоне.
     <ol
       className="scroll-slim -mx-1 mt-4 flex items-start gap-0 overflow-x-auto px-1 pb-1"
-      aria-label="Этапы отклика"
+      aria-label="Application stages"
     >
       {FUNNEL.map((step, i) => {
         const done = i < current;
@@ -125,7 +125,7 @@ function ApplicationCard({ a }: { a: ApplicantApplication }) {
             {a.address}
           </span>
         )}
-        <span>Отклик от {DATE_FMT.format(a.createdAt)}</span>
+        <span>Applied {DATE_FMT.format(a.createdAt)}</span>
       </div>
 
       <Funnel status={a.status} />
@@ -142,14 +142,14 @@ function ApplicationCard({ a }: { a: ApplicantApplication }) {
         <div className="mt-4 rounded-sm bg-surface-muted p-3.5">
           <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
             <Plane size={15} className="text-accent" />
-            Переезд: {RELOCATION_LABEL[a.relocationStep]}
+            Relocation: {RELOCATION_LABEL[a.relocationStep]}
           </p>
           {a.relocationNote && (
             <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">{a.relocationNote}</p>
           )}
           {a.expectedArrival && (
             <p className="mt-1.5 text-sm text-text-secondary">
-              Ожидаемая дата приезда: {DATE_FMT.format(a.expectedArrival)}
+              Expected arrival: {DATE_FMT.format(a.expectedArrival)}
             </p>
           )}
         </div>
@@ -158,14 +158,14 @@ function ApplicationCard({ a }: { a: ApplicantApplication }) {
       {a.requiresVideoGreeting && !a.videoGreetingUrl && (
         <p className="mt-4 flex items-center gap-2 rounded-sm bg-info-surface px-3 py-2 text-sm text-on-info-surface">
           <Video size={15} className="shrink-0" />
-          Нужна видео-презентация — её записывают в мобильном приложении.
+          A video intro is required. It is recorded in the mobile app.
         </p>
       )}
 
       {a.videoGreetingUrl && (
         <p className="mt-4 flex items-center gap-2 text-sm text-success">
           <Check size={15} />
-          Видео-презентация отправлена
+          Video intro sent
         </p>
       )}
     </Card>
@@ -192,7 +192,7 @@ export default function ResponsesPage() {
         // Свежие сверху: в приложении порядок такой же.
         setItems([...list].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
       })
-      .catch(() => !cancelled && setError('Не удалось загрузить отклики.'))
+      .catch(() => !cancelled && setError('Could not load applications.'))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -214,17 +214,17 @@ export default function ResponsesPage() {
   return (
     <>
       <PageHeader
-        title="Отклики"
+        title="Applications"
         subtitle={
-          loading ? undefined : `${items.length} ${plural(items.length, 'отклик', 'отклика', 'откликов')}`
+          loading ? undefined : `${items.length} ${plural(items.length, 'application')}`
         }
         actions={
           <div className="flex items-center gap-2">
             {(
               [
-                ['all', 'Все'],
-                ['active', 'В работе'],
-                ['archive', 'Завершённые'],
+                ['all', 'All'],
+                ['active', 'In progress'],
+                ['archive', 'Closed'],
               ] as [Filter, string][]
             ).map(([id, label]) => (
               <button
@@ -257,7 +257,7 @@ export default function ResponsesPage() {
           <Card className="p-5">
             <p className="text-sm text-danger">{error}</p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={() => setReloadKey((k) => k + 1)}>
-              Повторить
+              Try again
             </Button>
           </Card>
         )}
@@ -265,12 +265,12 @@ export default function ResponsesPage() {
         {!loading && !error && shown.length === 0 && (
           <Card className="p-8 text-center">
             <p className="font-medium text-text-primary">
-              {items.length === 0 ? 'Откликов пока нет' : 'В этой вкладке пусто'}
+              {items.length === 0 ? 'No applications yet' : 'Nothing in this tab'}
             </p>
             <p className="mt-1 text-sm text-text-secondary">
               {items.length === 0
-                ? 'Откликнитесь на вакансию — здесь появится её статус и переписка с работодателем.'
-                : 'Посмотрите другие вкладки.'}
+                ? 'Apply to a job and its status, plus your chat with the employer, will appear here.'
+                : 'Check the other tabs.'}
             </p>
           </Card>
         )}

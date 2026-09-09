@@ -10,14 +10,14 @@ import { ApiError } from '@/lib/api/client';
 import { homeFor, useAuth } from '@/lib/auth/context';
 
 /**
- * Вход и регистрация. Два шага в одном экране, как в login_screen.dart мобилки:
+ * Sign in и регистрация. Два шага в одном экране, как в login_screen.dart мобилки:
  * сначала почта, потом код из письма. Пароля в продукте нет.
  */
 
 interface Props {
   purpose: Purpose;
   role?: BackendRole;
-  /** Название компании — нужно только при регистрации работодателя. */
+  /** Company name — нужно только при регистрации работодателя. */
   companyName?: string;
   title: string;
   subtitle: string;
@@ -37,13 +37,13 @@ function readError(e: unknown): string {
         if (Array.isArray(v) && typeof v[0] === 'string') return v[0];
       }
     }
-    if (e.status === 400) return 'Проверьте код — он неверный или уже истёк.';
-    if (e.status === 404) return 'Аккаунта с такой почтой нет. Зарегистрируйтесь.';
-    if (e.status === 429) return 'Слишком много попыток. Подождите минуту.';
-    return `Сервер ответил ошибкой ${e.status}.`;
+    if (e.status === 400) return 'Check the code: it is wrong or has expired.';
+    if (e.status === 404) return 'No account with this email. Please sign up.';
+    if (e.status === 429) return 'Too many attempts. Please wait a minute.';
+    return `The server returned error ${e.status}.`;
   }
   // fetch падает так при обрыве сети или недоступном бэкенде.
-  return 'Не удалось связаться с сервером. Проверьте соединение.';
+  return 'Could not reach the server. Check your connection.';
 }
 
 const RESEND_SECONDS = 60;
@@ -120,13 +120,13 @@ export function AuthForm({ purpose, role, companyName, title, subtitle }: Props)
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary focus-ring"
         >
           <ArrowLeft size={16} />
-          Изменить почту
+          Change email
         </button>
       )}
 
       <h1 className="text-2xl font-bold tracking-tight text-text-primary">{title}</h1>
       <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">
-        {step === 'contact' ? subtitle : `Мы отправили шестизначный код на ${contact.trim()}`}
+        {step === 'contact' ? subtitle : `We sent a six-digit code to ${contact.trim()}`}
       </p>
 
       <div className="mt-6 space-y-4">
@@ -139,7 +139,7 @@ export function AuthForm({ purpose, role, companyName, title, subtitle }: Props)
             className="space-y-4"
           >
             <Field
-              label="Электронная почта"
+              label="Email"
               type="email"
               autoComplete="email"
               autoFocus
@@ -149,7 +149,7 @@ export function AuthForm({ purpose, role, companyName, title, subtitle }: Props)
               error={error}
             />
             <Button type="submit" full size="lg" disabled={!emailLooksValid || busy}>
-              {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Получить код'}
+              {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Get code'}
             </Button>
           </form>
         ) : (
@@ -167,7 +167,7 @@ export function AuthForm({ purpose, role, companyName, title, subtitle }: Props)
             {/* Код в ответе приходит только для демо-аккаунтов проверки в сторах. */}
             {debugCode && (
               <p className="text-xs text-text-secondary">
-                Демо-аккаунт, код из ответа сервера: <span className="font-semibold">{debugCode}</span>
+                Demo account, code from the server response: <span className="font-semibold">{debugCode}</span>
               </p>
             )}
 
@@ -177,7 +177,7 @@ export function AuthForm({ purpose, role, companyName, title, subtitle }: Props)
               disabled={code.length < 6 || busy}
               onClick={() => void verify(code)}
             >
-              {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Подтвердить'}
+              {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Confirm'}
             </Button>
 
             <button
@@ -186,7 +186,7 @@ export function AuthForm({ purpose, role, companyName, title, subtitle }: Props)
               onClick={() => void send()}
               className="w-full text-sm text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50 focus-ring"
             >
-              {cooldown > 0 ? `Отправить код повторно через ${cooldown} с` : 'Отправить код повторно'}
+              {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
             </button>
           </>
         )}

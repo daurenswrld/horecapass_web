@@ -10,7 +10,7 @@ import { homeFor, useAuth } from "@/lib/auth/context";
  * Шапка лендинга.
  *
  * Единственная часть страницы, которой нужно знать, вошёл ли человек:
- * вошедшему вместо «Войти» показываем ссылку в его раздел. Всё остальное
+ * вошедшему вместо «Sign in» показываем ссылку в его раздел. Всё остальное
  * на странице статично и рисуется сервером.
  */
 export function LandingHeader() {
@@ -28,25 +28,25 @@ export function LandingHeader() {
             href="#vacancies"
             className="rounded transition-colors hover:text-text-primary focus-ring"
           >
-            Вакансии
+            Jobs
           </a>
           <a
             href="#candidates"
             className="rounded transition-colors hover:text-text-primary focus-ring"
           >
-            Соискателям
+            For candidates
           </a>
           <a
             href="#employers"
             className="rounded transition-colors hover:text-text-primary focus-ring"
           >
-            Работодателям
+            For employers
           </a>
           <a
             href="#how"
             className="rounded transition-colors hover:text-text-primary focus-ring"
           >
-            Как это работает
+            How it works
           </a>
         </nav>
 
@@ -60,7 +60,7 @@ export function LandingHeader() {
               href={homeFor(user)}
               className="rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:brightness-95 focus-ring"
             >
-              В кабинет
+              Open dashboard
             </Link>
           ) : (
             <>
@@ -68,13 +68,13 @@ export function LandingHeader() {
                 href="/login"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-muted focus-ring"
               >
-                Войти
+                Sign in
               </Link>
               <Link
                 href="/register?role=applicant"
                 className="hidden rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:brightness-95 focus-ring sm:inline-flex"
               >
-                Регистрация
+                Sign up
               </Link>
             </>
           )}

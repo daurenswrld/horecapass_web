@@ -8,7 +8,7 @@ import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { ApiError } from '@/lib/api/client';
 
 /**
- * Вакансии работодателя — экран company_home_screen.dart мобилки.
+ * Jobs работодателя — экран company_home_screen.dart мобилки.
  *
  * Первым делом список опубликованного, а не аналитика: заказчица про графики
  * сказала прямо — «красивые графики, но это ни о чём. На первом этапе должны
@@ -25,7 +25,7 @@ export default function CompanyVacanciesPage() {
     vacanciesApi
       .mine()
       .then(setItems)
-      .catch(() => setError('Не удалось загрузить вакансии компании.'))
+      .catch(() => setError('Could not load company jobs.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -37,12 +37,12 @@ export default function CompanyVacanciesPage() {
   return (
     <>
       <PageHeader
-        title="Вакансии"
-        subtitle={loading ? undefined : `Активных: ${active.length}`}
+        title="Jobs"
+        subtitle={loading ? undefined : `Active: ${active.length}`}
         actions={
           <Button onClick={() => setCreating((v) => !v)}>
             {creating ? <X size={16} /> : <Plus size={16} />}
-            {creating ? 'Отменить' : 'Новая вакансия'}
+            {creating ? 'Cancel' : 'New job'}
           </Button>
         }
       />
@@ -72,21 +72,21 @@ export default function CompanyVacanciesPage() {
 
         {!loading && !error && items.length === 0 && !creating && (
           <Card className="p-8 text-center">
-            <p className="font-medium text-text-primary">Вакансий пока нет</p>
+            <p className="font-medium text-text-primary">No jobs yet</p>
             <p className="mt-1 text-sm text-text-secondary">
-              Опубликуйте первую — и здесь появятся отклики с кандидатами.
+              Post your first one and candidate applications will appear here.
             </p>
             <Button className="mt-4" onClick={() => setCreating(true)}>
               <Plus size={16} />
-              Новая вакансия
+              New job
             </Button>
           </Card>
         )}
 
         {!loading && !error && items.length > 0 && (
           <>
-            <VacancyGroup title="Активные" items={active} />
-            {archived.length > 0 && <VacancyGroup title="В архиве" items={archived} muted />}
+            <VacancyGroup title="Active" items={active} />
+            {archived.length > 0 && <VacancyGroup title="Archived" items={archived} muted />}
           </>
         )}
       </div>
@@ -133,7 +133,7 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
       // Показываем, что именно не понравилось серверу: у публикации вакансии
       // на бэкенде могут быть обязательные поля, которых нет в этой форме.
       const payload = err instanceof ApiError ? err.payload : null;
-      let message = 'Не удалось опубликовать вакансию.';
+      let message = 'Could not publish the job.';
       if (payload && typeof payload === 'object') {
         const parts = Object.entries(payload as Record<string, unknown>)
           .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : String(v)}`)
@@ -148,23 +148,23 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
 
   return (
     <Card className="p-6">
-      <h2 className="text-lg font-semibold text-text-primary">Новая вакансия</h2>
+      <h2 className="text-lg font-semibold text-text-primary">New job</h2>
       <p className="mt-1 text-sm text-text-secondary">
-        Обязательна только должность — остальное можно дописать позже.
+        Only the position is required, the rest can be added later.
       </p>
 
       <form onSubmit={submit} className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Field
-          label="Должность"
+          label="Position"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Например, Chef de Partie"
+          placeholder="e.g. Chef de Partie"
           autoFocus
         />
-        <Field label="Город" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Алматы" />
+        <Field label="City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Almaty" />
         <div className="grid grid-cols-2 gap-3">
           <Field
-            label="Зарплата от"
+            label="Salary from"
             type="number"
             inputMode="numeric"
             value={salaryMin}
@@ -172,7 +172,7 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
             placeholder="400000"
           />
           <Field
-            label="до"
+            label="to"
             type="number"
             inputMode="numeric"
             value={salaryMax}
@@ -183,28 +183,28 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
 
         <div className="lg:col-span-2 xl:col-span-3">
           <label className="block text-sm font-medium text-text-secondary" htmlFor="v-desc">
-            Описание
+            Description
           </label>
           <textarea
             id="v-desc"
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Чем предстоит заниматься"
+            placeholder="What the job involves"
             className="mt-1.5 w-full resize-none rounded border border-line-strong bg-surface px-3.5 py-2.5 text-text-primary placeholder:text-text-tertiary focus-ring"
           />
         </div>
 
         <div className="lg:col-span-2 xl:col-span-3">
           <label className="block text-sm font-medium text-text-secondary" htmlFor="v-req">
-            Требования
+            Requirements
           </label>
           <textarea
             id="v-req"
             rows={3}
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
-            placeholder="Опыт, навыки, языки"
+            placeholder="Experience, skills, languages"
             className="mt-1.5 w-full resize-none rounded border border-line-strong bg-surface px-3.5 py-2.5 text-text-primary placeholder:text-text-tertiary focus-ring"
           />
         </div>
@@ -213,10 +213,10 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
 
         <div className="flex gap-2 lg:col-span-2 xl:col-span-3">
           <Button type="submit" disabled={!title.trim() || busy}>
-            {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Опубликовать'}
+            {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Publish'}
           </Button>
           <Button type="button" variant="secondary" onClick={onCancel}>
-            Отменить
+            Cancel
           </Button>
         </div>
       </form>

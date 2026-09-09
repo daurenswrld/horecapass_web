@@ -68,7 +68,7 @@ export function VacancyCard({ vacancy, selected, onSelect, onToggleSave }: Props
               <p className="mt-0.5 flex items-center gap-1 truncate text-sm text-text-secondary">
                 {vacancy.companyName}
                 {vacancy.isVerified && (
-                  <BadgeCheck size={14} className="shrink-0 text-info" aria-label="Проверенная компания" />
+                  <BadgeCheck size={14} className="shrink-0 text-info" aria-label="Verified company" />
                 )}
               </p>
             </div>
@@ -81,7 +81,7 @@ export function VacancyCard({ vacancy, selected, onSelect, onToggleSave }: Props
                   onToggleSave(vacancy);
                 }}
                 aria-pressed={vacancy.isSaved}
-                aria-label={vacancy.isSaved ? 'Убрать из сохранённых' : 'Сохранить вакансию'}
+                aria-label={vacancy.isSaved ? 'Remove from saved' : 'Save job'}
                 className="-m-1 shrink-0 rounded p-1 text-text-tertiary transition-colors hover:text-accent focus-ring"
               >
                 <Bookmark size={18} className={vacancy.isSaved ? 'fill-accent text-accent' : undefined} />
@@ -101,11 +101,11 @@ export function VacancyCard({ vacancy, selected, onSelect, onToggleSave }: Props
           <div className="mt-3 flex flex-wrap gap-1.5">
             {vacancy.matchScore != null && (
               <Chip className="bg-info-surface font-semibold text-on-info-surface">
-                Совпадение {vacancy.matchScore}%
+                {vacancy.matchScore}% match
               </Chip>
             )}
             {vacancy.isApplied && (
-              <Chip className="bg-accent-muted text-text-primary">Вы откликнулись</Chip>
+              <Chip className="bg-accent-muted text-text-primary">You applied</Chip>
             )}
             {[vacancy.venueType, vacancy.employmentType, vacancy.schedule]
               .filter((x): x is string => !!x)

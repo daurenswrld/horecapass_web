@@ -10,7 +10,7 @@ import { vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { cn } from '@/lib/utils';
 
 /**
- * Поиск вакансий — экран Jobs соискателя.
+ * Search jobs — экран Jobs соискателя.
  *
  * На телефоне это список, из которого проваливаешься в карточку. На широком
  * экране обе части видны сразу: список слева, вакансия справа. Так не теряется
@@ -50,7 +50,7 @@ export default function JobsPage() {
         setSelected((prev) => (prev && list.some((v) => v.id === prev.id) ? prev : (list[0] ?? null)));
       })
       .catch(() => {
-        if (!cancelled) setError('Не удалось загрузить вакансии. Проверьте соединение и попробуйте ещё раз.');
+        if (!cancelled) setError('Could not load jobs. Check your connection and try again.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -69,8 +69,8 @@ export default function JobsPage() {
   return (
     <>
       <PageHeader
-        title="Вакансии"
-        subtitle={loading ? undefined : `Найдено: ${items.length}`}
+        title="Jobs"
+        subtitle={loading ? undefined : `Found: ${items.length}`}
         actions={
           <div className="flex items-center gap-2">
             {(['all', 'matches'] as Tab[]).map((t) => (
@@ -85,7 +85,7 @@ export default function JobsPage() {
                     : 'bg-surface-muted text-text-secondary hover:text-text-primary',
                 )}
               >
-                {t === 'all' ? 'Все' : 'Для вас'}
+                {t === 'all' ? 'All' : 'For you'}
               </button>
             ))}
           </div>
@@ -99,14 +99,14 @@ export default function JobsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Должность, компания, город"
-              aria-label="Поиск вакансий"
+              placeholder="Position, company, city"
+              aria-label="Search jobs"
               className="h-11 w-full rounded-full border border-line-strong bg-surface pl-10 pr-4 text-text-primary placeholder:text-text-tertiary focus-ring"
             />
           </div>
-          <Button variant="secondary" className="shrink-0" disabled title="Фильтры появятся вместе с разделами бэкенда">
+          <Button variant="secondary" className="shrink-0" disabled title="Filters will arrive with the backend sections">
             <SlidersHorizontal size={16} />
-            <span className="hidden sm:inline">Фильтры</span>
+            <span className="hidden sm:inline">Filters</span>
           </Button>
         </div>
       </div>
@@ -123,18 +123,18 @@ export default function JobsPage() {
             <Card className="p-5">
               <p className="text-sm text-danger">{error}</p>
               <Button variant="secondary" size="sm" className="mt-3" onClick={() => setQuery((q) => q + '')}>
-                Повторить
+                Try again
               </Button>
             </Card>
           )}
 
           {!loading && !error && items.length === 0 && (
             <Card className="p-8 text-center">
-              <p className="font-medium text-text-primary">Ничего не найдено</p>
+              <p className="font-medium text-text-primary">Nothing found</p>
               <p className="mt-1 text-sm text-text-secondary">
                 {tab === 'matches'
-                  ? 'Подборка собирается по вашему резюме — заполните профиль, чтобы она появилась.'
-                  : 'Попробуйте изменить запрос.'}
+                  ? 'The selection is built from your CV. Fill in your profile to see it.'
+                  : 'Try a different query.'}
               </p>
             </Card>
           )}
@@ -160,7 +160,7 @@ export default function JobsPage() {
             <VacancyDetails vacancy={selected} onChanged={patch} />
           ) : (
             <p className="py-16 text-center text-sm text-text-secondary">
-              Выберите вакансию слева, чтобы посмотреть подробности.
+              Pick a job on the left to see the details.
             </p>
           )}
         </Card>

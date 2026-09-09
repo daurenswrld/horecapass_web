@@ -5,7 +5,7 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Переключатель темы. Тёмная тема — пункт 1.7.1 договора.
+ * Переключатель темы. Dark тема — пункт 1.7.1 договора.
  *
  * Три состояния, а не два: «как в системе» должно оставаться выбором, иначе
  * пользователь, у которого телефон сам переключается вечером, не сможет это
@@ -49,9 +49,9 @@ export function applyTheme(theme: Theme) {
 }
 
 const OPTIONS: { value: Theme; label: string; Icon: typeof Sun }[] = [
-  { value: "light", label: "Светлая", Icon: Sun },
-  { value: "system", label: "Как в системе", Icon: Monitor },
-  { value: "dark", label: "Тёмная", Icon: Moon },
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "system", label: "System", Icon: Monitor },
+  { value: "dark", label: "Dark", Icon: Moon },
 ];
 
 export function ThemeToggle({ className }: { className?: string }) {
@@ -71,7 +71,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <div
       role="radiogroup"
-      aria-label="Тема оформления"
+      aria-label="Theme"
       className={cn(
         "inline-flex rounded-full border border-line bg-surface p-0.5",
         className,

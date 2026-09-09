@@ -66,9 +66,9 @@ export function parseApplication(json: Json): ApplicantApplication {
   return {
     id: Number(json.id),
     vacancyId: Number(json.vacancy ?? 0),
-    vacancyTitle: String(json.vacancy_title ?? 'Вакансия'),
+    vacancyTitle: String(json.vacancy_title ?? 'Job'),
     companyId: json.company_id == null ? null : Number(json.company_id),
-    companyName: String(json.company_name ?? 'Компания'),
+    companyName: String(json.company_name ?? 'Company'),
     companyLogoUrl: nonEmpty(json.company_logo),
     status: (String(json.status ?? 'NEW').toUpperCase() as ApplicationStatus) ?? 'NEW',
     createdAt: date(json.created_at) ?? new Date(),
@@ -102,13 +102,13 @@ export const applicationsApi = {
 
 /** Подписи статусов — те же, что видит человек в приложении. */
 export const STATUS_LABEL: Record<ApplicationStatus, string> = {
-  NEW: 'Не просмотрен',
-  REVIEWED: 'Просмотрен',
-  INVITED: 'Приглашение',
-  VISA: 'Виза',
-  ONBOARDING: 'Переезд',
-  HIRED: 'Принят',
-  REJECTED: 'Отказ',
+  NEW: 'Not reviewed',
+  REVIEWED: 'Reviewed',
+  INVITED: 'Invited',
+  VISA: 'Visa',
+  ONBOARDING: 'Relocation',
+  HIRED: 'Hired',
+  REJECTED: 'Rejected',
 };
 
 /** Цвет статуса. Смысловые токены, а не произвольные цвета. */
@@ -123,13 +123,13 @@ export const STATUS_TONE: Record<ApplicationStatus, string> = {
 };
 
 export const RELOCATION_LABEL: Record<RelocationStep, string> = {
-  NOT_STARTED: 'Не начат',
-  DOCUMENTS: 'Сбор документов',
-  SUBMITTED: 'Документы поданы',
-  APPROVED: 'Виза одобрена',
-  REFUSED: 'Отказ по визе',
-  TICKETS: 'Билеты',
-  ARRIVED: 'Прибыл',
+  NOT_STARTED: 'Not started',
+  DOCUMENTS: 'Collecting documents',
+  SUBMITTED: 'Documents submitted',
+  APPROVED: 'Visa approved',
+  REFUSED: 'Visa refused',
+  TICKETS: 'Tickets',
+  ARRIVED: 'Arrived',
 };
 
 /** Порядок воронки — по нему рисуется полоса прогресса. Отказ вне порядка. */
@@ -143,17 +143,17 @@ export const FUNNEL: readonly ApplicationStatus[] = [
 ];
 
 export function salaryLabel(a: Pick<ApplicantApplication, 'salaryMin' | 'salaryMax' | 'currency'>): string {
-  if (!a.salaryMin && !a.salaryMax) return 'Зарплата по договорённости';
+  if (!a.salaryMin && !a.salaryMax) return 'Salary negotiable';
   // Знак валюты один на диапазон: «450 000 ₸ – 650 000 ₸» читается тяжелее
   // и расходится с карточкой вакансии, где формат уже такой.
   const sign = CURRENCY_SIGNS[a.currency] ?? a.currency;
   const num = (v: string) => {
     const n = Number(v);
-    return Number.isFinite(n) ? Math.round(n).toLocaleString('ru-RU') : v;
+    return Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : v;
   };
   if (a.salaryMin && a.salaryMax) return `${num(a.salaryMin)} – ${num(a.salaryMax)} ${sign}`;
-  if (a.salaryMin) return `от ${num(a.salaryMin)} ${sign}`;
-  return `до ${num(a.salaryMax!)} ${sign}`;
+  if (a.salaryMin) return `from ${num(a.salaryMin)} ${sign}`;
+  return `up to ${num(a.salaryMax!)} ${sign}`;
 }
 
 const CURRENCY_SIGNS: Record<string, string> = {
@@ -187,8 +187,8 @@ export function parseCompanyApplication(json: Json): CompanyApplication {
   const fromRoot = String(json.applicant_name ?? '').trim();
   return {
     id: Number(json.id),
-    applicant: fromProfile || fromRoot || 'Кандидат',
-    vacancyTitle: String(json.vacancy_title ?? 'Вакансия'),
+    applicant: fromProfile || fromRoot || 'Candidate',
+    vacancyTitle: String(json.vacancy_title ?? 'Job'),
     status: (String(json.status ?? 'NEW').toUpperCase() as ApplicationStatus) ?? 'NEW',
     createdAt: date(json.created_at) ?? new Date(),
     avatarUrl: nonEmpty(profile.avatar),

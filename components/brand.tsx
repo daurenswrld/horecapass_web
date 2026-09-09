@@ -44,7 +44,7 @@ export function Wordmark({ height = 26, className }: { height?: number; classNam
   return (
     <span
       role="img"
-      aria-label="HorecaPass — платформа найма"
+      aria-label="HorecaPass, hiring platform"
       className={cn('inline-block shrink-0 bg-accent', className)}
       style={{ height, width: Math.round(height * WORDMARK_RATIO), ...maskStyle('/logo-mask.png') }}
     />

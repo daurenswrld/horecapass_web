@@ -25,9 +25,9 @@ export function Soon({
           <p className="text-sm leading-relaxed text-text-primary">{what}</p>
           {endpoint && (
             <p className="mt-3 text-xs text-text-secondary">
-              Данные для раздела уже отдаёт{" "}
-              <code className="rounded bg-surface-muted px-1.5 py-0.5">{endpoint}</code> — тот же
-              эндпоинт использует мобильное приложение.
+              Data for this section already comes from{" "}
+              <code className="rounded bg-surface-muted px-1.5 py-0.5">{endpoint}</code> — the same
+              endpoint the mobile app uses.
             </p>
           )}
         </Card>

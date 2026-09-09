@@ -18,7 +18,7 @@ import { isSample, SAMPLE_CANDIDATES } from '@/lib/demo/samples';
 import { cn, plural } from '@/lib/utils';
 
 /**
- * Подбор кандидатов — раздел с правками заказчицы (пункты 15–17 документа).
+ * Find candidates — раздел с правками заказчицы (пункты 15–17 документа).
  *
  * Список кандидатов и перевод по этапам работают по-настоящему: эндпоинты
  * `/api/applications/company/` и `/api/applications/<id>/status/` есть.
@@ -29,7 +29,7 @@ import { cn, plural } from '@/lib/utils';
  * и на экране об этом написано.
  */
 
-const DATE_FMT = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' });
+const DATE_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' });
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
   const [broken, setBroken] = React.useState(false);
@@ -51,7 +51,7 @@ function MatchBadge({ score }: { score: number }) {
   const tone =
     score >= 80 ? 'bg-surface-alt text-success' : score >= 55 ? 'bg-info-surface text-on-info-surface' : 'bg-surface-muted text-text-secondary';
   return (
-    <span className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', tone)} title="Совпадение с вакансией">
+    <span className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', tone)} title="Match with the job">
       {score}%
     </span>
   );
@@ -108,24 +108,24 @@ export default function SelectionPage() {
 
   const bulk = (label: string) => {
     setBulkNote(
-      `«${label}» для ${selected.length} ${plural(selected.length, 'кандидата', 'кандидатов', 'кандидатов')}: ` +
-        'пакетная операция выполняется на сервере, эндпоинта пока нет.',
+      `${label} for ${selected.length} ${plural(selected.length, 'candidate')}: ` +
+        'bulk actions run on the server, and the endpoint does not exist yet.',
     );
   };
 
   return (
     <>
       <PageHeader
-        title="Подбор"
-        subtitle={loading ? undefined : `${items.length} ${plural(items.length, 'отклик', 'отклика', 'откликов')}`}
+        title="Candidates"
+        subtitle={loading ? undefined : `${items.length} ${plural(items.length, 'application')}`}
       />
 
       <div className="space-y-4 px-5 py-5 md:px-8">
         <DemoNotice
           what={
             sample
-              ? 'Откликов на сервере пока нет — показаны примеры кандидатов. Корзина и массовые действия тоже показ: выбор хранится в браузере.'
-              : 'Список кандидатов и перевод по этапам работают по-настоящему. Корзина и массовые действия — показ замысла: выбор хранится в браузере.'
+              ? 'There are no applications on the server yet, so sample candidates are shown. The basket and bulk actions are a preview too: the selection is kept in the browser.'
+              : 'The candidate list and moving between stages are real. The basket and bulk actions are a preview: the selection is kept in the browser.'
           }
           endpoint="POST /api/applications/company/bulk/"
         />
@@ -136,8 +136,8 @@ export default function SelectionPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Имя, вакансия"
-              aria-label="Поиск кандидатов"
+              placeholder="Name, job"
+              aria-label="Search candidates"
               className="h-11 w-full rounded-full border border-line-strong bg-surface pl-10 pr-4 text-text-primary placeholder:text-text-tertiary focus-ring"
             />
           </div>
@@ -155,7 +155,7 @@ export default function SelectionPage() {
                     : 'bg-surface-muted text-text-secondary hover:text-text-primary',
                 )}
               >
-                {s === 'ALL' ? 'Все' : STATUS_LABEL[s]}
+                {s === 'ALL' ? 'All' : STATUS_LABEL[s]}
               </button>
             ))}
           </div>
@@ -175,9 +175,9 @@ export default function SelectionPage() {
 
         {!loading && !error && shown.length === 0 && (
           <Card className="p-8 text-center">
-            <p className="font-medium text-text-primary">Кандидатов нет</p>
+            <p className="font-medium text-text-primary">No candidates</p>
             <p className="mt-1 text-sm text-text-secondary">
-              Отклики появятся здесь, как только кандидаты откликнутся на ваши вакансии.
+              Applications will appear here as soon as candidates apply to your jobs.
             </p>
           </Card>
         )}
@@ -197,7 +197,7 @@ export default function SelectionPage() {
                 }
                 className="h-4 w-4 accent-[rgb(var(--accent))]"
               />
-              Выбрать всех в списке
+              Select all in the list
             </label>
 
             <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
@@ -215,7 +215,7 @@ export default function SelectionPage() {
                       type="checkbox"
                       checked={picked}
                       onChange={() => toggle(a.id)}
-                      aria-label={`Выбрать: ${a.applicant}`}
+                      aria-label={`Select ${a.applicant}`}
                       className="mt-3 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
                     />
                     <Avatar name={a.applicant} url={a.avatarUrl} />
@@ -233,13 +233,13 @@ export default function SelectionPage() {
                         </span>
                         {isSample(a.id) && (
                           <span className="rounded-full border border-dashed border-line-strong px-2 py-0.5 text-[11px] text-text-secondary">
-                            пример
+                            sample
                           </span>
                         )}
                       </div>
                       <p className="mt-0.5 truncate text-sm text-text-secondary">{a.vacancyTitle}</p>
                       <p className="mt-0.5 text-xs text-text-secondary">
-                        Отклик {DATE_FMT.format(a.createdAt)}
+                        Applied {DATE_FMT.format(a.createdAt)}
                       </p>
                     </div>
                   </Card>
@@ -256,25 +256,25 @@ export default function SelectionPage() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="flex items-center gap-2 font-semibold text-text-primary">
               <ShoppingBasket size={18} className="text-accent" />
-              Выбрано: {selected.length}
+              Selected: {selected.length}
             </span>
 
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => bulk('Пригласить на интервью')}>
+              <Button size="sm" onClick={() => bulk('Invite to interview')}>
                 <UserCheck size={15} />
-                Пригласить
+                Invite
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => bulk('В шорт-лист')}>
+              <Button variant="secondary" size="sm" onClick={() => bulk('Shortlist')}>
                 <Check size={15} />
-                В шорт-лист
+                Shortlist
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => bulk('Написать сообщение')}>
+              <Button variant="secondary" size="sm" onClick={() => bulk('Send a message')}>
                 <MessageSquare size={15} />
-                Написать
+                Message
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => bulk('Отклонить')}>
+              <Button variant="secondary" size="sm" onClick={() => bulk('Reject')}>
                 <UserX size={15} />
-                Отклонить
+                Reject
               </Button>
             </div>
 
@@ -287,7 +287,7 @@ export default function SelectionPage() {
               className="ml-auto inline-flex items-center gap-1.5 rounded text-sm text-text-secondary hover:text-text-primary focus-ring"
             >
               <X size={15} />
-              Снять выбор
+              Clear selection
             </button>
           </div>
 

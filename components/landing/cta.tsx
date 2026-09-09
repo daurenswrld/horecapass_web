@@ -31,16 +31,16 @@ export function HeroCta() {
       <>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
           <Link href="/register?role=applicant" className={PRIMARY}>
-            <Search size={18} />Я ищу работу
+            <Search size={18} />I am looking for work
           </Link>
           <Link href="/register?role=company" className={SECONDARY}>
-            <Briefcase size={18} />Я нанимаю
+            <Briefcase size={18} />I am hiring
           </Link>
         </div>
         <p className="mt-5 text-sm text-text-secondary">
-          Регистрация без пароля — по коду из письма.{' '}
+          Sign up without a password, using a code from your email.{' '}
           <Link href="/login" className="font-semibold text-accent-text underline-offset-4 hover:underline">
-            У меня уже есть аккаунт
+            I already have an account
           </Link>
         </p>
       </>
@@ -55,15 +55,15 @@ export function HeroCta() {
       <div className="mt-9 flex flex-col gap-3 sm:flex-row">
         <Link href={homeFor(user)} className={PRIMARY}>
           <LayoutDashboard size={18} />
-          {company ? 'Мои вакансии' : 'Смотреть вакансии'}
+          {company ? 'My jobs' : 'Browse jobs'}
         </Link>
         <Link href={company ? '/company/selection' : '/responses'} className={SECONDARY}>
           {company ? <UserSearch size={18} /> : <Search size={18} />}
-          {company ? 'Подбор кандидатов' : 'Мои отклики'}
+          {company ? 'Find candidates' : 'My applications'}
         </Link>
       </div>
       <p className="mt-5 text-sm text-text-secondary">
-        {name ? `Вы вошли как ${name}.` : 'Вы вошли в аккаунт.'} Сессия та же, что в мобильном приложении.
+        {name ? `Signed in as ${name}.` : 'You are signed in.'} Same session as in the mobile app.
       </p>
     </>
   );
@@ -78,7 +78,7 @@ export function AllVacanciesLink() {
       href={user ? homeFor(user) : '/register?role=applicant'}
       className="mt-8 inline-flex items-center gap-1.5 font-semibold text-accent-text underline-offset-4 hover:underline focus-ring"
     >
-      Смотреть все вакансии
+      See all jobs
       <ArrowRight size={16} />
     </Link>
   );
@@ -93,29 +93,29 @@ export function FinalCta() {
     <section className="border-t border-line bg-surface-muted">
       <div className="mx-auto max-w-6xl px-6 py-16 text-center lg:px-10 lg:py-20">
         <h2 className="text-3xl font-bold tracking-tight text-text-primary lg:text-4xl">
-          {user ? 'Продолжим с того же места' : 'Начните с бесплатной регистрации'}
+          {user ? 'Pick up where you left off' : 'Start with a free account'}
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-text-secondary">
           {user
             ? company
-              ? 'Ваши вакансии и отклики кандидатов ждут в кабинете.'
-              : 'Подходящие вакансии и статусы ваших откликов — в кабинете.'
-            : 'Займёт минуту: почта и код из письма. Дальше — вакансии или ваша первая публикация.'}
+              ? 'Your jobs and candidate applications are waiting in the dashboard.'
+              : 'Matching jobs and your application statuses are in the dashboard.'
+            : 'It takes a minute: your email and a code. Then jobs, or your first job post.'}
         </p>
 
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           {user ? (
             <Link href={homeFor(user)} className={PRIMARY}>
               <LayoutDashboard size={18} />
-              Перейти в кабинет
+              Go to dashboard
             </Link>
           ) : (
             <>
               <Link href="/register?role=applicant" className={PRIMARY}>
-                Я ищу работу
+                I am looking for work
               </Link>
               <Link href="/register?role=company" className={SECONDARY}>
-                Я нанимаю
+                I am hiring
               </Link>
             </>
           )}
@@ -133,7 +133,7 @@ export function FooterAccountLink() {
       href={user ? homeFor(user) : '/login'}
       className="rounded transition-colors hover:text-text-primary focus-ring"
     >
-      {user ? 'В кабинет' : 'Войти'}
+      {user ? 'Open dashboard' : 'Sign in'}
     </Link>
   );
 }

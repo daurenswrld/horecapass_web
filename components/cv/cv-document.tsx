@@ -15,7 +15,7 @@ import {
 import { cn, plural } from "@/lib/utils";
 
 /**
- * Профиль кандидата в виде резюме.
+ * Profile кандидата в виде резюме.
  *
  * Заказчица: «в конце итоги резюме, то есть профайл кандидата, должен
  * выглядеть как красиво сделанное резюме, а не как профайл в платформе».
@@ -36,16 +36,16 @@ interface Props {
 }
 
 const SLOT_TITLES: Partial<Record<CvSlot, string>> = {
-  specifics: "Профессиональная специфика",
-  systems: "Системы",
-  skills: "Навыки",
-  languages: "Языки",
-  portfolio: "Портфолио и документы",
+  specifics: "Professional specifics",
+  systems: "Systems",
+  skills: "Skills",
+  languages: "Languages",
+  portfolio: "Portfolio and documents",
 };
 
 function formatValue(q: Question, v: unknown): string {
   if (Array.isArray(v)) return v.join(" · ");
-  if (typeof v === "boolean") return v ? "Да" : "Нет";
+  if (typeof v === "boolean") return v ? "Yes" : "No";
   if (q.kind === "scale") return `${v} / ${q.max ?? 5}`;
   if (q.unit) return `${v} ${q.unit}`;
   return String(v);
@@ -55,7 +55,7 @@ function formatValue(q: Question, v: unknown): string {
  *  буквы. Иначе получается «12 лет в HoReCa. основная секция — Grill». */
 function summary(parts: string[]): string {
   if (parts.length === 0)
-    return "Профиль пока пустой — пройдите анкету, и здесь появится краткое описание.";
+    return "The profile is empty. Answer the questions and a short summary will appear here.";
   return (
     parts.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(". ") + "."
   );
@@ -83,7 +83,7 @@ function Row({
           <button
             type="button"
             onClick={() => onEdit(q.id)}
-            aria-label={`Изменить: ${q.label}`}
+            aria-label={`Edit ${q.label}`}
             className="shrink-0 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:text-text-primary focus-ring group-hover:opacity-100 focus-visible:opacity-100"
           >
             <Pencil size={13} />
@@ -137,7 +137,7 @@ function Section({
 export function CvDocument({
   profession,
   answers,
-  candidateName = "Ваше имя",
+  candidateName = "Your name",
   onEdit,
 }: Props) {
   const [note, setNote] = React.useState<string | null>(null);
@@ -161,7 +161,7 @@ export function CvDocument({
     // Собирать вложения в один архив с пересжатием должен сервер: в браузере
     // «файлов» нет, есть только их имена.
     setNote(
-      `Файлов к выгрузке: ${attachments.length}. Архив собирает сервер — эндпоинта пока нет.`,
+      `Files to export: ${attachments.length}. The archive is built on the server, and the endpoint does not exist yet.`,
     );
   };
 
@@ -171,8 +171,8 @@ export function CvDocument({
         {/* Портрет — обязательное поле по правке Алдияра. */}
         <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-muted text-center text-[11px] leading-tight text-text-secondary">
           {isBlank(answers.photo_portrait)
-            ? "Портретное\nфото"
-            : "Фото\nзагружено"}
+            ? "Portrait\nphoto"
+            : "Photo\nuploaded"}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -187,13 +187,13 @@ export function CvDocument({
             {summary(
               [
                 !isBlank(years) &&
-                  `${years} ${plural(Number(years), "год", "года", "лет")} в HoReCa`,
+                  `${years} ${plural(Number(years), "year")} in hospitality`,
                 Array.isArray(answers.venue_types) &&
                   answers.venue_types.length > 0 &&
                   answers.venue_types.join(", "),
                 typeof answers.main_section === "string" &&
-                  `основная секция — ${answers.main_section}`,
-                languages.length > 0 && `языки: ${languages.join(", ")}`,
+                  `main section: ${answers.main_section}`,
+                languages.length > 0 && `languages: ${languages.join(", ")}`,
               ].filter(
                 (x): x is string => typeof x === "string" && x.length > 0,
               ),
@@ -202,16 +202,16 @@ export function CvDocument({
 
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-text-secondary">
             {!isBlank(answers.height_cm) && (
-              <span>Рост {String(answers.height_cm)} см</span>
+              <span>Height {String(answers.height_cm)} cm</span>
             )}
             {!isBlank(answers.weight_kg) && (
-              <span>Вес {String(answers.weight_kg)} кг</span>
+              <span>Weight {String(answers.weight_kg)} kg</span>
             )}
             {!isBlank(answers.visa_status) && (
               <span>{String(answers.visa_status)}</span>
             )}
             {!isBlank(answers.relocation) && (
-              <span>Релокация: {String(answers.relocation)}</span>
+              <span>Relocation: {String(answers.relocation)}</span>
             )}
           </div>
         </div>
@@ -250,7 +250,7 @@ export function CvDocument({
             {SLOT_TITLES.portfolio}
           </h2>
           {attachments.length === 0 ? (
-            <p className="text-sm text-text-secondary">Пока ничего не загружено.</p>
+            <p className="text-sm text-text-secondary">Nothing uploaded yet.</p>
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
@@ -271,7 +271,7 @@ export function CvDocument({
                 onClick={handleDownload}
               >
                 <Download size={15} />
-                Скачать одним файлом
+                Download as one file
               </Button>
             </>
           )}
@@ -288,8 +288,8 @@ export function CvDocument({
       <footer
         className={cn("mt-6 border-t border-line pt-4 text-xs text-text-secondary")}
       >
-        Резюме собрано автоматически из ваших ответов. Любое поле можно
-        поправить вручную — наведите на строку.
+        This CV was assembled automatically from your answers. Any field can be edited
+        by hand: hover over a row.
       </footer>
     </article>
   );

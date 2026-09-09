@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
 
 /**
- * Профиль компании как HR-бренд — пункт 13 документа заказчицы.
+ * Company profile как HR-бренд — пункт 13 документа заказчицы.
  *
  * «У работодателя должен быть полноценный Company Profile. Это фактически
  * HR Branding page внутри платформы»: Who We Are, Why Work With Us, Our
@@ -22,34 +22,34 @@ import { cn } from '@/lib/utils';
  */
 
 const TEXT_FIELDS: { key: keyof CompanyBrand; label: string; hint: string; rows: number }[] = [
-  { key: 'whoWeAre', label: 'Кто мы', hint: 'Одно-два предложения: чем занимается компания.', rows: 3 },
-  { key: 'whyUs', label: 'Почему стоит работать у нас', hint: 'Главный ответ на вопрос кандидата.', rows: 3 },
-  { key: 'about', label: 'О компании', hint: 'История, масштаб, чем гордитесь.', rows: 4 },
-  { key: 'projects', label: 'Наши проекты', hint: 'Рестораны, отели, площадки.', rows: 3 },
-  { key: 'achievements', label: 'Достижения', hint: 'Награды, рейтинги, результаты.', rows: 3 },
-  { key: 'culture', label: 'Культура', hint: 'Как устроена работа в команде.', rows: 3 },
+  { key: 'whoWeAre', label: 'Who we are', hint: 'A sentence or two about what the company does.', rows: 3 },
+  { key: 'whyUs', label: 'Why work with us', hint: 'The main answer to the candidate question.', rows: 3 },
+  { key: 'about', label: 'About the company', hint: 'History, scale, what you are proud of.', rows: 4 },
+  { key: 'projects', label: 'Our projects', hint: 'Restaurants, hotels, venues.', rows: 3 },
+  { key: 'achievements', label: 'Achievements', hint: 'Awards, ratings, results.', rows: 3 },
+  { key: 'culture', label: 'Culture', hint: 'How the team works together.', rows: 3 },
 ];
 
-/** Что предлагают сотруднику — список из документа заказчицы. */
+/** What they offer сотруднику — список из документа заказчицы. */
 const OFFER_OPTIONS = [
-  'Питание',
-  'Проживание',
-  'Транспорт',
-  'Страховка',
-  'Обучение',
-  'Карьерный рост',
-  'Форма',
-  'Бонусы',
-  'Оплата визы',
-  'Билеты',
+  'Meals',
+  'Accommodation',
+  'Transport',
+  'Insurance',
+  'Training',
+  'Career growth',
+  'Uniform',
+  'Bonuses',
+  'Visa costs covered',
+  'Flights',
 ];
 
 const DEFAULT_STEPS = [
-  'Отбор по резюме',
-  'Интервью с HR',
-  'Интервью с руководителем',
-  'Стажировка',
-  'Оффер',
+  'CV screening',
+  'HR interview',
+  'Interview with the manager',
+  'Trial shift',
+  'Offer',
 ];
 
 export default function CompanyProfilePage() {
@@ -82,25 +82,25 @@ export default function CompanyProfilePage() {
   const toggleOffer = (item: string) =>
     set('offer', brand.offer.includes(item) ? brand.offer.filter((x) => x !== item) : [...brand.offer, item]);
 
-  const companyName = user?.company_name || 'Ваша компания';
+  const companyName = user?.company_name || 'Your company';
 
   return (
     <>
       <PageHeader
-        title="Профиль компании"
+        title="Company profile"
         subtitle={companyName}
         actions={
           <Button variant="secondary" size="sm" onClick={() => setEditing((v) => !v)}>
             {editing ? <Eye size={15} /> : <Pencil size={15} />}
-            {editing ? 'Посмотреть глазами кандидата' : 'Редактировать'}
+            {editing ? 'View as a candidate' : 'Edit'}
           </Button>
         }
       />
 
       <div className="space-y-4 px-5 py-6 md:px-8">
         <DemoNotice
-          what="Страница работодателя как HR-бренд: то, что кандидат увидит перед откликом. Пока полей под это в сериализаторе компании нет, текст хранится в браузере."
-          endpoint="PATCH /users/api/users/me/company/ — поля who_we_are, why_us, projects, achievements, offer, culture, hiring_steps"
+          what="The employer page as an HR brand: what a candidate sees before applying. There are no fields for this in the company serializer yet, so the text is kept in the browser."
+          endpoint="PATCH /users/api/users/me/company/ with fields who_we_are, why_us, projects, achievements, offer, culture, hiring_steps"
         />
 
         {editing ? (
@@ -122,7 +122,7 @@ export default function CompanyProfilePage() {
             ))}
 
             <div>
-              <p className="text-sm font-medium text-text-secondary">Что предлагаем сотруднику</p>
+              <p className="text-sm font-medium text-text-secondary">What we offer</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {OFFER_OPTIONS.map((o) => {
                   const on = brand.offer.includes(o);
@@ -147,9 +147,9 @@ export default function CompanyProfilePage() {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-text-secondary">Этапы найма</p>
+              <p className="text-sm font-medium text-text-secondary">Hiring process</p>
               <p className="mt-1 text-sm text-text-secondary">
-                Кандидат увидит их до отклика и будет понимать, сколько шагов впереди.
+                Candidates see them before applying and know how many steps lie ahead.
               </p>
 
               {brand.hiringSteps.length === 0 && (
@@ -159,7 +159,7 @@ export default function CompanyProfilePage() {
                   className="mt-2"
                   onClick={() => set('hiringSteps', DEFAULT_STEPS)}
                 >
-                  Подставить типовые
+                  Use a typical set
                 </Button>
               )}
 
@@ -172,7 +172,7 @@ export default function CompanyProfilePage() {
                     <span className="flex-1 text-sm text-text-primary">{step}</span>
                     <button
                       type="button"
-                      aria-label={`Убрать этап: ${step}`}
+                      aria-label={`Remove stage: ${step}`}
                       onClick={() => set('hiringSteps', brand.hiringSteps.filter((_, j) => j !== i))}
                       className="rounded p-1 text-text-secondary hover:text-danger focus-ring"
                     >
@@ -194,15 +194,15 @@ export default function CompanyProfilePage() {
               >
                 <div className="flex-1">
                   <Field
-                    label="Добавить этап"
+                    label="Add a stage"
                     value={stepDraft}
                     onChange={(e) => setStepDraft(e.target.value)}
-                    placeholder="Например, практическое задание"
+                    placeholder="e.g. practical assignment"
                   />
                 </div>
                 <Button type="submit" disabled={!stepDraft.trim()}>
                   <Plus size={16} />
-                  Добавить
+                  Add
                 </Button>
               </form>
             </div>
@@ -218,12 +218,12 @@ export default function CompanyProfilePage() {
 /** Как страницу увидит кандидат. */
 function BrandPreview({ brand, companyName }: { brand: CompanyBrand; companyName: string }) {
   const sections = [
-    ['Кто мы', brand.whoWeAre],
-    ['Почему стоит работать у нас', brand.whyUs],
-    ['О компании', brand.about],
-    ['Наши проекты', brand.projects],
-    ['Достижения', brand.achievements],
-    ['Культура', brand.culture],
+    ['Who we are', brand.whoWeAre],
+    ['Why work with us', brand.whyUs],
+    ['About the company', brand.about],
+    ['Our projects', brand.projects],
+    ['Achievements', brand.achievements],
+    ['Culture', brand.culture],
   ].filter((s): s is [string, string] => !!s[1]?.trim());
 
   const empty = sections.length === 0 && brand.offer.length === 0 && brand.hiringSteps.length === 0;
@@ -234,8 +234,8 @@ function BrandPreview({ brand, companyName }: { brand: CompanyBrand; companyName
 
       {empty && (
         <p className="mt-3 text-sm text-text-secondary">
-          Пока пусто. Нажмите «Редактировать» и расскажите о компании — это первое, что читает
-          кандидат перед откликом.
+          Empty for now. Press Edit and tell candidates about the company: this is the first
+          thing they read before applying.
         </p>
       )}
 
@@ -249,7 +249,7 @@ function BrandPreview({ brand, companyName }: { brand: CompanyBrand; companyName
       {brand.offer.length > 0 && (
         <section className="mt-6 border-t border-line pt-5">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-accent-text">
-            Что предлагаем
+            What we offer
           </h3>
           <div className="mt-2.5 flex flex-wrap gap-2">
             {brand.offer.map((o) => (
@@ -264,7 +264,7 @@ function BrandPreview({ brand, companyName }: { brand: CompanyBrand; companyName
       {brand.hiringSteps.length > 0 && (
         <section className="mt-6 border-t border-line pt-5">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-accent-text">
-            Как проходит отбор
+            How hiring works
           </h3>
           <ol className="mt-3 space-y-2.5">
             {brand.hiringSteps.map((step, i) => (
@@ -278,7 +278,7 @@ function BrandPreview({ brand, companyName }: { brand: CompanyBrand; companyName
           </ol>
           <p className="mt-3 flex items-center gap-2 text-sm text-text-secondary">
             <Check size={15} className="text-success" />
-            Кандидат видит эти этапы до отклика
+            Candidates see these stages before applying
           </p>
         </section>
       )}

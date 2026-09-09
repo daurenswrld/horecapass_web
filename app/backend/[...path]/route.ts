@@ -69,7 +69,7 @@ async function proxy(req: NextRequest, path: string[]) {
       cache: 'no-store',
     });
   } catch {
-    return Response.json({ detail: 'Бэкенд недоступен.' }, { status: 502 });
+    return Response.json({ detail: 'Backend is unavailable.' }, { status: 502 });
   }
 
   const responseHeaders = new Headers();

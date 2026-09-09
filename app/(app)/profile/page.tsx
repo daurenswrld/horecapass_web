@@ -15,10 +15,10 @@ import { useAuth } from '@/lib/auth/context';
 import { plural } from '@/lib/utils';
 
 /**
- * Профиль кандидата — раздел, который заказчица просила переделать.
+ * Profile кандидата — раздел, который заказчица просила переделать.
  *
  * Здесь показан её замысел, а не то, что сейчас в мобилке:
- *  • анкета идёт разговором, отвечать можно голосом или текстом;
+ *  • анкета идёт разговором, отвечать можно by voice или текстом;
  *  • набор вопросов зависит от профессии — «если хостес, то один параметр,
  *    если официант, другой... это всё должно быть вшито в платформу»;
  *  • на выходе не карточка платформы, а лист резюме.
@@ -48,7 +48,7 @@ export default function ProfilePage() {
 
   const profession = getProfession(professionId);
   const candidateName =
-    [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Ваше имя';
+    [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Your name';
 
   if (!loaded) {
     return (
@@ -78,20 +78,20 @@ export default function ProfilePage() {
   if (mode === 'pick' || !profession) {
     return (
       <>
-        <PageHeader title="Профиль" subtitle="Соберём резюме за один разговор" />
+        <PageHeader title="Profile" subtitle="We will build your CV in one conversation" />
         <div className="space-y-5 px-5 py-6 md:px-8">
           <DemoNotice
-            what="Так профиль выглядит по замыслу заказчика: вопросы задаются по одной, ответить можно голосом или текстом, набор вопросов зависит от профессии."
+            what="This is the profile as the client intended it: questions are asked one at a time, you can answer by voice or text, and the question set depends on the profession."
             endpoint="GET/PUT /api/resumes/my/<id>/profession-profile/"
           />
 
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
-              Кем вы работаете?
+              What do you do?
             </h2>
             <p className="mt-1.5 text-sm text-text-secondary">
-              От профессии зависит, о чём спросим: у хостес, официанта, шефа и менеджера наборы
-              параметров разные.
+              The profession decides what we ask: a hostess, a waiter, a chef and a manager each
+              have their own set of parameters.
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -118,8 +118,7 @@ export default function ProfilePage() {
                         </span>
                         <span className="mt-0.5 block text-sm text-text-secondary">{p.blurb}</span>
                         <span className="mt-2 block text-xs text-text-secondary">
-                          ~{count} {plural(count, 'вопрос', 'вопроса', 'вопросов')} · свои параметры
-                          позиции
+                          ~{count} {plural(count, 'question')} · its own position parameters
                         </span>
                       </span>
                     </Card>
@@ -138,12 +137,12 @@ export default function ProfilePage() {
   return (
     <>
       <PageHeader
-        title="Профиль"
+        title="Profile"
         subtitle={profession.title}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => setMode('chat')}>
-              Дополнить анкету
+              Continue the questions
             </Button>
             <Button
               variant="ghost"
@@ -154,10 +153,10 @@ export default function ProfilePage() {
                 setAnswers({});
                 setMode('pick');
               }}
-              title="Выбрать другую профессию и начать заново"
+              title="Pick another profession and start over"
             >
               <RotateCcw size={15} />
-              Заново
+              Start over
             </Button>
           </div>
         }
@@ -165,7 +164,7 @@ export default function ProfilePage() {
 
       <div className="space-y-4 px-5 py-6 md:px-8">
         <DemoNotice
-          what="Резюме собрано из ответов и хранится в браузере. Когда появится эндпоинт, эти же данные уедут на сервер и станут доступны работодателю."
+          what="The CV is built from your answers and kept in the browser. Once the endpoint exists, the same data will go to the server and become visible to employers."
           endpoint="GET/PUT /api/resumes/my/<id>/profession-profile/"
         />
 

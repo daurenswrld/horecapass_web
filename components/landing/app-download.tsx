@@ -62,7 +62,7 @@ async function StoreCard({ store }: { store: StoreLink }) {
       <StoreGlyph id={store.id} />
       <span className="text-left leading-tight">
         <span className="block text-[11px] uppercase tracking-wide opacity-80">
-          {store.url ? store.caption : 'Скоро в'}
+          {store.url ? store.caption : 'Coming soon to'}
         </span>
         <span className="block text-base font-semibold">{store.name}</span>
       </span>
@@ -79,7 +79,7 @@ async function StoreCard({ store }: { store: StoreLink }) {
           <span className="h-full w-full" dangerouslySetInnerHTML={{ __html: qr }} />
         ) : (
           <span className="px-2 text-center text-[11px] leading-tight text-qr-ink">
-            QR появится после публикации
+            QR appears after release
           </span>
         )}
       </div>
@@ -105,7 +105,7 @@ async function StoreCard({ store }: { store: StoreLink }) {
 
         <p className="mt-3 text-sm text-text-secondary">{store.requirement}</p>
         {store.url && (
-          <p className="mt-1 text-sm text-text-secondary">Наведите камеру телефона на код</p>
+          <p className="mt-1 text-sm text-text-secondary">Point your phone camera at the code</p>
         )}
       </div>
     </div>
@@ -120,8 +120,8 @@ export async function AppDownload() {
           <Smartphone size={24} className="text-accent-text" />
         </span>
         <p className="max-w-2xl leading-relaxed text-text-secondary">
-          Отклики, чаты и резюме синхронизированы: сервер один. Запись видео-презентации
-          и голосовых сообщений в чате доступна только в приложении.
+          Applications, chats and your CV stay in sync: one server. Recording a video intro
+          and voice messages is available in the app only.
         </p>
       </div>
 

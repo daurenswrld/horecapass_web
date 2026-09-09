@@ -23,13 +23,13 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
       <div className="grid flex-1 items-center gap-12 py-10 lg:grid-cols-2">
         <section className="hidden lg:block">
           <h2 className="text-3xl font-bold leading-tight tracking-tight text-text-primary">
-            Одна учётная запись на приложение и сайт
+            One account for the app and the web
           </h2>
           <ul className="mt-8 space-y-5">
             {[
-              ['Без пароля', 'Вводите почту и шестизначный код из письма — придумывать и вспоминать нечего.'],
-              ['Всё синхронно', 'Отклики, чаты и резюме те же, что в телефоне: сервер один.'],
-              ['Удобнее за компьютером', 'Список вакансий и карточка открыты одновременно, ничего не теряется.'],
+              ['No password', 'Enter your email and the six-digit code from the letter. Nothing to invent or remember.'],
+              ['Everything in sync', 'Applications, chats and your CV are the same as on your phone: one server.'],
+              ['Better on a big screen', 'The job list and the job card stay open side by side, so you never lose your place.'],
             ].map(([title, text]) => (
               <li key={title} className="flex gap-3">
                 <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />

@@ -20,7 +20,7 @@ import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
 
 /**
- * Чаты. Повторяет экраны *_chats_screen.dart и *_chat_conversation_live_screen.dart
+ * Chats. Повторяет экраны *_chats_screen.dart и *_chat_conversation_live_screen.dart
  * мобилки: список комнат, история по REST, живые сообщения вебсокетом.
  *
  * На телефоне это два экрана, здесь — две колонки: переписка открывается
@@ -31,13 +31,13 @@ import { cn } from '@/lib/utils';
  * так же написано и на лендинге.
  */
 
-const TIME_FMT = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' });
-const DAY_FMT = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
+const TIME_FMT = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' });
+const DAY_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long' });
 
 function roomTitle(room: ChatRoom): string {
-  if (room.chatType === 'SUPPORT') return 'Поддержка';
-  if (room.chatType === 'ASSISTANT') return 'Ассистент';
-  return room.peer?.displayName ?? room.applicationSummary?.companyName ?? 'Чат';
+  if (room.chatType === 'SUPPORT') return 'Support';
+  if (room.chatType === 'ASSISTANT') return 'Assistant';
+  return room.peer?.displayName ?? room.applicationSummary?.companyName ?? 'Chat';
 }
 
 function roomSubtitle(room: ChatRoom): string | null {
@@ -95,7 +95,7 @@ function RoomRow({ room, active, onClick }: { room: ChatRoom; active: boolean; o
         )}
         <span className="mt-1 flex items-center justify-between gap-2">
           <span className="truncate text-sm text-text-secondary">
-            {last ? (last.isVoice ? 'Голосовое сообщение' : last.text) : 'Сообщений пока нет'}
+            {last ? (last.isVoice ? 'Voice message' : last.text) : 'No messages yet'}
           </span>
           {room.unreadCount > 0 && (
             <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-accent-strong px-1.5 text-xs font-semibold text-on-accent">
@@ -122,8 +122,8 @@ function Bubble({ message, own }: { message: ChatMessage; own: boolean }) {
           <span className="flex flex-col gap-2">
             <span className="flex items-center gap-2">
               <Mic size={15} />
-              Голосовое сообщение
-              {message.audioDuration ? ` · ${message.audioDuration} с` : ''}
+              Voice message
+              {message.audioDuration ? ` · ${message.audioDuration}s` : ''}
             </span>
             {/* Слушать можно, записывать — нет: запись оставлена приложению. */}
             <audio controls preload="none" src={message.audioUrl ?? undefined} className="max-w-full" />
@@ -183,7 +183,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
         setMessages([...list].reverse());
         void chatsApi.markRead(room.id).then(() => onRead(room.id)).catch(() => {});
       })
-      .catch(() => !cancelled && setError('Не удалось загрузить переписку.'))
+      .catch(() => !cancelled && setError('Could not load the conversation.'))
       .finally(() => !cancelled && setLoading(false));
 
     return () => {
@@ -191,7 +191,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
     };
   }, [room.id, onRead]);
 
-  // Живое соединение. Отдельно от загрузки истории: если вебсокет не поднялся,
+  // Живое соединение. Departmentьно от загрузки истории: если вебсокет не поднялся,
   // переписку всё равно можно читать и отправлять сообщения по REST.
   React.useEffect(() => {
     if (isSample(room.id)) return;
@@ -241,7 +241,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
       if (isSample(room.id)) {
         setMessages((prev) => [
           ...prev,
-          { id: Date.now(), room: room.id, sender: { id: user?.id ?? 0, firstName: 'Вы', lastName: '', role: '', avatar: null, displayName: 'Вы' },
+          { id: Date.now(), room: room.id, sender: { id: user?.id ?? 0, firstName: 'You', lastName: '', role: '', avatar: null, displayName: 'You' },
             text: value, createdAt: new Date(), suggestions: [], audioUrl: null, audioDuration: null, isVoice: false },
         ]);
         return;
@@ -255,7 +255,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
         setMessages((prev) => [...prev, sent]);
       }
     } catch {
-      setError('Сообщение не отправлено. Попробуйте ещё раз.');
+      setError('Message not sent. Please try again.');
       setText(value);
     } finally {
       setSending(false);
@@ -276,9 +276,9 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
         </div>
         <span
           className={cn('text-xs', live ? 'text-success' : 'text-text-secondary')}
-          title={live ? 'Новые сообщения приходят сразу' : 'Соединение не установлено, сообщения уходят обычным запросом'}
+          title={live ? 'New messages arrive instantly' : 'No live connection, messages are sent as regular requests'}
         >
-          {live ? 'на связи' : 'без live'}
+          {live ? 'live' : 'offline'}
         </span>
       </header>
 
@@ -293,7 +293,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
 
         {!loading && !error && messages.length === 0 && (
           <p className="py-16 text-center text-sm text-text-secondary">
-            Сообщений пока нет. Напишите первым.
+            No messages yet. Say hello.
           </p>
         )}
 
@@ -352,13 +352,13 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
             }
           }}
           rows={1}
-          placeholder="Сообщение"
-          aria-label="Текст сообщения"
+          placeholder="Message"
+          aria-label="Message text"
           className="max-h-32 min-h-11 flex-1 resize-none overflow-y-auto rounded border border-line-strong bg-surface px-3.5 py-2.5 text-text-primary placeholder:text-text-tertiary focus-ring scroll-slim"
         />
         <Button type="submit" disabled={!text.trim() || sending} className="shrink-0">
           <Send size={16} />
-          Отправить
+          Send
         </Button>
       </form>
     </div>
@@ -381,7 +381,7 @@ export function ChatScreen() {
       .rooms()
       .then((list) => {
         if (cancelled) return;
-        // На новом аккаунте переписок нет — показываем пример, иначе раздел
+        // На новом аккаунте переписок нет — показываем sample, иначе раздел
         // выглядит сломанным.
         setSample(list.length === 0);
         list = list.length > 0 ? list : SAMPLE_ROOMS;
@@ -409,19 +409,19 @@ export function ChatScreen() {
   return (
     <>
       <PageHeader
-        title="Чаты"
-        subtitle={loading ? undefined : totalUnread > 0 ? `Непрочитанных: ${totalUnread}` : undefined}
+        title="Chats"
+        subtitle={loading ? undefined : totalUnread > 0 ? `Unread: ${totalUnread}` : undefined}
         actions={
           <Button variant="secondary" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
             <RefreshCw size={15} />
-            Обновить
+            Refresh
           </Button>
         }
       />
 
       {sample && (
         <div className="px-5 pt-4 md:px-8">
-          <DemoNotice what="Переписок на сервере пока нет — показан пример диалога с кандидатом. Отправленные здесь сообщения никуда не уходят." />
+          <DemoNotice what="There are no chats on the server yet, so this is a sample conversation with a candidate. Messages sent here go nowhere." />
         </div>
       )}
 
@@ -442,9 +442,9 @@ export function ChatScreen() {
           {!loading && !error && rooms.length === 0 && (
             <Card className="p-8 text-center">
               <MessageSquare size={22} className="mx-auto text-text-secondary" />
-              <p className="mt-3 font-medium text-text-primary">Чатов пока нет</p>
+              <p className="mt-3 font-medium text-text-primary">No chats yet</p>
               <p className="mt-1 text-sm text-text-secondary">
-                Переписка появится после отклика на вакансию.
+                Chats appear once you apply to a job.
               </p>
             </Card>
           )}
@@ -459,7 +459,7 @@ export function ChatScreen() {
             <Conversation room={selected} onRead={clearUnread} />
           ) : (
             <p className="grid flex-1 place-items-center p-8 text-center text-sm text-text-secondary">
-              Выберите переписку слева.
+              Pick a conversation on the left.
             </p>
           )}
         </Card>

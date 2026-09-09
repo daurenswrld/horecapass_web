@@ -101,7 +101,7 @@ export function OnboardingChat({ profession, onDone }: Props) {
               {profession.title}
             </p>
             <p className="text-xs text-text-secondary">
-              Профиль заполнен на {state.progress}%
+              Profile {state.progress}% complete
             </p>
           </div>
         </div>
@@ -133,7 +133,7 @@ export function OnboardingChat({ profession, onDone }: Props) {
                 {m.byVoice && (
                   <span className="ml-2 inline-flex items-center gap-1 align-middle text-[11px] opacity-70">
                     <Mic size={11} />
-                    голосом
+                    by voice
                   </span>
                 )}
               </div>

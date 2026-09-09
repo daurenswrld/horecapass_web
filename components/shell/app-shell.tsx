@@ -39,17 +39,17 @@ interface NavItem {
 }
 
 const APPLICANT_NAV: NavItem[] = [
-  { href: '/jobs', label: 'Вакансии', Icon: Search },
-  { href: '/responses', label: 'Отклики', Icon: FileText },
-  { href: '/chats', label: 'Чаты', Icon: MessageSquare },
-  { href: '/profile', label: 'Профиль', Icon: User },
+  { href: '/jobs', label: 'Jobs', Icon: Search },
+  { href: '/responses', label: 'Applications', Icon: FileText },
+  { href: '/chats', label: 'Chats', Icon: MessageSquare },
+  { href: '/profile', label: 'Profile', Icon: User },
 ];
 
 const COMPANY_NAV: NavItem[] = [
-  { href: '/company/vacancies', label: 'Вакансии', Icon: Briefcase },
-  { href: '/company/selection', label: 'Подбор', Icon: UserSearch },
-  { href: '/company/chats', label: 'Чаты', Icon: MessageSquare },
-  { href: '/company/profile', label: 'Профиль', Icon: User },
+  { href: '/company/vacancies', label: 'Jobs', Icon: Briefcase },
+  { href: '/company/selection', label: 'Candidates', Icon: UserSearch },
+  { href: '/company/chats', label: 'Chats', Icon: MessageSquare },
+  { href: '/company/profile', label: 'Profile', Icon: User },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [user.first_name, user.last_name].filter(Boolean).join(' ') ||
     user.company_name ||
     user.email ||
-    'Аккаунт';
+    'Account';
 
   return (
     <div className="flex min-h-[100dvh]">
@@ -111,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="px-3">
             <p className="truncate text-sm font-medium text-text-primary">{name}</p>
             <p className="truncate text-xs text-text-secondary">
-              {isCompany(user.role) ? 'Работодатель' : 'Соискатель'}
+              {isCompany(user.role) ? 'Employer' : 'Candidate'}
             </p>
           </div>
           <div className="flex items-center justify-between px-1">
@@ -119,8 +119,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={signOut}
-              aria-label="Выйти"
-              title="Выйти"
+              aria-label="Sign out"
+              title="Sign out"
               className="rounded p-2 text-text-secondary transition-colors hover:bg-surface-muted hover:text-danger focus-ring"
             >
               <LogOut size={18} />

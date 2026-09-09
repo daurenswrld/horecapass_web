@@ -52,12 +52,12 @@ const nextId = () => `m${++seq}`;
  *  зачитывает поля формы. Индекс берётся по счётчику отвеченных, чтобы
  *  фразы не повторялись подряд. */
 const BRIDGES = [
-  "Понял.",
-  "Записал.",
-  "Хорошо.",
-  "Отлично.",
-  "Принято.",
-  "Так, дальше.",
+  "Got it.",
+  "Noted.",
+  "Good.",
+  "Great.",
+  "Understood.",
+  "Next one.",
 ];
 
 const bridge = (n: number) => BRIDGES[n % BRIDGES.length];
@@ -68,9 +68,9 @@ const bridge = (n: number) => BRIDGES[n % BRIDGES.length];
 export function greeting(p: Profession): string {
   const total = activeQuestions(p, {}).length;
   return (
-    `Отлично — ${p.title}. Я задам около ${total} ${plural(total, "вопроса", "вопросов", "вопросов")} ` +
-    `и соберу из ответов готовое резюме. Отвечать можно голосом или текстом, как удобнее. ` +
-    `Если что-то не помните точно — скажите примерно, это нормально.`
+    `${p.title} it is. I will ask about ${total} ${plural(total, "question")} ` +
+    `and build a finished CV from your answers. Answer by voice or by text, whichever suits you. ` +
+    `If you do not remember something exactly, an approximate answer is fine.`
   );
 }
 
@@ -107,8 +107,8 @@ export function nextQuestion(p: Profession, a: Answers): Question | null {
 /** Как ответ кандидата выглядит в ленте. */
 export function renderAnswer(q: Question, value: unknown): string {
   if (Array.isArray(value)) return value.join(", ");
-  if (typeof value === "boolean") return value ? "Да" : "Нет";
-  if (q.kind === "scale") return `${value} из ${q.max ?? 5}`;
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (q.kind === "scale") return `${value} of ${q.max ?? 5}`;
   if (q.unit) return `${value} ${q.unit}`;
   return String(value);
 }
@@ -160,7 +160,7 @@ export function answer(
     messages.push({
       id: nextId(),
       from: "assistant",
-      text: "Всё, анкета собрана. Смотрите, что получилось — это уже готовое резюме, его можно править вручную в любой момент.",
+      text: "That is the whole questionnaire. Here is the result: a finished CV you can edit by hand at any time.",
     });
   }
 
@@ -185,13 +185,13 @@ export function skip(state: OnboardingState): OnboardingState {
 
   const messages: Message[] = [
     ...state.messages,
-    { id: nextId(), from: "candidate", text: "Пропустить" },
+    { id: nextId(), from: "candidate", text: "Skip" },
   ];
   if (next) {
     messages.push({
       id: nextId(),
       from: "assistant",
-      text: `Хорошо, вернёмся к этому позже. ${next.ask}`,
+      text: `Fine, we will come back to it later. ${next.ask}`,
       questionId: next.id,
     });
   }
@@ -221,13 +221,13 @@ export function nudge(p: Profession, a: Answers): string | null {
     const names = required
       .slice(0, 2)
       .map((q) => q.label.toLowerCase())
-      .join(" и ");
-    return `Профиль заполнен на ${pct}%. Без ${names} работодатель не увидит вас в подборке.`;
+      .join(" and ");
+    return `Profile is ${pct}% complete. Without ${names}, employers will not see you in their matches.`;
   }
 
   const names = gaps
     .slice(0, 2)
     .map((q) => q.label.toLowerCase())
-    .join(" и ");
-  return `Профиль заполнен на ${pct}%. Добавьте ${names} — такие резюме открывают заметно чаще.`;
+    .join(" and ");
+  return `Profile is ${pct}% complete. Add ${names}: CVs with it get opened noticeably more often.`;
 }

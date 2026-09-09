@@ -39,12 +39,12 @@ export function DemoNotice({
         <span aria-hidden className="mr-1.5">
           ⚑
         </span>
-        Показ замысла — данные хранятся в браузере и на сервер не уходят
+        Preview only: data is kept in the browser and never leaves it
       </p>
       <p className="mt-1 text-sm leading-relaxed text-text-secondary">{what}</p>
       {endpoint && (
         <p className="mt-1.5 text-sm text-text-secondary">
-          Нужен эндпоинт{' '}
+          Endpoint needed:{' '}
           <code className="rounded bg-surface-alt px-1.5 py-0.5 text-xs text-text-primary">{endpoint}</code>
         </p>
       )}

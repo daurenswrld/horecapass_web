@@ -62,8 +62,8 @@ export function Footer() {
           <div>
             <Wordmark height={26} />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-text-secondary">
-              Платформа найма для отелей, ресторанов и кейтеринга. Веб и мобильное приложение
-              с общим аккаунтом.
+              A hiring platform for hotels, restaurants and catering. The web and mobile app
+              share one account.
             </p>
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
@@ -75,32 +75,32 @@ export function Footer() {
           </div>
 
           <Column
-            title="Соискателям"
+            title="For candidates"
             links={[
-              { label: 'Открытые вакансии', href: '#vacancies' },
-              { label: 'Как это работает', href: '#how' },
-              { label: 'Что даёт платформа', href: '#candidates' },
-              { label: 'Создать профиль', href: '/register?role=applicant' },
+              { label: 'Open jobs', href: '#vacancies' },
+              { label: 'How it works', href: '#how' },
+              { label: 'What you get', href: '#candidates' },
+              { label: 'Create a profile', href: '/register?role=applicant' },
             ]}
           />
 
           <Column
-            title="Работодателям"
+            title="For employers"
             links={[
-              { label: 'Возможности подбора', href: '#employers' },
-              { label: 'Этапы найма', href: '#how' },
-              { label: 'Зарегистрировать компанию', href: '/register?role=company' },
+              { label: 'Hiring tools', href: '#employers' },
+              { label: 'Hiring process', href: '#how' },
+              { label: 'Register a company', href: '/register?role=company' },
             ]}
           />
 
           <Column
-            title="Приложение и документы"
+            title="App and legal"
             links={[
               // App Store появится в списке, когда будет ссылка (lib/stores.ts).
               ...(APP_STORE_URL ? [{ label: 'App Store', href: APP_STORE_URL, external: true }] : []),
               { label: 'Google Play', href: GOOGLE_PLAY_URL, external: true },
-              { label: 'Политика конфиденциальности', href: PRIVACY_URL, external: true },
-              { label: 'Пользовательское соглашение', href: TERMS_URL, external: true },
+              { label: 'Privacy policy', href: PRIVACY_URL, external: true },
+              { label: 'Terms of use', href: TERMS_URL, external: true },
             ]}
           />
         </div>

@@ -65,8 +65,8 @@ export function VacancyDetails({
     } catch (e) {
       setError(
         e instanceof ApiError && e.status === 400
-          ? 'Отклик не отправлен: возможно, вы уже откликались или профиль заполнен не полностью.'
-          : 'Не удалось отправить отклик. Попробуйте ещё раз.',
+          ? 'Application not sent: you may have already applied, or your profile is incomplete.'
+          : 'Could not send the application. Please try again.',
       );
     } finally {
       setApplying(false);
@@ -86,14 +86,14 @@ export function VacancyDetails({
   };
 
   const conditions = [
-    ['Тип занятости', vacancy.employmentType],
-    ['График', vacancy.schedule],
-    ['Часы', vacancy.hours],
-    ['Тип заведения', vacancy.venueType],
-    ['Уровень', vacancy.venueLevel],
-    ['Отдел', vacancy.department],
-    ['Выплаты', vacancy.paymentSchedule],
-    ['Тип оплаты', vacancy.salaryType],
+    ['Employment type', vacancy.employmentType],
+    ['Schedule', vacancy.schedule],
+    ['Hours', vacancy.hours],
+    ['Venue type', vacancy.venueType],
+    ['Level', vacancy.venueLevel],
+    ['Department', vacancy.department],
+    ['Pay schedule', vacancy.paymentSchedule],
+    ['Pay type', vacancy.salaryType],
   ].filter((r): r is [string, string] => !!r[1]);
 
   return (
@@ -102,7 +102,7 @@ export function VacancyDetails({
         <h2 className="text-xl font-bold tracking-tight text-text-primary">{vacancy.title}</h2>
         <p className="mt-1 flex items-center gap-1.5 text-sm text-text-secondary">
           {vacancy.companyName}
-          {vacancy.isVerified && <BadgeCheck size={15} className="text-info" aria-label="Проверенная компания" />}
+          {vacancy.isVerified && <BadgeCheck size={15} className="text-info" aria-label="Verified company" />}
         </p>
 
         {salary && <p className="mt-3 text-lg font-bold text-text-primary">{salary}</p>}
@@ -117,7 +117,7 @@ export function VacancyDetails({
         {vacancy.requiresVideoGreeting && (
           <p className="mt-3 flex items-center gap-2 rounded-sm bg-info-surface px-3 py-2 text-sm text-on-info-surface">
             <Video size={15} className="shrink-0" />
-            Нужна видео-презентация — её можно записать в мобильном приложении.
+            A video intro is required. You can record it in the mobile app.
           </p>
         )}
 
@@ -126,14 +126,14 @@ export function VacancyDetails({
             {applying ? (
               <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" />
             ) : applied ? (
-              'Отклик отправлен'
+              'Application sent'
             ) : (
-              'Откликнуться'
+              'Apply'
             )}
           </Button>
           <Button variant="secondary" onClick={toggleSave}>
             <Bookmark size={16} className={saved ? 'fill-accent text-accent' : undefined} />
-            {saved ? 'Сохранено' : 'Сохранить'}
+            {saved ? 'Saved' : 'Save'}
           </Button>
         </div>
 
@@ -141,7 +141,7 @@ export function VacancyDetails({
       </header>
 
       {conditions.length > 0 && (
-        <Section title="Условия">
+        <Section title="Conditions">
           <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
             {conditions.map(([k, v]) => (
               <div key={k} className="flex justify-between gap-3 text-sm">
@@ -154,25 +154,25 @@ export function VacancyDetails({
       )}
 
       {vacancy.description && (
-        <Section title="Описание">
+        <Section title="Description">
           <p className="whitespace-pre-line text-sm leading-relaxed text-text-primary">{vacancy.description}</p>
         </Section>
       )}
 
       {vacancy.responsibilities.length > 0 && (
-        <Section title="Обязанности">
+        <Section title="Responsibilities">
           <Bullets items={vacancy.responsibilities} />
         </Section>
       )}
 
       {vacancy.requirements && (
-        <Section title="Требования">
+        <Section title="Requirements">
           <p className="whitespace-pre-line text-sm leading-relaxed text-text-primary">{vacancy.requirements}</p>
         </Section>
       )}
 
       {vacancy.skills.length > 0 && (
-        <Section title="Навыки">
+        <Section title="Skills">
           <div className="flex flex-wrap gap-1.5">
             {vacancy.skills.map((s) => (
               <Chip key={s}>{s}</Chip>
@@ -182,13 +182,13 @@ export function VacancyDetails({
       )}
 
       {vacancy.benefits.length > 0 && (
-        <Section title="Что предлагают">
+        <Section title="What they offer">
           <Bullets items={vacancy.benefits} />
         </Section>
       )}
 
       {vacancy.hiringSteps.length > 0 && (
-        <Section title="Этапы найма">
+        <Section title="Hiring process">
           <ol className="space-y-2">
             {vacancy.hiringSteps.map((step, i) => (
               <li key={step} className="flex gap-3 text-sm text-text-primary">
