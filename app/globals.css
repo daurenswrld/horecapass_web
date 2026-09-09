@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Токены взяты один в один из мобильного приложения:
+ * horeca_pass_mobile/lib/core/theme/app_colors.dart.
+ *
+ * Имена совпадают с мобильными (background, surfaceMuted, accent, onAccent...),
+ * чтобы при переносе экрана не приходилось держать в голове таблицу
+ * соответствий. Меняется палитра в мобилке — правится этот файл, и только он.
+ *
+ * Токены живут вне @layer base намеренно: Tailwind вычищает из base правила
+ * с классами, которых нет в разметке, и блок .dark молча пропадает
+ * из собранного CSS.
+ */
+
+:root {
+  --background: 248 244 238; /* #F8F4EE */
+  --surface: 255 255 255; /* #FFFFFF */
+  --surface-muted: 246 240 232; /* #F6F0E8 */
+  --surface-alt: 244 234 224; /* #F4EAE0 */
+  --border: 240 231 221; /* #F0E7DD */
+  --border-strong: 220 207 196; /* #DCCFC4 */
+  --text-primary: 42 33 27; /* #2A211B */
+  /* Затемнено против мобильного #8A7F73: тот давал 3.57:1 на белой карточке
+     и не проходил WCAG AA для мелкого текста. Оттенок сохранён. */
+  --text-secondary: 117 106 95; /* #756A5F */
+  --text-tertiary: 182 168 156; /* #B6A89C */
+  --accent: 154 127 107; /* #9A7F6B */
+  --on-accent: 255 255 255;
+  --accent-muted: 239 229 219; /* #EFE5DB */
+  --on-accent-muted: 209 183 158; /* #D1B79E */
+  --accent-focus: 204 177 151; /* #CCB197 */
+  /* Фирменный #9A7F6B как цвет ссылки на белом даёт 3.74:1. Для текста берём
+     тот же тон темнее — 5.4:1. */
+  --accent-text: 126 101 83; /* #7E6553 */
+  /* Он же под белым текстом на кнопке даёт те же 3.74:1 — ниже нормы для
+     основного действия страницы. Заливка кнопок чуть глубже: 4.7:1.
+     В мобилке эта пара цветов такая же, там стоит проверить отдельно. */
+  --accent-strong: 138 110 89; /* #8A6E59 */
+  --info: 122 155 174; /* #7A9BAE */
+  --info-surface: 229 233 235; /* #E5E9EB */
+  --on-info-surface: 111 131 147; /* #6F8393 */
+  --danger: 192 87 76; /* #C0574C */
+  --danger-surface: 252 236 236; /* #FCECEC */
+  --warning: 201 150 46; /* #C9962E */
+  --success: 75 140 106; /* #4B8C6A */
+  --scrim: 0 0 0;
+
+  /* Плитка QR-кода не переворачивается вместе с темой: сканеры рассчитывают
+     на тёмные модули на светлом фоне, инвертированный код читают не все.
+     Поэтому в тёмной теме эти два значения намеренно не переопределяются. */
+  --qr-surface: 255 255 255;
+  --qr-ink: 42 33 27;
+
+  --radius: 0.875rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1.25rem;
+}
+
+/* Три состояния темы: явный выбор перекрывает системный в обе стороны.
+   Без :not(.light) системная тёмная не даст выбрать светлую. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: 22 17 13; /* #16110D */
+    --surface: 33 26 21; /* #211A15 */
+    --surface-muted: 42 33 27; /* #2A211B */
+    --surface-alt: 51 41 31; /* #33291F */
+    --border: 58 46 37; /* #3A2E25 */
+    --border-strong: 86 69 57; /* #564539 */
+    --text-primary: 244 237 228; /* #F4EDE4 */
+    --text-secondary: 188 174 159; /* #BCAE9F */
+    --text-tertiary: 154 139 124; /* #9A8B7C */
+    --accent: 201 170 140; /* #C9AA8C */
+    --on-accent: 36 27 19; /* #241B13 */
+    --accent-muted: 59 47 37; /* #3B2F25 */
+    --on-accent-muted: 140 123 105; /* #8C7B69 */
+    --accent-focus: 216 187 156; /* #D8BB9C */
+    --accent-text: 201 170 140;
+    --accent-strong: 201 170 140;
+    --info: 155 191 211; /* #9BBFD3 */
+    --info-surface: 43 51 57; /* #2B3339 */
+    --on-info-surface: 175 198 211; /* #AFC6D3 */
+    --danger: 229 140 128; /* #E58C80 */
+    --danger-surface: 58 36 34; /* #3A2422 */
+    --warning: 227 180 95; /* #E3B45F */
+    --success: 124 198 160; /* #7CC6A0 */
+  }
+}
+
+:root.dark {
+  --background: 22 17 13;
+  --surface: 33 26 21;
+  --surface-muted: 42 33 27;
+  --surface-alt: 51 41 31;
+  --border: 58 46 37;
+  --border-strong: 86 69 57;
+  --text-primary: 244 237 228;
+  --text-secondary: 188 174 159;
+  --text-tertiary: 154 139 124;
+  --accent: 201 170 140;
+  --on-accent: 36 27 19;
+  --accent-muted: 59 47 37;
+  --on-accent-muted: 140 123 105;
+  --accent-focus: 216 187 156;
+  --accent-text: 201 170 140;
+  --accent-strong: 201 170 140;
+  --info: 155 191 211;
+  --info-surface: 43 51 57;
+  --on-info-surface: 175 198 211;
+  --danger: 229 140 128;
+  --danger-surface: 58 36 34;
+  --warning: 227 180 95;
+  --success: 124 198 160;
+}
+
+@layer base {
+  * {
+    border-color: rgb(var(--border));
+  }
+
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--text-primary));
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply outline-none ring-offset-2 ring-offset-[rgb(var(--background))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--accent-focus))];
+  }
+
+  /* Полоса прокрутки в списках вакансий и канбане: тонкая, в тон интерфейсу.
+     Дефолтная светло-серая на тёплом фоне выглядит инородной. */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--border-strong)) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

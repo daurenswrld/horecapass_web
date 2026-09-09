@@ -1,0 +1,288 @@
+'use client';
+
+import * as React from 'react';
+import { Check, MapPin, Plane, Video, X } from 'lucide-react';
+import { PageHeader } from '@/components/shell/app-shell';
+import { Button, Card, Spinner } from '@/components/ui/primitives';
+import {
+  applicationsApi,
+  FUNNEL,
+  RELOCATION_LABEL,
+  salaryLabel,
+  STATUS_LABEL,
+  STATUS_TONE,
+  type ApplicantApplication,
+  type ApplicationStatus,
+} from '@/lib/api/applications';
+import { cn, plural } from '@/lib/utils';
+
+/**
+ * Отклики соискателя — экран applicant_responses_screen.dart мобилки.
+ *
+ * Раздел заказчица не правила: прозрачность статусов ей как раз нравится,
+ * поэтому здесь ровно то же поведение, что в приложении, только в раскладке
+ * под широкий экран.
+ */
+
+const DATE_FMT = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+function StatusBadge({ status }: { status: ApplicationStatus }) {
+  return (
+    <span className={cn('inline-flex items-center rounded-full px-3 py-1 text-xs font-medium', STATUS_TONE[status])}>
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+/**
+ * Этапы отклика.
+ *
+ * Показываем все шаги с названиями, а не одну полосу: кандидату важно видеть
+ * не только где он сейчас, но и сколько осталось. Это то же требование
+ * прозрачности, что в документе заказчицы про «Our Hiring Process» —
+ * человек заранее понимает, что его ждёт.
+ *
+ * Отказ рисуем отдельной строкой: он не «шаг вперёд» по воронке.
+ */
+function Funnel({ status }: { status: ApplicationStatus }) {
+  if (status === 'REJECTED') {
+    return (
+      <p className="mt-4 flex items-center gap-2 rounded-sm bg-danger-surface px-3 py-2 text-sm text-danger">
+        <X size={15} className="shrink-0" />
+        Работодатель отказал по этому отклику
+      </p>
+    );
+  }
+
+  const current = FUNNEL.indexOf(status);
+  if (current < 0) return null;
+
+  return (
+    // Названия этапов длиннее, чем шестая часть узкой карточки. Позволяем
+    // цепочке прокручиваться внутри себя — иначе она распирает страницу
+    // и появляется горизонтальная прокрутка на телефоне.
+    <ol
+      className="scroll-slim -mx-1 mt-4 flex items-start gap-0 overflow-x-auto px-1 pb-1"
+      aria-label="Этапы отклика"
+    >
+      {FUNNEL.map((step, i) => {
+        const done = i < current;
+        const active = i === current;
+        return (
+          <li key={step} className="flex min-w-16 flex-1 flex-col items-center gap-1.5">
+            <span className="flex w-full items-center" aria-hidden>
+              {/* Линии по бокам точки. У крайних шагов половина линии
+                  прозрачная — иначе полоса торчит за пределы цепочки. */}
+              <span className={cn('h-0.5 flex-1 rounded-full', i === 0 ? 'bg-transparent' : done || active ? 'bg-accent' : 'bg-surface-alt')} />
+              <span
+                className={cn(
+                  'grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 transition-colors',
+                  done && 'border-accent bg-accent',
+                  active && 'border-accent bg-surface',
+                  !done && !active && 'border-surface-alt bg-surface',
+                )}
+              >
+                {done && <Check size={11} className="text-on-accent" strokeWidth={3} />}
+                {active && <span className="h-2 w-2 rounded-full bg-accent" />}
+              </span>
+              <span className={cn('h-0.5 flex-1 rounded-full', i === FUNNEL.length - 1 ? 'bg-transparent' : done ? 'bg-accent' : 'bg-surface-alt')} />
+            </span>
+            <span
+              className={cn(
+                'text-center text-[11px] leading-tight',
+                active ? 'font-semibold text-text-primary' : 'text-text-secondary',
+              )}
+            >
+              {STATUS_LABEL[step]}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function ApplicationCard({ a }: { a: ApplicantApplication }) {
+  return (
+    // min-w-0 обязателен: элемент сетки по умолчанию не сжимается уже своего
+    // содержимого, и длинная цепочка этапов распирала карточку вместе
+    // со страницей вместо того, чтобы прокручиваться внутри себя.
+    <Card className="min-w-0 p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-text-primary">{a.vacancyTitle}</h3>
+          <p className="mt-0.5 text-sm text-text-secondary">{a.companyName}</p>
+        </div>
+        <StatusBadge status={a.status} />
+      </div>
+
+      <p className="mt-3 font-medium text-text-primary">{salaryLabel(a)}</p>
+
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
+        {a.address && (
+          <span className="flex items-center gap-1.5">
+            <MapPin size={13} />
+            {a.address}
+          </span>
+        )}
+        <span>Отклик от {DATE_FMT.format(a.createdAt)}</span>
+      </div>
+
+      <Funnel status={a.status} />
+
+      {a.coverLetter && (
+        <p className="mt-4 whitespace-pre-line border-t border-line pt-3 text-sm leading-relaxed text-text-secondary">
+          {a.coverLetter}
+        </p>
+      )}
+
+      {/* Визовый этап показываем, только когда он начался — как в мобилке:
+          у отклика в статусе «Не просмотрен» такой блок сбивает с толку. */}
+      {a.relocationStep !== 'NOT_STARTED' && (
+        <div className="mt-4 rounded-sm bg-surface-muted p-3.5">
+          <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <Plane size={15} className="text-accent" />
+            Переезд: {RELOCATION_LABEL[a.relocationStep]}
+          </p>
+          {a.relocationNote && (
+            <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">{a.relocationNote}</p>
+          )}
+          {a.expectedArrival && (
+            <p className="mt-1.5 text-sm text-text-secondary">
+              Ожидаемая дата приезда: {DATE_FMT.format(a.expectedArrival)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {a.requiresVideoGreeting && !a.videoGreetingUrl && (
+        <p className="mt-4 flex items-center gap-2 rounded-sm bg-info-surface px-3 py-2 text-sm text-on-info-surface">
+          <Video size={15} className="shrink-0" />
+          Нужна видео-презентация — её записывают в мобильном приложении.
+        </p>
+      )}
+
+      {a.videoGreetingUrl && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-success">
+          <Check size={15} />
+          Видео-презентация отправлена
+        </p>
+      )}
+    </Card>
+  );
+}
+
+type Filter = 'all' | 'active' | 'archive';
+
+export default function ResponsesPage() {
+  const [items, setItems] = React.useState<ApplicantApplication[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [filter, setFilter] = React.useState<Filter>('all');
+  const [reloadKey, setReloadKey] = React.useState(0);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    applicationsApi
+      .mine()
+      .then((list) => {
+        if (cancelled) return;
+        // Свежие сверху: в приложении порядок такой же.
+        setItems([...list].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      })
+      .catch(() => !cancelled && setError('Не удалось загрузить отклики.'))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  const shown = items.filter((a) => {
+    if (filter === 'active') return a.status !== 'REJECTED' && a.status !== 'HIRED';
+    if (filter === 'archive') return a.status === 'REJECTED' || a.status === 'HIRED';
+    return true;
+  });
+
+  const counts = {
+    all: items.length,
+    active: items.filter((a) => a.status !== 'REJECTED' && a.status !== 'HIRED').length,
+    archive: items.filter((a) => a.status === 'REJECTED' || a.status === 'HIRED').length,
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Отклики"
+        subtitle={
+          loading ? undefined : `${items.length} ${plural(items.length, 'отклик', 'отклика', 'откликов')}`
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            {(
+              [
+                ['all', 'Все'],
+                ['active', 'В работе'],
+                ['archive', 'Завершённые'],
+              ] as [Filter, string][]
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setFilter(id)}
+                className={cn(
+                  'rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus-ring',
+                  filter === id
+                    ? 'bg-accent-strong text-on-accent'
+                    : 'bg-surface-muted text-text-secondary hover:text-text-primary',
+                )}
+              >
+                {label}
+                {counts[id] > 0 && <span className="ml-1.5 opacity-70">{counts[id]}</span>}
+              </button>
+            ))}
+          </div>
+        }
+      />
+
+      <div className="px-5 py-6 md:px-8">
+        {loading && (
+          <div className="grid place-items-center py-20">
+            <Spinner />
+          </div>
+        )}
+
+        {!loading && error && (
+          <Card className="p-5">
+            <p className="text-sm text-danger">{error}</p>
+            <Button variant="secondary" size="sm" className="mt-3" onClick={() => setReloadKey((k) => k + 1)}>
+              Повторить
+            </Button>
+          </Card>
+        )}
+
+        {!loading && !error && shown.length === 0 && (
+          <Card className="p-8 text-center">
+            <p className="font-medium text-text-primary">
+              {items.length === 0 ? 'Откликов пока нет' : 'В этой вкладке пусто'}
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">
+              {items.length === 0
+                ? 'Откликнитесь на вакансию — здесь появится её статус и переписка с работодателем.'
+                : 'Посмотрите другие вкладки.'}
+            </p>
+          </Card>
+        )}
+
+        {!loading && !error && shown.length > 0 && (
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            {shown.map((a) => (
+              <ApplicationCard key={a.id} a={a} />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
