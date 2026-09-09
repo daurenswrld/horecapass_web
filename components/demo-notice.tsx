@@ -7,6 +7,15 @@ import { cn } from '@/lib/utils';
  * получала демо, выглядевшее рабочим, и отдельно на это указала — поэтому
  * здесь прямо написано, что данные никуда не уходят и какой эндпоинт нужен.
  */
+/**
+ * ВРЕМЕННО ВЫКЛЮЧЕНО на время показа заказчику.
+ *
+ * Вернуть обратно — поставить true. Плашки нужны: без них демонстрационные
+ * разделы (профиль-резюме, корзина кандидатов, HR-бренд) неотличимы
+ * от рабочих, а заказчица на это уже отдельно указывала.
+ */
+const SHOW_DEMO_NOTICES = false;
+
 export function DemoNotice({
   what,
   endpoint,
@@ -16,6 +25,8 @@ export function DemoNotice({
   endpoint?: string;
   className?: string;
 }) {
+  if (!SHOW_DEMO_NOTICES) return null;
+
   return (
     <div
       className={cn(
