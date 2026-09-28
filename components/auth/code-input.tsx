@@ -24,6 +24,12 @@ interface Props {
 export function CodeInput({ value, onChange, onComplete, length = 6, disabled, invalid }: Props) {
   const refs = React.useRef<(HTMLInputElement | null)[]>([]);
 
+  // Поле кода появляется после «Get code» — сразу ставим курсор в первую
+  // клетку, чтобы код можно было просто набрать или вставить, без лишнего клика.
+  React.useEffect(() => {
+    refs.current[0]?.focus();
+  }, []);
+
   const set = (next: string) => {
     const clean = next.replace(/\D/g, '').slice(0, length);
     onChange(clean);

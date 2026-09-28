@@ -25,6 +25,8 @@ export interface Vacancy {
   requirements: string | null;
   skills: string[];
   isActive: boolean;
+  /** Статус на сервере: черновик, активна или в архиве (бриф, пункт 8). */
+  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED';
   address: string | null;
   companyImages: string[];
   isVerified: boolean;
@@ -72,6 +74,7 @@ export function parseVacancy(json: Json): Vacancy {
       ? (json.skills as Json[]).map((s) => String(s?.name ?? '')).filter(Boolean)
       : [],
     isActive: json.is_active !== false,
+    status: json.status === 'DRAFT' || json.status === 'ARCHIVED' ? json.status : json.is_active === false ? 'ARCHIVED' : 'ACTIVE',
     address: nonEmpty(json.address),
     companyImages: Array.isArray(json.company_images)
       ? (json.company_images as Json[]).map((i) => String(i?.image ?? '')).filter(Boolean)
@@ -136,10 +139,18 @@ export const vacanciesApi = {
     return unwrapList(data).map(parseVacancy);
   },
 
-  /** Публикация вакансии. Эндпоинт тот же, что у списка. */
+  /** Создание вакансии компании (status DRAFT — черновик, ACTIVE — сразу видна). */
   async create(data: Record<string, unknown>): Promise<Vacancy> {
-    const json = await http.post<Json>(API.vacancies.list, data);
+    // Создание — POST /api/vacancies/my/ (CompanyVacancyListCreateView).
+    // /api/vacancies/ — публичный список только для чтения: раньше форма
+    // отправляла туда и получала 405, вакансия не публиковалась вовсе.
+    const json = await http.post<Json>(API.vacancies.mine, data);
     return parseVacancy(json);
+  },
+
+  /** Правка своей вакансии — PATCH /api/vacancies/my/<id>/. */
+  async update(id: number, data: Record<string, unknown>): Promise<Vacancy> {
+    return parseVacancy(await http.patch<Json>(API.vacancies.mineDetail(id), data));
   },
 
   cities(): Promise<string[]> {
@@ -159,6 +170,9 @@ export const vacanciesApi = {
 export function formatSalary(v: Pick<Vacancy, 'salaryMin' | 'salaryMax' | 'currency'>): string | null {
   const sign = CURRENCY_SIGNS[v.currency] ?? v.currency;
   const num = (s: string) => Number(s).toLocaleString('en-US');
+  // Фиксированная сумма — одно число, а не «4,000 – 4,000 SAR»: заказчица
+  // отметила этот баг в обоих брифах (работодателя 13.2, кандидата 9 и 10).
+  if (v.salaryMin && v.salaryMax && Number(v.salaryMin) === Number(v.salaryMax)) return `${num(v.salaryMin)} ${sign}`;
   if (v.salaryMin && v.salaryMax) return `${num(v.salaryMin)} – ${num(v.salaryMax)} ${sign}`;
   if (v.salaryMin) return `from ${num(v.salaryMin)} ${sign}`;
   if (v.salaryMax) return `up to ${num(v.salaryMax)} ${sign}`;

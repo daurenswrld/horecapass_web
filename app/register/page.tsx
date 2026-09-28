@@ -28,7 +28,7 @@ function RegisterInner() {
         <div className="mb-6">
           <Field
             label="Company name"
-            placeholder="e.g. Grand Hotel Almaty"
+            placeholder="e.g. Grand Hotel Dubai"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
           />
