@@ -1,64 +1,66 @@
-import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
-import {
-  BadgeCheck,
-  Bot,
-  PenLine,
-  Briefcase,
-  CalendarClock,
-  FileText,
-  MessageSquare,
-  Search,
-  Users,
-  Video,
-} from 'lucide-react';
+import { BadgeCheck, Briefcase, Check, ChevronDown, FileText, Mail, MessageSquare, Minus, Play, Users } from 'lucide-react';
 import { AppDownload } from '@/components/landing/app-download';
+import { Bubble } from '@/components/landing/bubble';
+import { FinalCta, HeroCta, SectionCta } from '@/components/landing/cta';
 import { Footer } from '@/components/landing/footer';
-import { AllVacanciesLink, FinalCta, HeroCta } from '@/components/landing/cta';
 import { LandingHeader } from '@/components/landing/header';
-import { Card, Chip } from '@/components/ui/primitives';
-import { fetchPublicVacancies } from '@/lib/api/server';
-import { formatSalary, type Vacancy } from '@/lib/api/vacancies';
-import { plural } from '@/lib/utils';
+import { IntroSplash } from '@/components/landing/intro';
+import { cn } from '@/lib/utils';
 
 /**
  * Лендинг.
  *
- * Серверная страница: вакансии подгружаются на сервере и попадают в HTML.
- * Так они индексируются поисковиками (SEO — пункт 3.6 договора) и страница
- * читается даже с выключенным JavaScript. Клиентская часть здесь только одна —
- * шапка, которой нужно знать, вошёл ли посетитель.
+ * Тексты — утверждённая версия HorecaPass_Web_Copy.docx (22.09.2026), порядок
+ * блоков тот же. Визуальный язык — из утверждённого мобильного редизайна
+ * в Figma: десктопного макета нет, заказчица просила, чтобы веб и приложение
+ * «были гармоничны».
+ *
+ * Блока с открытыми вакансиями здесь нет намеренно (пункт 5 документа):
+ * пока работодателей мало, список и его счётчик выдают масштаб платформы.
+ * Когда наберутся узнаваемые работодатели — на его место карусель логотипов
+ * «Hiring with us» (данные уже умеет отдавать lib/api/server.ts).
+ *
+ * Страница статичная и рисуется сервером целиком; клиентские только шапка
+ * и кнопки, которым нужно знать, вошёл ли посетитель.
  */
 
 export const metadata: Metadata = {
-  title: 'HorecaPass, hospitality jobs',
+  title: 'HorecaPass — a hospitality recruiter in your pocket',
   description:
-    'A hiring platform built for hospitality: candidates find work in hotels and restaurants, companies post jobs and move candidates through the pipeline.',
+    "GCC's hospitality hiring platform. Smart matches hospitality talent to real, verified roles across the GCC — and employers to candidates who are actually ready to work.",
   openGraph: {
-    title: 'HorecaPass, hospitality jobs',
+    title: 'HorecaPass — a hospitality recruiter in your pocket',
     description:
-      'Hotel and restaurant jobs, applications, video interviews and direct chat with employers. Web and mobile app share one account.',
+      'Real jobs, verified employers, no agent fees for candidates. Pre-screened candidates for hotels, restaurants and catering.',
     type: 'website',
   },
 };
 
-// Список вакансий меняется нечасто — страницу можно держать в кэше.
-export const revalidate = 300;
+/**
+ * Ссылка на видео-презентацию. Заказчица: «на веб-версии обязательно видео
+ * для ленивых». Самого ролика пока нет — до него блок показывает обложку
+ * с пометкой. Сюда кладётся адрес файла (mp4 в /public или внешний).
+ */
+const PROMO_VIDEO_URL: string | null = null;
 
-export default async function LandingPage() {
-  const vacancies = await fetchPublicVacancies(6);
-
+export default function LandingPage() {
   return (
     <div className="min-h-[100dvh]">
+      <IntroSplash />
       <LandingHeader />
 
       <main>
-        <Hero vacancies={vacancies} />
-        <Vacancies vacancies={vacancies} />
+        <Hero />
+        <Pain />
         <ForCandidates />
         <ForEmployers />
+        <PromoVideo />
         <HowItWorks />
         <MobileApp />
+        <Trust />
+        <Faq />
         <FinalCta />
       </main>
 
@@ -73,251 +75,325 @@ function Section({
   title,
   lead,
   children,
-  muted,
+  className,
 }: {
   id?: string;
   eyebrow?: string;
   title: string;
   lead?: string;
   children: React.ReactNode;
-  muted?: boolean;
+  className?: string;
 }) {
   return (
-    <section id={id} className={muted ? 'bg-surface-muted' : undefined}>
+    <section id={id} className={cn('scroll-mt-20', className)}>
       <div className="mx-auto max-w-6xl px-6 py-16 lg:px-10 lg:py-24">
-        {eyebrow && (
-          <p className="text-sm font-semibold uppercase tracking-wider text-accent-text">{eyebrow}</p>
-        )}
-        <h2 className="mt-2 max-w-3xl text-3xl font-bold leading-tight tracking-tight text-text-primary lg:text-4xl">
+        {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+        <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-tight tracking-tight text-heading lg:text-[2.75rem]">
           {title}
         </h2>
         {lead && <p className="mt-4 max-w-2xl text-lg leading-relaxed text-text-secondary">{lead}</p>}
-        <div className="mt-10">{children}</div>
+        <div className="mt-10 lg:mt-14">{children}</div>
       </div>
     </section>
   );
 }
 
-function Hero({ vacancies }: { vacancies: Vacancy[] }) {
-  // Настоящие цифры вместо рекламной строки. Пустой список — строки нет:
-  // «0 вакансий» на первом экране лучше не показывать.
-  const companies = new Set(vacancies.map((v) => v.companyName).filter(Boolean)).size;
-
+function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <section className="border-b border-line">
-      <div className="mx-auto max-w-6xl px-6 py-20 lg:px-10 lg:py-28">
-        <h1 className="max-w-4xl text-4xl font-bold leading-[1.1] tracking-tight text-text-primary lg:text-6xl">
-          Hospitality jobs without CVs by email and hiring over messengers
-        </h1>
-
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary lg:text-xl">
-          Candidates fill in their profile once and see the jobs that fit. Employers get
-          applications already sorted and move candidates through stages without losing anyone.
-        </p>
-
-        {vacancies.length > 0 && (
-          <p className="mt-6 text-sm text-text-secondary">
-            <span className="font-semibold text-text-primary">
-              {vacancies.length} {plural(vacancies.length, 'job')}
-            </span>{' '}
-            open right now
-            {companies > 0 && (
-              <>
-                {' at '}
-                <span className="font-semibold text-text-primary">
-                  {companies} {plural(companies, 'company', 'companies')}
-                </span>
-              </>
-            )}
-          </p>
-        )}
-
-        <HeroCta />
-      </div>
-    </section>
+    <p className="inline-flex rounded-full bg-accent-muted px-3.5 py-1.5 text-sm font-medium text-accent-text">
+      {children}
+    </p>
   );
 }
 
-function Vacancies({ vacancies }: { vacancies: Awaited<ReturnType<typeof fetchPublicVacancies>> }) {
+/* 1. Hero ------------------------------------------------------------------ */
+
+function Hero() {
+  const reveal = (d: number) => ({ '--d': `${d}ms` }) as React.CSSProperties;
+
   return (
-    <Section
-      id="vacancies"
-      eyebrow="Open jobs"
-      title="Who is hiring right now"
-      lead="A live list from the platform. You need an account to apply and chat with the employer."
-    >
-      {vacancies.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="font-medium text-text-primary">The job list is unavailable right now</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            Check back a little later, or{' '}
-            <Link href="/register?role=applicant" className="font-semibold text-accent-text underline-offset-4 hover:underline">
-              create a profile
-            </Link>
-            {' '}and we will send matching ones as soon as they appear.
-          </p>
-        </Card>
-      ) : (
-        <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {vacancies.map((v) => {
-              const salary = formatSalary(v);
-              return (
-                <Card key={v.id} className="flex h-full flex-col p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-semibold leading-snug text-text-primary">{v.title}</h3>
-                    {v.isVerified && (
-                      <BadgeCheck size={16} className="mt-0.5 shrink-0 text-info" aria-label="Verified company" />
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm text-text-secondary">{v.companyName}</p>
-                  {salary && <p className="mt-3 font-semibold text-text-primary">{salary}</p>}
-                  {v.address && <p className="mt-1 text-sm text-text-secondary">{v.address}</p>}
-                  {v.skills.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {v.skills.slice(0, 3).map((s) => (
-                        <Chip key={s}>{s}</Chip>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              );
-            })}
+    <section className="relative overflow-hidden bg-gradient-to-b from-peach-from to-peach-to">
+      <div className="mx-auto grid max-w-6xl items-end gap-4 px-6 pt-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10 lg:px-10 lg:pt-16">
+        <div className="pb-4 lg:pb-24">
+          <div className="hero-reveal" style={reveal(0)}>
+            <Eyebrow>GCC&apos;s Hospitality Hiring Platform</Eyebrow>
           </div>
 
-          <AllVacanciesLink />
-        </>
-      )}
+          <h1
+            className="hero-reveal mt-5 text-[2.6rem] font-bold leading-[1.05] tracking-tight text-heading sm:text-6xl lg:text-[4.25rem]"
+            style={reveal(80)}
+          >
+            A hospitality recruiter — in your pocket.
+          </h1>
+
+          <p
+            className="hero-reveal mt-6 max-w-xl text-lg leading-relaxed text-text-secondary lg:text-xl"
+            style={reveal(180)}
+          >
+            Smart matches hospitality talent to real, verified roles across the GCC — and employers to
+            candidates who are actually ready to work.
+          </p>
+
+          <div className="hero-reveal mt-9" style={reveal(280)}>
+            <HeroCta />
+          </div>
+
+          <ul
+            className="hero-reveal mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-text-secondary"
+            style={reveal(380)}
+          >
+            {['Verified employers only', 'No agent fees for candidates', 'Built for hotels, restaurants & catering'].map(
+              (t) => (
+                <li key={t} className="inline-flex items-center gap-1.5">
+                  <Check size={15} aria-hidden className="text-accent-text" />
+                  {t}
+                </li>
+              ),
+            )}
+          </ul>
+
+          <a
+            href="#video"
+            className="hero-reveal group mt-8 inline-flex items-center gap-3 rounded-full text-sm font-semibold text-heading focus-ring"
+            style={reveal(460)}
+          >
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-accent-strong text-on-accent transition-transform group-hover:scale-105 dark:bg-accent">
+              <Play size={16} aria-hidden className="translate-x-px" fill="currentColor" />
+            </span>
+            Watch how it works
+          </a>
+        </div>
+
+        {/* Фото команды уходит в фон снизу — как на экране приветствия в макете. */}
+        <div className="hero-reveal relative mx-auto w-full max-w-md lg:max-w-none" style={reveal(200)}>
+          <Image
+            src="/landing/team.webp"
+            alt="A hotel manager, a chef, a front office manager and a waitress"
+            width={900}
+            height={1350}
+            priority
+            unoptimized
+            className="photo-calm h-auto w-full rounded-t-[2rem] [mask-image:linear-gradient(to_bottom,black_70%,transparent)]"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* 2. Боль ------------------------------------------------------------------ */
+
+function Pain() {
+  const columns = [
+    {
+      Icon: Briefcase,
+      who: 'If you are looking for work',
+      items: [
+        'You send the same CV to ten different numbers and rarely hear back.',
+        "You can't always tell which job post is real.",
+        'An agent wants a cut of your first salary.',
+      ],
+    },
+    {
+      Icon: Users,
+      who: 'If you are hiring',
+      items: [
+        "Your inbox is a graveyard of CVs you'll never open.",
+        'Good candidates go quiet after the first call.',
+        'You write the same job requirements from scratch, every time.',
+      ],
+    },
+  ];
+
+  return (
+    <Section title="Hospitality hiring still runs on email attachments and WhatsApp chains.">
+      <div className="grid gap-5 md:grid-cols-2">
+        {columns.map(({ Icon, who, items }) => (
+          <div key={who} className="rounded-lg border border-line bg-surface p-6 shadow-card lg:p-8">
+            <h3 className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wider text-text-secondary">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-accent-muted text-accent-text">
+                <Icon size={19} aria-hidden />
+              </span>
+              {who}
+            </h3>
+            <ul className="mt-5 space-y-4">
+              {items.map((t) => (
+                <li key={t} className="flex gap-3 text-lg leading-snug text-text-primary">
+                  <span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-danger-surface text-danger">
+                    <Minus size={12} strokeWidth={3} aria-hidden />
+                  </span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </Section>
   );
 }
 
-function Feature({
-  Icon,
-  title,
-  text,
-}: {
-  Icon: typeof Search;
-  title: string;
-  text: string;
-}) {
+/* 3–4. Для кандидатов и работодателей --------------------------------------- */
+
+function Points({ items }: { items: string[] }) {
   return (
-    <div>
-      <span className="grid h-11 w-11 place-items-center rounded-lg bg-accent-muted">
-        <Icon size={20} className="text-accent-text" />
-      </span>
-      <h3 className="mt-4 font-semibold text-text-primary">{title}</h3>
-      <p className="mt-1.5 leading-relaxed text-text-secondary">{text}</p>
+    <ul className="mt-8 space-y-5">
+      {items.map((t) => (
+        <li key={t} className="flex gap-3.5 text-lg leading-relaxed text-text-primary">
+          <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-strong text-on-accent dark:bg-accent">
+            <Check size={14} strokeWidth={3} aria-hidden />
+          </span>
+          {t}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Portrait({ src, alt, line }: { src: string; alt: string; line: string }) {
+  return (
+    <div className="relative mx-auto w-full max-w-sm pb-10">
+      <Image
+        src={src}
+        alt={alt}
+        width={720}
+        height={1209}
+        unoptimized
+        className="photo-calm aspect-[4/5] w-full rounded-lg object-cover object-top shadow-lift"
+      />
+      <Bubble className="absolute -bottom-2 left-4 right-4 sm:-left-8 sm:right-10">{line}</Bubble>
     </div>
   );
 }
 
 function ForCandidates() {
   return (
-    <Section
-      id="candidates"
-      muted
-      eyebrow="For candidates"
-      title="One profile instead of ten emails with a CV"
-      lead="Fill in your profile once. The platform then shows where you fit and keeps you posted on every application."
-    >
-      <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-        <Feature
-          Icon={Bot}
-          title="Matched to your experience"
-          text="Jobs are ranked by how well they match your profile: position, city, salary expectations, skills."
+    <section id="candidates" className="scroll-mt-20 bg-surface-muted">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-24">
+        <Portrait
+          src="/landing/recruiter.webp"
+          alt="A HorecaPass recruiter"
+          line="Perfect — let's build your profile so employers come to you, not the other way around."
         />
-        <Feature
-          Icon={FileText}
-          title="CV and certificates"
-          text="Your CV is built inside the platform and exports to PDF. You can import data from LinkedIn."
-        />
-        <Feature
-          Icon={Video}
-          title="Video intro"
-          text="Some employers ask for a short video instead of a first call. Recorded in the mobile app."
-        />
-        <Feature
-          Icon={MessageSquare}
-          title="Chat directly"
-          text="Chat with the employer inside the platform, with no swapping phone numbers and no digging through messengers."
-        />
-        <Feature
-          Icon={CalendarClock}
-          title="A clear status"
-          text="You can see where your application stands: review, shortlist, interview, offer."
-        />
-        <Feature
-          Icon={BadgeCheck}
-          title="Verified companies"
-          text="Some employers are verified, and the badge sits right on the job card."
-        />
+        <div>
+          <Eyebrow>For candidates</Eyebrow>
+          <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-heading lg:text-[2.75rem]">
+            One profile. Real jobs. No agent fees.
+          </h2>
+          <Points
+            items={[
+              'Fill in your profile once — the platform shows you where you actually fit.',
+              'Chat with employers directly. No phone numbers, no middlemen, no chasing WhatsApp groups.',
+              'Get Verified with a short qualification and stand out from every other applicant.',
+            ]}
+          />
+          <SectionCta role="applicant" label="Find a job" />
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 function ForEmployers() {
   return (
-    <Section
-      id="employers"
-      eyebrow="For employers"
-      title="Applications arrive sorted, not in a pile"
-      lead="Instead of a folder of emails, a candidate list for every job, with a match score and hiring stages."
-    >
-      <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-        <Feature
-          Icon={PenLine}
-          title="AI-assisted posting"
-          text="No need to write the description and requirements from scratch: the platform drafts them for you."
-        />
-        <Feature
-          Icon={Users}
-          title="Candidates by stage"
-          text="Applied, shortlisted, interview, offer. You see who is where, and nobody gets lost."
-        />
-        <Feature
-          Icon={Bot}
-          title="Match score"
-          text="Every application gets a match score against the job, with a short summary of the candidate."
-        />
-        <Feature
-          Icon={MessageSquare}
-          title="Chat with templates"
-          text="Chat with the candidate plus saved replies, so you do not retype the same things."
-        />
-        <Feature
-          Icon={CalendarClock}
-          title="Interview scheduling"
-          text="Interviews are scheduled inside the platform, with calendar availability checked."
-        />
-        <Feature
-          Icon={Briefcase}
-          title="Recruiting team"
-          text="Invite colleagues to the company and hire together."
-        />
+    <section id="employers" className="scroll-mt-20">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-24">
+        <div className="lg:order-2">
+          <Portrait
+            src="/landing/kitchen.webp"
+            alt="A restaurant team at work in the kitchen"
+            line="Got it — let's set you up to start receiving matched candidates."
+          />
+        </div>
+        <div>
+          <Eyebrow>For employers</Eyebrow>
+          <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-heading lg:text-[2.75rem]">
+            Candidates arrive ranked and ready to review.
+          </h2>
+          <Points
+            items={[
+              'Every candidate arrives with a match score and a short summary — no more opening fifty CVs to find three worth calling.',
+              'Smart drafts your job post from similar hospitality roles — you review and publish in minutes.',
+              'Move candidates through stages in one place. Nobody gets lost in email.',
+            ]}
+          />
+          <SectionCta role="company" label="Post a role" />
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
+/* Видео-презентация ---------------------------------------------------------- */
+
+function PromoVideo() {
+  return (
+    <section id="video" className="scroll-mt-20 bg-surface-muted">
+      <div className="mx-auto max-w-5xl px-6 py-16 lg:px-10 lg:py-24">
+        <div className="text-center">
+          <Eyebrow>Video</Eyebrow>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-heading lg:text-[2.75rem]">
+            See how it works
+          </h2>
+        </div>
+
+        <div className="relative mt-10 aspect-video overflow-hidden rounded-lg bg-ink shadow-lift">
+          {PROMO_VIDEO_URL ? (
+            <video
+              src={PROMO_VIDEO_URL}
+              poster="/landing/lobby.webp"
+              controls
+              preload="none"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <>
+              <Image src="/landing/lobby.webp" alt="" fill unoptimized className="photo-calm object-cover" />
+              <div aria-hidden className="absolute inset-0 bg-ink opacity-30" />
+              <div className="absolute inset-0 grid place-items-center">
+                <div className="flex flex-col items-center gap-4">
+                  <span className="grid h-20 w-20 place-items-center rounded-full bg-surface text-accent-strong shadow-lift">
+                    <Play size={30} aria-hidden className="translate-x-0.5" fill="currentColor" />
+                  </span>
+                  <span className="rounded-full bg-black/60 px-4 py-1.5 text-sm font-medium text-white">
+                    Video coming soon
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* 6. Как это работает -------------------------------------------------------- */
+
 function HowItWorks() {
+  // Голосовое 23.09: «чтобы был не только текст, а разбавлялось картинками
+  // и элементами — людям тяжело читать весь текст». Отсюда иконки у шагов.
   const steps = [
-    ['Sign up with a code', 'Enter your email and get a six-digit code. No password to invent.'],
-    ['Profile or job post', 'Candidates fill in a profile, employers post a job.'],
-    ['Apply and chat', 'Applying takes one click, then comes the chat and an interview invitation.'],
-    ['Start work', 'Both sides see the hiring stage, all the way to the offer.'],
-  ];
+    [Mail, 'Sign up with a code', 'Your email and a six-digit code. No password to invent.'],
+    [FileText, 'Profile or job post', 'Candidates fill in a profile, employers post a role.'],
+    [MessageSquare, 'Apply and chat', 'One-click apply, then a direct chat and interview invite.'],
+    [BadgeCheck, 'Start work', 'Both sides track every stage, all the way to the offer.'],
+  ] as const;
 
   return (
-    <Section id="how" muted eyebrow="How it works" title="Four steps from sign-up to your first day">
-      <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-        {steps.map(([title, text], i) => (
-          <li key={title}>
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-accent-strong text-sm font-bold text-on-accent">
-              {i + 1}
+    <Section id="how" eyebrow="How it works" title="Four steps from sign-up to your first day">
+      <ol className="relative grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        {/* Линия, связывающая шаги, — только когда они стоят в один ряд. */}
+        <span aria-hidden className="absolute left-6 right-6 top-6 hidden h-px bg-line-strong lg:block" />
+        {steps.map(([Icon, title, text], i) => (
+          <li key={title} className="relative">
+            <span className="relative grid h-12 w-12 place-items-center rounded-full bg-accent-strong text-on-accent ring-8 ring-background dark:bg-accent">
+              <Icon size={20} aria-hidden />
+              <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-surface text-[11px] font-bold text-heading shadow">
+                {i + 1}
+              </span>
             </span>
-            <h3 className="mt-4 font-semibold text-text-primary">{title}</h3>
+            <h3 className="mt-5 text-lg font-semibold text-heading">{title}</h3>
             <p className="mt-1.5 leading-relaxed text-text-secondary">{text}</p>
           </li>
         ))}
@@ -326,14 +402,75 @@ function HowItWorks() {
   );
 }
 
+/* 7. Мобильное приложение ---------------------------------------------------- */
+
 function MobileApp() {
   return (
-    <Section
-      eyebrow="Mobile app"
-      title="The same account on your phone"
-      lead="HorecaPass for iOS and Android. Scan the code with your camera to open the app in the store."
-    >
+    <Section id="app" eyebrow="Mobile app" title="The same account, in your pocket." className="bg-surface-muted">
       <AppDownload />
+    </Section>
+  );
+}
+
+/* 8. Доверие ------------------------------------------------------------------ */
+
+function Trust() {
+  // Приглушённое чёрно-белое фото зала — заказчица: «фоном можно использовать
+  // приглушённые чёрно-белые фотографии команды, особенно там, где продажи».
+  return (
+    <section className="relative overflow-hidden bg-ink">
+      <Image src="/landing/restaurant.webp" alt="" fill unoptimized className="object-cover grayscale" />
+      <div aria-hidden className="absolute inset-0 bg-ink opacity-75" />
+      <div className="relative mx-auto max-w-4xl px-6 py-24 text-center lg:px-10 lg:py-32">
+        <p className="text-3xl font-bold leading-tight tracking-tight text-white lg:text-5xl">
+          Built by recruiters who&apos;ve placed 1,000+ hospitality professionals across the GCC.
+        </p>
+        <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/75">
+          After years of doing this by hand — CVs, WhatsApp, spreadsheets — we built the tool we needed
+          ourselves.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* 9. FAQ ---------------------------------------------------------------------- */
+
+function Faq() {
+  const items = [
+    // В документе пометка: «требует подтверждения как факта перед публикацией».
+    ['Is it really free for candidates?', 'Yes — no fee to apply or get hired.'],
+    [
+      'How is this different from a general job board?',
+      'Built specifically for hospitality — qualification and verification are part of the profile, not an afterthought.',
+    ],
+    [
+      'Do I need everything ready before I sign up?',
+      'No. Start with your email, build your profile at your own pace.',
+    ],
+    [
+      "What does 'Verified' actually mean?",
+      'Completed a short role-specific qualification and, where required, a video introduction.',
+    ],
+  ];
+
+  return (
+    <Section id="faq" eyebrow="FAQ" title="Before you sign up">
+      <div className="max-w-3xl divide-y divide-line border-y border-line">
+        {items.map(([q, a]) => (
+          <details key={q} className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-lg font-semibold text-heading focus-ring [&::-webkit-details-marker]:hidden">
+              {q}
+              <ChevronDown
+                size={20}
+                aria-hidden
+                className="shrink-0 text-accent-text transition-transform group-open:rotate-180"
+              />
+            </summary>
+            <p className="-mt-1 pb-5 text-lg leading-relaxed text-text-secondary">{a}</p>
+          </details>
+        ))}
+      </div>
     </Section>
   );
 }
