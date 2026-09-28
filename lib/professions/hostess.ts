@@ -85,7 +85,7 @@ export const hostess: Profession = {
       kind: "text",
       slot: "specifics",
       required: true,
-      hint: "You can dictate it, the AI will break it into points.",
+      hint: "You can dictate it, Smart will break it into points.",
     },
     {
       id: "vip_experience",

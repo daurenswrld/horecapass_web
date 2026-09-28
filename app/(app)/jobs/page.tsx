@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { CandidateSetupInvite, ProfileProgress } from '@/components/candidate/profile-overview';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { VacancyCard } from '@/components/vacancy/vacancy-card';
@@ -92,7 +93,11 @@ export default function JobsPage() {
         }
       />
 
-      <div className="px-5 py-4 md:px-8">
+      <div className="space-y-3 px-5 py-4 md:px-8">
+        {/* Бриф кандидата, пункт 9: вместо пустой шкалы — прогресс профиля
+            с конкретным следующим действием. */}
+        <CandidateSetupInvite />
+        <ProfileProgress />
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary" />

@@ -1,5 +1,6 @@
 import { API } from './endpoints';
 import { http, request, tokens } from './client';
+import { demoSession } from '@/lib/demo/session';
 
 /**
  * Авторизация. Повторяет AuthRepository мобильного приложения
@@ -99,6 +100,7 @@ export const authApi = {
 
   logout() {
     tokens.clear();
+    demoSession.end();
   },
 
   /** Удаление аккаунта. В мобилке это требование App Store 5.1.1(v). */

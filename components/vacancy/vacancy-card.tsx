@@ -112,7 +112,10 @@ export function VacancyCard({ vacancy, selected, onSelect, onToggleSave }: Props
               .map((t) => (
                 <Chip key={t}>{t}</Chip>
               ))}
-            {vacancy.skills.slice(0, 3).map((s) => (
+            {/* Бриф кандидата, пункт 9: вместо общих навыков («Teamwork»,
+                «Positive attitude») — 2–4 реальных перка позиции: жильё, еда,
+                чаевые. Навыки — только если работодатель перки не указал. */}
+            {(vacancy.benefits.length ? vacancy.benefits : vacancy.skills).slice(0, vacancy.benefits.length ? 4 : 3).map((s) => (
               <Chip key={s}>{s}</Chip>
             ))}
           </div>

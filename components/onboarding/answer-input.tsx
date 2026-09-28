@@ -50,7 +50,7 @@ function createRecognition(): SpeechRecognitionLike | null {
   return r;
 }
 
-function VoiceButton({
+export function VoiceButton({
   onText,
   disabled,
 }: {

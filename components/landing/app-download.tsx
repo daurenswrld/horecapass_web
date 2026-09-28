@@ -120,8 +120,8 @@ export async function AppDownload() {
           <Smartphone size={24} className="text-accent-text" />
         </span>
         <p className="max-w-2xl leading-relaxed text-text-secondary">
-          Applications, chats and your CV stay in sync: one server. Recording a video intro
-          and voice messages is available in the app only.
+          Applications, chats and your CV stay in sync. Video intros and voice messages are
+          recorded right in the app.
         </p>
       </div>
 

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { BadgeCheck, Bookmark, Check, MapPin, Video } from 'lucide-react';
 import { Button, Chip, Spinner } from '@/components/ui/primitives';
 import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
+import { InterviewPrep } from './interview-prep';
 import { ApiError } from '@/lib/api/client';
 
 /**
@@ -96,8 +97,14 @@ export function VacancyDetails({
     ['Pay type', vacancy.salaryType],
   ].filter((r): r is [string, string] => !!r[1]);
 
+  // Бриф кандидата, пункт 10: в шапке — фото заведения, а не иконка;
+  // своих фото нет — стоковое фото зала.
+  const photo = vacancy.companyImages[0] ?? '/landing/restaurant.webp';
+
   return (
     <div className="space-y-4">
+      {/* Обычный img: адрес с сервера компании или локальный файл. */}
+      <img src={photo} alt="" className="photo-calm aspect-[16/6] w-full rounded-lg object-cover" />
       <header>
         <h2 className="text-xl font-bold tracking-tight text-text-primary">{vacancy.title}</h2>
         <p className="mt-1 flex items-center gap-1.5 text-sm text-text-secondary">
@@ -138,6 +145,10 @@ export function VacancyDetails({
         </div>
 
         {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+
+        <div className="mt-4">
+          <InterviewPrep key={vacancy.id} vacancy={vacancy} />
+        </div>
       </header>
 
       {conditions.length > 0 && (

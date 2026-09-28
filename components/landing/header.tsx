@@ -25,12 +25,6 @@ export function LandingHeader() {
 
         <nav className="hidden items-center gap-7 text-sm text-text-secondary md:flex">
           <a
-            href="#vacancies"
-            className="rounded transition-colors hover:text-text-primary focus-ring"
-          >
-            Jobs
-          </a>
-          <a
             href="#candidates"
             className="rounded transition-colors hover:text-text-primary focus-ring"
           >
@@ -47,6 +41,12 @@ export function LandingHeader() {
             className="rounded transition-colors hover:text-text-primary focus-ring"
           >
             How it works
+          </a>
+          <a
+            href="#faq"
+            className="rounded transition-colors hover:text-text-primary focus-ring"
+          >
+            FAQ
           </a>
         </nav>
 
@@ -66,7 +66,7 @@ export function LandingHeader() {
             <>
               <Link
                 href="/login"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-muted focus-ring"
+                className="whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-muted focus-ring"
               >
                 Sign in
               </Link>

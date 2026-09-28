@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/auth-form";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { DemoLogin } from "@/components/auth/demo-login";
 
 export const metadata = { title: "Sign in" };
 
@@ -18,6 +19,7 @@ export default function LoginPage() {
           Create an account
         </Link>
       </p>
+      <DemoLogin />
     </AuthLayout>
   );
 }

@@ -115,7 +115,7 @@ export const manager: Profession = {
       kind: "text",
       slot: "scale",
       required: true,
-      hint: "For example: 3.2M USD a year, or 25M KZT a month.",
+      hint: "For example: 3.2M USD a year, or 1.5M AED a month.",
     },
     {
       id: "venue_types",
@@ -155,7 +155,7 @@ export const manager: Profession = {
       kind: "text",
       slot: "specifics",
       required: true,
-      hint: "You can dictate it, the AI will break it into points.",
+      hint: "You can dictate it, Smart will break it into points.",
     },
     {
       id: "recruitment",

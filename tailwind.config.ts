@@ -23,6 +23,10 @@ const config: Config = {
           alt: rgb('--surface-alt'),
         },
         line: { DEFAULT: rgb('--border'), strong: rgb('--border-strong') },
+        heading: rgb('--heading'),
+        peach: { from: rgb('--peach-from'), to: rgb('--peach-to') },
+        ink: rgb('--ink'),
+        cv: { paper: rgb('--cv-paper'), ink: rgb('--cv-ink'), accent: rgb('--cv-accent') },
         text: {
           primary: rgb('--text-primary'),
           secondary: rgb('--text-secondary'),

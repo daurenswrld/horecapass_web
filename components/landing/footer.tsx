@@ -77,9 +77,9 @@ export function Footer() {
           <Column
             title="For candidates"
             links={[
-              { label: 'Open jobs', href: '#vacancies' },
-              { label: 'How it works', href: '#how' },
               { label: 'What you get', href: '#candidates' },
+              { label: 'How it works', href: '#how' },
+              { label: 'FAQ', href: '#faq' },
               { label: 'Create a profile', href: '/register?role=applicant' },
             ]}
           />

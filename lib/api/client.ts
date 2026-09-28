@@ -1,4 +1,5 @@
 import { API } from "./endpoints";
+import { demoResponse, demoSession } from "@/lib/demo/session";
 
 /**
  * HTTP-клиент.
@@ -101,6 +102,14 @@ export async function request<T>(
 ): Promise<T> {
   const { body, query, __retried, headers, ...rest } = options;
 
+  // Демо-сессия (только dev): закрытые запросы отвечаются локально,
+  // публичные уходят на сервер без токена. См. lib/demo/session.ts.
+  const demo = demoResponse(path, (rest.method ?? "GET").toUpperCase());
+  if (demo) return demo.value as T;
+  const inDemo = demoSession.get() !== null;
+  // «Для вас» в демо — общий список: на сервере нет профиля демо-кандидата.
+  if (inDemo && path.startsWith(API.vacancies.matches)) path = API.vacancies.list;
+
   let url = path.startsWith("http") ? path : BASE_URL + path;
   if (query) {
     const qs = new URLSearchParams();
@@ -118,7 +127,7 @@ export async function request<T>(
   if (body !== undefined && !isFormData)
     h.set("Content-Type", "application/json");
 
-  const access = tokens.access;
+  const access = inDemo ? null : tokens.access;
   if (access && !isAuthPath(path)) h.set("Authorization", `Bearer ${access}`);
 
   const res = await fetch(url, {
