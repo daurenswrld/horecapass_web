@@ -88,6 +88,36 @@ export function speechRecognitionAvailable(): boolean {
   return 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
 }
 
+const CONSENT_KEY = 'hp_demo_cv_consent';
+
+/**
+ * Согласие кандидата на публикацию резюме — заказчица 17.09: «перед
+ * публикацией резюме он должен согласиться и именно рукой подписать, что
+ * согласен, что его данные будут опубликованы на платформе в публичном
+ * доступе: имя, номер телефона, почта и опыт работы». Станет
+ * POST /api/resumes/my/<id>/publish-consent/.
+ */
+export interface CvConsent {
+  agreed: boolean;
+  signer: string;
+  signature: string | null;
+  signedAt: string | null;
+}
+
+export const EMPTY_CONSENT: CvConsent = { agreed: false, signer: '', signature: null, signedAt: null };
+
+export const cvConsent = {
+  load(): CvConsent {
+    return { ...EMPTY_CONSENT, ...read<Partial<CvConsent>>(CONSENT_KEY, {}) };
+  },
+  save(value: CvConsent) {
+    write(CONSENT_KEY, value);
+  },
+  clear() {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(CONSENT_KEY);
+  },
+};
+
 const BRAND_KEY = 'hp_demo_company_brand';
 
 /** HR-бренд компании. Станет полями в /users/api/users/me/company/. */

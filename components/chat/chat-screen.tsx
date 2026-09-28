@@ -365,7 +365,8 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
   );
 }
 
-export function ChatScreen() {
+/** `segment` — переключатель Messages / Communities у кандидата (бриф, пункт 13). */
+export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
   const [rooms, setRooms] = React.useState<ChatRoom[]>([]);
   const [selected, setSelected] = React.useState<ChatRoom | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -412,10 +413,13 @@ export function ChatScreen() {
         title="Chats"
         subtitle={loading ? undefined : totalUnread > 0 ? `Unread: ${totalUnread}` : undefined}
         actions={
-          <Button variant="secondary" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
-            <RefreshCw size={15} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            {segment}
+            <Button variant="secondary" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+              <RefreshCw size={15} />
+              Refresh
+            </Button>
+          </div>
         }
       />
 

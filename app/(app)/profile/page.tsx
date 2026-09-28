@@ -6,11 +6,13 @@ import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { DemoNotice } from '@/components/demo-notice';
 import { CvDocument } from '@/components/cv/cv-document';
+import { PublishConsent } from '@/components/cv/publish-consent';
+import { ProfileOverview } from '@/components/candidate/profile-overview';
 import { OnboardingChat } from '@/components/onboarding/chat';
 import { AssistantNudge } from '@/components/onboarding/assistant';
 import { nudge } from '@/lib/onboarding/engine';
 import { activeQuestions, getProfession, PROFESSIONS, type Answers } from '@/lib/professions';
-import { profileDraft } from '@/lib/demo/storage';
+import { cvConsent, profileDraft } from '@/lib/demo/storage';
 import { useAuth } from '@/lib/auth/context';
 import { plural } from '@/lib/utils';
 
@@ -80,6 +82,8 @@ export default function ProfilePage() {
       <>
         <PageHeader title="Profile" subtitle="We will build your CV in one conversation" />
         <div className="space-y-5 px-5 py-6 md:px-8">
+          <ProfileOverview />
+
           <DemoNotice
             what="This is the profile as the client intended it: questions are asked one at a time, you can answer by voice or text, and the question set depends on the profession."
             endpoint="GET/PUT /api/resumes/my/<id>/profession-profile/"
@@ -149,6 +153,8 @@ export default function ProfilePage() {
               size="sm"
               onClick={() => {
                 profileDraft.clear();
+                // Согласие подписано под прежнее резюме — новое подписывается заново.
+                cvConsent.clear();
                 setProfessionId(null);
                 setAnswers({});
                 setMode('pick');
@@ -163,6 +169,9 @@ export default function ProfilePage() {
       />
 
       <div className="space-y-4 px-5 py-6 md:px-8">
+        <ProfileOverview />
+
+        <div id="cv" className="scroll-mt-24" />
         <DemoNotice
           what="The CV is built from your answers and kept in the browser. Once the endpoint exists, the same data will go to the server and become visible to employers."
           endpoint="GET/PUT /api/resumes/my/<id>/profession-profile/"
@@ -171,6 +180,8 @@ export default function ProfilePage() {
         {hint && <AssistantNudge message={hint} />}
 
         <CvDocument profession={profession} answers={answers} candidateName={candidateName} />
+
+        <PublishConsent defaultName={candidateName === 'Your name' ? '' : candidateName} />
       </div>
     </>
   );

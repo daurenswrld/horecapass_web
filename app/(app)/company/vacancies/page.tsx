@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Plus, X } from 'lucide-react';
+import { SetupInvite } from '@/components/employer/setup-invite';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Chip, Field, Spinner } from '@/components/ui/primitives';
 import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
@@ -31,8 +33,11 @@ export default function CompanyVacanciesPage() {
 
   React.useEffect(load, [load]);
 
-  const active = items.filter((v) => v.isActive);
-  const archived = items.filter((v) => !v.isActive);
+  // Active / Drafts / Archived — как в брифе (пункт 8). Черновики создаёт
+  // онбординг работодателя: вакансия ждёт оплаты и кандидатам не видна.
+  const active = items.filter((v) => v.status === 'ACTIVE');
+  const drafts = items.filter((v) => v.status === 'DRAFT');
+  const archived = items.filter((v) => v.status === 'ARCHIVED');
 
   return (
     <>
@@ -40,14 +45,28 @@ export default function CompanyVacanciesPage() {
         title="Jobs"
         subtitle={loading ? undefined : `Active: ${active.length}`}
         actions={
-          <Button onClick={() => setCreating((v) => !v)}>
-            {creating ? <X size={16} /> : <Plus size={16} />}
-            {creating ? 'Cancel' : 'New job'}
-          </Button>
+          // Голосовое 15.09: «нажимает Create — и в этом же окошке появляется
+          // чат». Главная кнопка ведёт в Smart vacancy; короткая форма, которая
+          // публикует на сервер уже сейчас, остаётся рядом.
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => setCreating((v) => !v)}>
+              {creating ? <X size={16} /> : null}
+              {creating ? 'Cancel' : 'Quick form'}
+            </Button>
+            <Link
+              href="/company/onboarding?new=vacancy"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-accent-strong px-4 text-sm font-semibold text-on-accent transition-colors hover:brightness-110 focus-ring dark:bg-accent"
+            >
+              <Plus size={16} aria-hidden />
+              New job
+            </Link>
+          </div>
         }
       />
 
       <div className="space-y-6 px-5 py-6 md:px-8">
+        <SetupInvite />
+
         {creating && (
           <CreateVacancyForm
             onCancel={() => setCreating(false)}
@@ -76,16 +95,20 @@ export default function CompanyVacanciesPage() {
             <p className="mt-1 text-sm text-text-secondary">
               Post your first one and candidate applications will appear here.
             </p>
-            <Button className="mt-4" onClick={() => setCreating(true)}>
-              <Plus size={16} />
+            <Link
+              href="/company/onboarding?new=vacancy"
+              className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-accent-strong px-4 text-sm font-semibold text-on-accent transition-colors hover:brightness-110 focus-ring dark:bg-accent"
+            >
+              <Plus size={16} aria-hidden />
               New job
-            </Button>
+            </Link>
           </Card>
         )}
 
         {!loading && !error && items.length > 0 && (
           <>
             <VacancyGroup title="Active" items={active} />
+            {drafts.length > 0 && <VacancyGroup title="Drafts" items={drafts} onPublished={load} />}
             {archived.length > 0 && <VacancyGroup title="Archived" items={archived} muted />}
           </>
         )}
@@ -101,11 +124,20 @@ export default function CompanyVacanciesPage() {
  * но для веба важнее опубликовать быстро, а детали дописать потом. Уходит
  * настоящим запросом на `/api/vacancies/`.
  */
+/**
+ * Валюты стран GCC. Раньше форма всегда отправляла KZT — наследие первой
+ * версии, хотя рынок платформы — Залив. На сервере уже лежат вакансии в AED
+ * и SAR; остальные коды сервером пока не проверены — если он их не примет,
+ * форма покажет его ответ.
+ */
+const CURRENCIES = ['AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR'] as const;
+
 function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
   const [title, setTitle] = React.useState('');
   const [city, setCity] = React.useState('');
   const [salaryMin, setSalaryMin] = React.useState('');
   const [salaryMax, setSalaryMax] = React.useState('');
+  const [currency, setCurrency] = React.useState<(typeof CURRENCIES)[number]>('AED');
   const [description, setDescription] = React.useState('');
   const [requirements, setRequirements] = React.useState('');
   const [busy, setBusy] = React.useState(false);
@@ -113,7 +145,8 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || busy) return;
+    // Сервер требует название и описание (VacancySerializer).
+    if (!title.trim() || !description.trim() || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -123,10 +156,11 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
         address: city.trim() || undefined,
         salary_min: salaryMin ? Number(salaryMin) : undefined,
         salary_max: salaryMax ? Number(salaryMax) : undefined,
-        currency: 'KZT',
+        currency,
         description: description.trim() || undefined,
         requirements: requirements.trim() || undefined,
-        is_active: true,
+        // is_active сервер вычисляет из status при сохранении.
+        status: 'ACTIVE',
       });
       onCreated();
     } catch (err) {
@@ -150,7 +184,7 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
     <Card className="p-6">
       <h2 className="text-lg font-semibold text-text-primary">New job</h2>
       <p className="mt-1 text-sm text-text-secondary">
-        Only the position is required, the rest can be added later.
+        The position and a short description are required, the rest can be added later.
       </p>
 
       <form onSubmit={submit} className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -161,15 +195,15 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
           placeholder="e.g. Chef de Partie"
           autoFocus
         />
-        <Field label="City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Almaty" />
-        <div className="grid grid-cols-2 gap-3">
+        <Field label="City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Dubai" />
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
           <Field
             label="Salary from"
             type="number"
             inputMode="numeric"
             value={salaryMin}
             onChange={(e) => setSalaryMin(e.target.value)}
-            placeholder="400000"
+            placeholder="4000"
           />
           <Field
             label="to"
@@ -177,8 +211,23 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
             inputMode="numeric"
             value={salaryMax}
             onChange={(e) => setSalaryMax(e.target.value)}
-            placeholder="600000"
+            placeholder="6000"
           />
+          <div className="space-y-1.5">
+            <label htmlFor="v-cur" className="block text-sm font-medium text-text-secondary">
+              Currency
+            </label>
+            <select
+              id="v-cur"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as (typeof CURRENCIES)[number])}
+              className="h-12 rounded border border-line-strong bg-surface px-3 text-text-primary focus-ring"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="lg:col-span-2 xl:col-span-3">
@@ -212,7 +261,7 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
         {error && <p className="text-sm text-danger lg:col-span-2 xl:col-span-3">{error}</p>}
 
         <div className="flex gap-2 lg:col-span-2 xl:col-span-3">
-          <Button type="submit" disabled={!title.trim() || busy}>
+          <Button type="submit" disabled={!title.trim() || !description.trim() || busy}>
             {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Publish'}
           </Button>
           <Button type="button" variant="secondary" onClick={onCancel}>
@@ -224,7 +273,52 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
   );
 }
 
-function VacancyGroup({ title, items, muted }: { title: string; items: Vacancy[]; muted?: boolean }) {
+/**
+ * Публикация черновика — status DRAFT → ACTIVE (PATCH /api/vacancies/my/<id>/).
+ * По брифу (пункт 14) публикация платная и идёт после оплаты; пока оплата
+ * не подключена, публикуем сразу — так же, как «Quick form». Когда появится
+ * оплата, эта кнопка ведёт на выбор тарифа.
+ */
+function PublishButton({ vacancy, onDone }: { vacancy: Vacancy; onDone: () => void }) {
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  return (
+    <div className="mt-3">
+      <Button
+        size="sm"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await vacanciesApi.update(vacancy.id, { status: 'ACTIVE' });
+            onDone();
+          } catch (e) {
+            const p = e instanceof ApiError ? e.payload : null;
+            setError(p && typeof p === 'object' ? Object.values(p as Record<string, unknown>).flat().join(' ') : 'Could not publish.');
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? <Spinner className="h-4 w-4 border-accent-muted border-t-on-accent" /> : 'Publish'}
+      </Button>
+      {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+function VacancyGroup({
+  title,
+  items,
+  muted,
+  onPublished,
+}: {
+  title: string;
+  items: Vacancy[];
+  muted?: boolean;
+  /** Есть только у черновиков: кнопка «Publish» на карточке. */
+  onPublished?: () => void;
+}) {
   if (items.length === 0) return null;
   return (
     <section>
@@ -244,6 +338,7 @@ function VacancyGroup({ title, items, muted }: { title: string; items: Vacancy[]
                     <Chip key={t}>{t}</Chip>
                   ))}
               </div>
+              {onPublished && <PublishButton vacancy={v} onDone={onPublished} />}
             </Card>
           );
         })}

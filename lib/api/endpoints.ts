@@ -173,6 +173,64 @@ export const MISSING_ON_BACKEND = [
     why: "Документ, раздел 7: несколько визуальных шаблонов, в перспективе платных.",
   },
   {
+    need: "Профиль компании для онбординга работодателя: контакты, источники, pre-opening, инкогнито",
+    proposed:
+      "Поля в /users/api/users/me/company/: website, linkedin, whatsapp, contact_email, size, is_pre_opening, pre_opening_answers, hide_name, photos",
+    why: "Бриф, пункты 4 и 6; встреча 15.09: «взять email, телефон, WhatsApp»; инкогнито для Premium.",
+  },
+  {
+    need: "Черновик HR-описания компании по ссылке, PDF или ответам pre-opening",
+    proposed: "POST /api/ai/company-brand/draft/ (website | instagram | linkedin | pdf | answers → текст)",
+    why: "Бриф, пункт 4: работодатель правит и утверждает текст, а не пишет с нуля.",
+  },
+  {
+    need: "Соглашение работодателя с подписью от руки и копией лицензии",
+    proposed:
+      "POST /users/api/users/me/company/agreement/ (signer, position, signature png, license file, accepted_at)",
+    why: "Заказчица 17.09: перед оплатой — соглашение, роспись и лицензия (due diligence). Текст соглашения готовит адвокат.",
+  },
+  {
+    need: "Согласие кандидата на публикацию резюме с подписью от руки",
+    proposed: "POST /api/resumes/my/<id>/publish-consent/ (full name, signature png, signed_at)",
+    why: "Заказчица 17.09: без согласия на публикацию имени, телефона, почты и опыта «никого пускать на платформу нельзя».",
+  },
+  {
+    need: "Оплата публикации: Single post 149 SAR, 5-post bundle 449 SAR, Premium 699 SAR/мес",
+    proposed: "POST /api/billing/checkout/ (plan) → публикация вакансии после оплаты; лимиты и срок жизни постов",
+    why: "Бриф работодателя, пункт 14: пейволл после Smart vacancy review и до публикации. Голосовое 25.09: превью → условия → оплата → публикация.",
+  },
+  {
+    need: "Модель вакансии под композер: Permanent / Part-time, дни и часы смены, joining ticket, tips, язык, обязанности, этапы, видео по желанию, файл JD",
+    proposed:
+      "Поля в /api/vacancies/: employment_type (permanent | part_time), is_admin_role, part_time_days[], shift_hours, joining_ticket, tips, language_requirement, responsibilities[], hiring_steps[], prefer_video_intro, jd_file, show_no_insurance",
+    why: "Бриф работодателя, пункты 9–12, и Vacancy Prompt: ручная форма и композер пишут в одну модель. Национальность не хранить — только язык.",
+  },
+  {
+    need: "Smart vacancy review на черновике, до публикации",
+    proposed: "POST /api/vacancies/my/<id>/ai-score/ — уже есть; нужен запуск на неопубликованном черновике",
+    why: "Бриф работодателя, пункт 13.7: ревью должно быть actionable до публикации, а не после.",
+  },
+  {
+    need: "Профиль кандидата: национальность, текущая локация, страны работы (массив), cover letter, тип сертификата, references",
+    proposed: "Поля в /api/resumes/my/<id>/: nationality, current_location, target_countries[], cover_letter (file|text), certificates[].type, references[]",
+    why: "Бриф кандидата, пункты 1–3 и 12: страны — множественный выбор, локация — свободный текст.",
+  },
+  {
+    need: "Smart-анализ профиля и платный CV upgrade",
+    proposed: "POST /api/resumes/my/<id>/gaps/ (вопросы по одному), POST /api/resumes/my/<id>/upgrade/ (превью до оплаты) + оплата",
+    why: "Бриф кандидата, пункт 4: сначала показать результат, потом предложить апгрейд; отказ не блокирует.",
+  },
+  {
+    need: "Квалификация кандидата и флаг Verified",
+    proposed: "POST /api/qualification/generate/ (роль, уровень → 8 вопросов), /api/qualification/answers/, is_verified у профиля",
+    why: "Бриф кандидата, пункты 7, 8, 12: Verified = 8 вопросов + видео-визитка; кухня квалификацию пропускает.",
+  },
+  {
+    need: "Communities: кличи и групповые чаты",
+    proposed: "/api/community/calls/ (создать, вступить, премодерация, жалоба), групповой чат от 2 участников",
+    why: "Бриф кандидата, пункт 13: таргетинг по национальности и стране, один активный клич, фильтр ссылок и телефонов.",
+  },
+  {
     need: "Find Your People",
     proposed: "GET /api/community/ — поиск коллег по профессии, языку, стране",
     why: "Документ, раздел 10: раздел был в изначальной концепции и потерян.",

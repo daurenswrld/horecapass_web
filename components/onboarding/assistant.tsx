@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { X } from "lucide-react";
+import { useAssistant } from "@/lib/demo/assistant";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,50 +22,23 @@ export function AssistantMark({
   size?: number;
   className?: string;
 }) {
-  // Собственная фигура, а не иконка из набора: у ассистента должно быть лицо,
-  // которое кандидат запомнит. Токены — те же, что у остального интерфейса.
+  // У ассистента должно быть лицо, которое кандидат запомнит. Раньше здесь
+  // был нарисованный человечек в поварском колпаке; на созвоне 22.09
+  // заказчица: «аватар должен быть не шефом, а менеджером в костюме
+  // рекрутёра». Это рекрутёр из утверждённого макета.
+  // Мужчина или женщина — по выбору в Settings (созвон 22.09).
+  const { avatar } = useAssistant();
   return (
-    <svg
+    // Обычный img: крошечный локальный файл, next/image здесь ничего не даёт.
+    <img
+      src={avatar}
+      alt=""
+      aria-hidden
       width={size}
       height={size}
-      viewBox="0 0 48 48"
-      fill="none"
-      aria-hidden
-      className={cn("shrink-0", className)}
-    >
-      <circle cx="24" cy="24" r="24" className="fill-accent-muted" />
-      {/* колпак — отсылка к поварскому, но геометричная */}
-      <path
-        d="M14 20c0-4.4 3.6-8 8-8h4c4.4 0 8 3.6 8 8v2H14v-2Z"
-        className="fill-accent"
-      />
-      <rect
-        x="14"
-        y="21"
-        width="20"
-        height="4"
-        rx="1.6"
-        className="fill-accent"
-      />
-      {/* лицо */}
-      <rect
-        x="16"
-        y="26"
-        width="16"
-        height="13"
-        rx="5"
-        className="fill-surface"
-      />
-      <circle cx="21" cy="31" r="1.7" className="fill-text-primary" />
-      <circle cx="27" cy="31" r="1.7" className="fill-text-primary" />
-      <path
-        d="M20.5 34.6c1.2 1.2 5.8 1.2 7 0"
-        stroke="currentColor"
-        className="text-text-secondary"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
+      className={cn("shrink-0 rounded-full bg-accent-muted object-cover", className)}
+      style={{ width: size, height: size }}
+    />
   );
 }
 

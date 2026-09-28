@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi, isCompany, type CurrentUser } from '@/lib/api/auth';
 import { tokens } from '@/lib/api/client';
+import { demoSession } from '@/lib/demo/session';
 
 /**
  * Кто сейчас в системе.
@@ -29,6 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const load = React.useCallback(async () => {
+    // Демо-сессия (только dev) — без токенов и без сервера.
+    const demo = demoSession.user();
+    if (demo) {
+      setUser(demo);
+      setLoading(false);
+      return;
+    }
     if (!tokens.access) {
       setUser(null);
       setLoading(false);

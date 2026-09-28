@@ -34,3 +34,13 @@ next-env.d.ts
 
 # local tooling
 .claude/
+
+# client materials (private chat export)
+WhatsApp Chat - */
+
+# Figma personal access token
+.figma-token
+
+# client context: notes, voice transcripts, Figma exports, copy doc (local only)
+docs/
+HorecaPass_Web_Copy.docx

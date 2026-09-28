@@ -9,9 +9,11 @@ import {
   LogOut,
   MessageSquare,
   Search,
+  Settings,
   User,
   UserSearch,
 } from 'lucide-react';
+import { DemoBanner } from '@/components/auth/demo-login';
 import { Wordmark } from '@/components/brand';
 import { Spinner } from '@/components/ui/primitives';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -43,6 +45,7 @@ const APPLICANT_NAV: NavItem[] = [
   { href: '/responses', label: 'Applications', Icon: FileText },
   { href: '/chats', label: 'Chats', Icon: MessageSquare },
   { href: '/profile', label: 'Profile', Icon: User },
+  { href: '/settings', label: 'Settings', Icon: Settings },
 ];
 
 const COMPANY_NAV: NavItem[] = [
@@ -50,6 +53,7 @@ const COMPANY_NAV: NavItem[] = [
   { href: '/company/selection', label: 'Candidates', Icon: UserSearch },
   { href: '/company/chats', label: 'Chats', Icon: MessageSquare },
   { href: '/company/profile', label: 'Profile', Icon: User },
+  { href: '/company/settings', label: 'Settings', Icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -150,7 +154,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      <main className="min-w-0 flex-1 pb-20 md:pb-0">{children}</main>
+      <main className="min-w-0 flex-1 pb-20 md:pb-0">
+        <DemoBanner />
+        {children}
+      </main>
     </div>
   );
 }
