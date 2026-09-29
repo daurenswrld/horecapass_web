@@ -410,7 +410,7 @@ export function CheckStep({ draft, update, go }: CProps) {
   );
 }
 
-/* CV upgrade: сначала результат, потом предложение ---------------------------------------------- */
+/* Резюме под GCC: сначала результат, потом предложение скачать -------------------------------- */
 
 export function buildCv(d: CandidateDraft, name: { first: string; last: string }): CvData {
   const certs = d.certificates.map((c) => (c.type === 'Other' ? c.name.replace(/\.[a-z]+$/i, '') : c.type));
@@ -439,8 +439,12 @@ export function buildCv(d: CandidateDraft, name: { first: string; last: string }
   };
 }
 
-/** Цена CV upgrade — Aldi, 29.09: «8$ за резюме». Разовая оплата. */
-const CV_UPGRADE_PRICE = '$8';
+/**
+ * Созвон 29.09: адаптированное под GCC резюме есть у каждого кандидата и его
+ * видит работодатель — бесплатно. Платно ($8, разово) — только скачать и
+ * распечатать PDF самому кандидату. Отказ ничего не блокирует.
+ */
+const CV_DOWNLOAD_PRICE = '$8';
 
 export function UpgradeStep({ draft, update, go, name }: CProps) {
   const choose = (upgrade: 'yes' | 'no') => {
@@ -449,7 +453,10 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
   };
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-      <Title title="Want a CV that actually gets noticed?" lead="Let Smart turn your answers into a polished, professional resume — see it before you decide." />
+      <Title
+        title="Your CV is ready for GCC employers"
+        lead="Smart turned your answers into a polished resume in the format employers here expect. It stays on your profile for free, and employers see it when you apply."
+      />
 
       <div className="grid gap-5 lg:grid-cols-[0.7fr_1.3fr]">
         <div className="rounded-lg border border-line bg-surface p-5">
@@ -472,18 +479,18 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
       </div>
 
       <DemoNotice
-        what={`The preview is assembled from your answers in the browser; Smart would rewrite the full CV. The upgrade costs ${CV_UPGRADE_PRICE}, but no payment is taken yet: payment needs the server.`}
-        endpoint="POST /api/resumes/my/<id>/upgrade/ (preview) and a payment step"
+        what={`The preview is assembled from your answers in the browser; Smart would rewrite the full CV. Downloading the PDF costs ${CV_DOWNLOAD_PRICE}, but no payment is taken yet: payment needs the server.`}
+        endpoint="Stripe checkout for the CV download + GET /api/resumes/my/<id>/pdf/ after payment"
       />
 
       <div className="flex flex-wrap gap-2">
         <Continue onClick={() => choose('yes')}>
           <Sparkles size={17} aria-hidden />
-          Upgrade my CV — {CV_UPGRADE_PRICE}
+          Download PDF — {CV_DOWNLOAD_PRICE}
         </Continue>
         {/* Отказ не блокирует — сразу дальше, без экранов-препятствий. */}
         <Button variant="secondary" size="lg" onClick={() => choose('no')}>
-          No thanks, continue
+          Continue for free
         </Button>
       </div>
     </div>

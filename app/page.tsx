@@ -429,7 +429,12 @@ function Trust() {
 function Faq() {
   const items = [
     // В документе пометка: «требует подтверждения как факта перед публикацией».
-    ['Is it really free for candidates?', 'Yes — no fee to apply or get hired.'],
+    // Созвон 29.09: кандидат не платит за профиль и отклики — только за
+    // скачивание своего резюме в PDF ($8), по желанию.
+    [
+      'Is it really free for candidates?',
+      'Yes — your profile, applications and chats are free. You only pay $8 if you want to download your CV as a PDF.',
+    ],
     [
       'How is this different from a general job board?',
       'Built specifically for hospitality — qualification and verification are part of the profile, not an afterthought.',
