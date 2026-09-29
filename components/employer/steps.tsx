@@ -24,6 +24,8 @@ import { Bubble } from '@/components/landing/bubble';
 import { DemoNotice } from '@/components/demo-notice';
 import { VoiceButton } from '@/components/onboarding/answer-input';
 import { Button, ChoiceChip, Field } from '@/components/ui/primitives';
+import { aiApi } from '@/lib/api/ai';
+import { vacanciesApi } from '@/lib/api/vacancies';
 import { speechRecognitionAvailable } from '@/lib/demo/storage';
 import { useAssistant } from '@/lib/demo/assistant';
 import { CompanyAvatar, CompanyProfileCard, PhotoHeader, VacancyCard } from './cards';
@@ -598,9 +600,21 @@ export function VacancyIntroStep({ go }: StepProps) {
 
 /* Smart vacancy --------------------------------------------------------------------------- */
 
-export function VacancyChatStep({ draft, update, go }: StepProps) {
+/**
+ * «Publish» ИИ не отправляем: серверный конструктор на такую просьбу сразу
+ * создаёт активную вакансию, а у нас впереди проверка, соглашение и оплата.
+ */
+const PUBLISH_RE = /\b(publish|post it|go live)\b|опубликуй|опубликовать/i;
+
+export function VacancyChatStep({ draft, update, go, server }: StepProps) {
   const [typing, setTyping] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Настоящий вход: отвечает серверный ИИ (/api/ai/vacancy-builder/stream/),
+  // тот же, что в мобилке. В демо — сценарий в браузере, как раньше.
+  const [aiOptions, setAiOptions] = React.useState<string[]>([]);
+  const [aiDraft, setAiDraft] = React.useState(false);
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => abortRef.current?.abort(), []);
 
   // Первая реплика — сразу при входе в чат (голосовое 15.09: «нажимает Create,
   // и в этом же окошке появляется чат»).
@@ -616,7 +630,71 @@ export function VacancyChatStep({ draft, update, go }: StepProps) {
 
   React.useEffect(() => () => clearTimeout(timer.current), []);
 
+  const replyLive = async (text: string, file?: string) => {
+    const onlyFile = !!file && text === 'Attached a file.';
+    // Структуру вакансии для шага «Check the details» по-прежнему собираем
+    // из слов работодателя — ИИ отдаёт её только при публикации.
+    let v: VacancyDraft = onlyFile ? draft.vacancy : parseVacancy(text, draft.vacancy);
+    if (file) v = { ...v, jdFile: file };
+    const userMsg: ChatMessage = { id: msgId(), from: 'user', text, file };
+    const history = [...draft.vacancyChat, userMsg];
+    update((d) => ({ ...d, vacancy: v, vacancyChat: [...d.vacancyChat, userMsg] }));
+    setAiOptions([]);
+    if (PUBLISH_RE.test(text)) {
+      toDetails();
+      return;
+    }
+
+    const botId = msgId();
+    let started = false;
+    const show = (t: string) =>
+      update((d) =>
+        started
+          ? { ...d, vacancyChat: d.vacancyChat.map((m) => (m.id === botId ? { ...m, text: t } : m)) }
+          : { ...d, vacancyChat: [...d.vacancyChat, { id: botId, from: 'assistant', text: t }] },
+      );
+    setTyping(true);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const res = await aiApi.vacancyBuilder(
+        history
+          .filter((m) => !m.draft && m.text)
+          .map((m) => ({
+            role: m.from,
+            text: m.file && m.text === 'Attached a file.' ? `I attached the job description file ${m.file}.` : m.text,
+          })),
+        (t) => {
+          setTyping(false);
+          show(t);
+          started = true;
+        },
+        ctrl.signal,
+      );
+      show(res.reply.trim() || 'Could you tell me a bit more about the role?');
+      started = true;
+      setAiOptions(res.suggestions.filter((o) => !PUBLISH_RE.test(o)));
+      if (/responsibilit/i.test(res.reply) && /hiring|benefit/i.test(res.reply)) setAiDraft(true);
+      // Если ИИ всё же создал вакансию — держим её черновиком и дальше обновляем её же.
+      if (res.vacancyId) {
+        const id = res.vacancyId;
+        void vacanciesApi.update(id, { status: 'DRAFT' }).catch(() => {});
+        update((d) => ({ ...d, serverVacancyId: id }));
+      }
+    } catch {
+      if (ctrl.signal.aborted) return;
+      show("Sorry, I couldn't reach the assistant just now. Please send that again, or review the details when you're ready.");
+      started = true;
+    } finally {
+      setTyping(false);
+    }
+  };
+
   const reply = (text: string, file?: string) => {
+    if (server) {
+      void replyLive(text, file);
+      return;
+    }
     const turn = draft.turn;
     const onlyFile = !!file && text === 'Attached a file.';
     let v: VacancyDraft = draft.vacancy;
@@ -692,6 +770,10 @@ export function VacancyChatStep({ draft, update, go }: StepProps) {
   const turn = draft.turn;
   const done = turn?.kind === 'draft';
   const v = draft.vacancy;
+  const last = draft.vacancyChat[draft.vacancyChat.length - 1];
+  // С ИИ разговор не «заканчивается» — к деталям можно перейти, как только
+  // понятна роль; когда ИИ показал полный черновик, это основная кнопка.
+  const canReview = server && (aiDraft || !!v.title);
 
   return (
     <ChatLayout
@@ -701,9 +783,23 @@ export function VacancyChatStep({ draft, update, go }: StepProps) {
           ? 'Pre-opening · tell us about the first role you are hiring for'
           : 'Describe the role in your own words — the assistant asks about anything missing'
       }
-      scrollKey={`${draft.vacancyChat.length}-${typing}`}
+      scrollKey={`${draft.vacancyChat.length}-${last?.text.length ?? 0}-${typing}`}
       composer={
-        done ? (
+        server ? (
+          <div className="space-y-3">
+            {canReview && (
+              <Button variant={aiDraft ? 'primary' : 'secondary'} size={aiDraft ? 'lg' : 'sm'} onClick={toDetails}>
+                Review the details
+              </Button>
+            )}
+            <Composer
+              onSend={reply}
+              disabled={typing}
+              suggestion={!aiOptions.length && turn?.kind === 'text' ? turn.suggestion : null}
+              options={aiOptions.length ? { list: aiOptions, multi: false } : null}
+            />
+          </div>
+        ) : done ? (
           <div className="space-y-3">
             <DemoNotice
               what="The assistant here is a script in the browser: it picks out role, city, salary and benefits from your text and asks about the rest. The real one runs on the server."
