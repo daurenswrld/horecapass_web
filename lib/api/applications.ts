@@ -192,7 +192,8 @@ export interface ApplicantProfile {
   skills: string[];
   experiences: ApplicantExperience[];
   educations: string[];
-  certificates: string[];
+  /** Сертификаты со ссылкой на файл, если кандидат его загрузил. */
+  certificates: { title: string; url: string | null }[];
 }
 
 export interface CompanyApplication {
@@ -230,8 +231,9 @@ function label(v: unknown): string | null {
 const list = (v: unknown): string[] => (Array.isArray(v) ? v : []).map(label).filter((x): x is string => !!x);
 
 export function parseApplicantProfile(p: Record<string, unknown>): ApplicantProfile {
-  const salary = nonEmpty(p.desired_salary);
-  const salaryTail = [nonEmpty(p.salary_currency), nonEmpty(p.salary_period)].filter(Boolean).join(' / ');
+  const salary = nonEmpty(p.desired_salary)?.replace(/\.0+$/, '') ?? null;
+  const period = nonEmpty(p.salary_period)?.toLowerCase() ?? null;
+  const salaryTail = [nonEmpty(p.salary_currency), period].filter(Boolean).join(' / ');
   return {
     email: nonEmpty(p.email),
     phone: nonEmpty(p.phone),
@@ -247,17 +249,31 @@ export function parseApplicantProfile(p: Record<string, unknown>): ApplicantProf
     relocationReady: p.relocation_ready === true,
     languages: list(p.languages),
     skills: list(p.skills),
+    // Прод отдаёт опыт как company_name + start_date/end_date, код бэкенда — company + period.
     experiences: (Array.isArray(p.experiences) ? p.experiences : []).map((e) => {
       const x = (e ?? {}) as Json;
+      const month = (v: unknown) => {
+        const m = /^(\d{4})-(\d{2})/.exec(String(v ?? ''));
+        return m ? `${m[2]}/${m[1]}` : null;
+      };
+      const period =
+        String(x.period ?? '').trim() ||
+        (x.start_date ? `${month(x.start_date)} — ${month(x.end_date) ?? 'Now'}` : '');
       return {
         position: String(x.position ?? '').trim(),
-        company: String(x.company ?? '').trim(),
-        period: String(x.period ?? '').trim(),
+        company: String(x.company ?? x.company_name ?? '').trim(),
+        period,
         description: String(x.description ?? '').trim(),
       };
     }),
     educations: list(p.educations),
-    certificates: list(p.certificates),
+    certificates: (Array.isArray(p.certificates) ? p.certificates : [])
+      .map((c) => {
+        const x = (typeof c === 'object' && c ? c : { title: c }) as Json;
+        const title = label(x) ?? 'Certificate';
+        return { title, url: nonEmpty(x.file) };
+      })
+      .filter((c) => c.title || c.url),
   };
 }
 

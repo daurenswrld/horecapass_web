@@ -38,6 +38,7 @@ import {
   type CandidateDraft,
 } from '@/lib/demo/candidate';
 import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/storage';
+import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { cn } from '@/lib/utils';
 
 export interface CProps {
@@ -45,6 +46,8 @@ export interface CProps {
   update: (fn: (d: CandidateDraft) => CandidateDraft) => void;
   go: (step: CStep) => void;
   name: { first: string; last: string };
+  /** Файл — сразу на сервер (при настоящем входе). Статус показывает шапка. */
+  upload?: (kind: 'cv' | 'certificate' | 'video', file: File) => void;
 }
 
 function Continue({ children = 'Continue', className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -201,7 +204,17 @@ function Tile({
   );
 }
 
-function FilePick({ label, accept, multiple, onFiles }: { label: string; accept: string; multiple?: boolean; onFiles: (names: string[]) => void }) {
+function FilePick({
+  label,
+  accept,
+  multiple,
+  onFiles,
+}: {
+  label: string;
+  accept: string;
+  multiple?: boolean;
+  onFiles: (names: string[], files: File[]) => void;
+}) {
   return (
     <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent focus-within:ring-2 focus-within:ring-[rgb(var(--accent-focus))]">
       <Upload size={15} aria-hidden />
@@ -212,7 +225,11 @@ function FilePick({ label, accept, multiple, onFiles }: { label: string; accept:
         multiple={multiple}
         className="sr-only"
         onChange={(e) => {
-          onFiles(Array.from(e.target.files ?? []).map((f) => f.name));
+          const files = Array.from(e.target.files ?? []);
+          onFiles(
+            files.map((f) => f.name),
+            files,
+          );
           e.target.value = '';
         }}
       />
@@ -225,7 +242,7 @@ function FilePick({ label, accept, multiple, onFiles }: { label: string; accept:
  * без «Skip» — профиль не может остаться пустым. Нужно хотя бы резюме:
  * загруженное или собранное в конструкторе.
  */
-export function MaterialsStep({ draft, update, go }: CProps) {
+export function MaterialsStep({ draft, update, go, upload }: CProps) {
   const [builtCv, setBuiltCv] = React.useState(false);
   const [letterOpen, setLetterOpen] = React.useState(false);
   React.useEffect(() => setBuiltCv(!!profileDraft.load().professionId), []);
@@ -237,7 +254,11 @@ export function MaterialsStep({ draft, update, go }: CProps) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Tile Icon={Upload} title="Upload CV" note={draft.cvFile ?? 'PDF, DOC or DOCX'} done={!!draft.cvFile}>
-          <FilePick label={draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.doc,.docx" onFiles={(n) => set({ cvFile: n[0] ?? null })} />
+          <FilePick label={draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.doc,.docx" onFiles={(n, f) => {
+              set({ cvFile: n[0] ?? null });
+              if (f[0]) upload?.('cv', f[0]);
+            }}
+          />
         </Tile>
 
         <Tile Icon={PenLine} title="Create a CV" note={builtCv ? 'Started in the CV builder' : 'Build it in a short conversation'} done={builtCv}>
@@ -281,7 +302,10 @@ export function MaterialsStep({ draft, update, go }: CProps) {
             label="Add files"
             accept=".pdf,image/*"
             multiple
-            onFiles={(n) => set({ certificates: [...draft.certificates, ...n.map((name) => ({ name, type: 'Other' as const }))] })}
+            onFiles={(n, f) => {
+              set({ certificates: [...draft.certificates, ...n.map((name) => ({ name, type: 'Other' as const }))] });
+              f.forEach((file) => upload?.('certificate', file));
+            }}
           />
           {draft.certificates.length > 0 && (
             <ul className="mt-3 space-y-2">
@@ -317,8 +341,12 @@ export function MaterialsStep({ draft, update, go }: CProps) {
       </div>
 
       <DemoNotice
-        what="Only file names are kept, in this browser: nothing is uploaded yet."
-        endpoint="POST /api/resumes/my/ (cv file), /api/resumes/my/certificates/ (with type), /api/resumes/my/<id>/portfolio/, cover letter"
+        what={
+          canSyncToServer()
+            ? 'Your CV file and certificates are saved to your account. The certificate type, the cover letter file and the portfolio stay in this browser for now.'
+            : 'Only file names are kept, in this browser: nothing is uploaded yet.'
+        }
+        endpoint="Certificate type on /api/resumes/my/certificates/, POST /api/resumes/my/<id>/portfolio/, cover letter file"
       />
 
       <Continue disabled={!draft.cvFile && !builtCv} onClick={() => go('countries')} />
@@ -592,7 +620,7 @@ export function QualificationStep({ draft, update, go }: CProps) {
   );
 }
 
-export function VideoStep({ draft, update, go }: CProps) {
+export function VideoStep({ draft, update, go, upload }: CProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
       <Title title="Add a short video intro" lead="Optional. 30–60 seconds: who you are and what you do. Not speaking on camera won't count against you." />
@@ -606,7 +634,9 @@ export function VideoStep({ draft, update, go }: CProps) {
             className="sr-only"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) update((d) => ({ ...d, video: 'added', videoFile: f.name }));
+              if (!f) return;
+              update((d) => ({ ...d, video: 'added', videoFile: f.name }));
+              upload?.('video', f);
             }}
           />
         </label>
@@ -650,7 +680,10 @@ export function DoneStep({ draft }: CProps) {
           ? 'Once your qualification and video intro are reviewed, the Verified star appears on your profile.'
           : 'Add your video intro any time to complete the Verified star.'}
       </p>
-      <DemoNotice className="text-left" what="Nothing was sent to the server: this walkthrough keeps everything in the browser." />
+      {/* При настоящем входе профиль уже на сервере — плашка только для демо. */}
+      {!canSyncToServer() && (
+        <DemoNotice className="text-left" what="Nothing was sent to the server: this walkthrough keeps everything in the browser." />
+      )}
       <div className="flex flex-wrap justify-center gap-2">
         <Link href="/jobs" className="inline-flex h-13 items-center gap-2 rounded-full bg-accent-strong px-6 font-semibold text-on-accent focus-ring dark:bg-accent">
           See matching jobs

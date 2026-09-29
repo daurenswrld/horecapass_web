@@ -380,7 +380,24 @@ export function CandidatePanel({
 
         {d.certificates.length > 0 && (
           <Section title="Certificates">
-            <List items={d.certificates} />
+            <ul className="list-disc space-y-1 pl-5 text-sm text-text-primary">
+              {d.certificates.map((c, i) => (
+                <li key={i}>
+                  {c.url ? (
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-accent-text underline-offset-2 hover:underline focus-ring"
+                    >
+                      {c.title}
+                    </a>
+                  ) : (
+                    c.title
+                  )}
+                </li>
+              ))}
+            </ul>
           </Section>
         )}
 
