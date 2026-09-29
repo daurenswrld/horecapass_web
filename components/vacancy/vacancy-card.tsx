@@ -23,7 +23,10 @@ function CompanyLogo({ v, size = 44 }: { v: Vacancy; size?: number }) {
         width={size}
         height={size}
         onError={() => setBroken(true)}
-        className="shrink-0 rounded-sm border border-line object-cover"
+        // contain, а не cover: вытянутый логотип обрезался до «AREERTER»
+        // вместо «Careerteria» (бриф кандидата). Белая подложка — чтобы
+        // тёмный логотип на прозрачном фоне не пропадал в тёмной теме.
+        className="shrink-0 rounded-sm border border-line bg-white object-contain p-0.5"
         style={{ width: size, height: size }}
       />
     );

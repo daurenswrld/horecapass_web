@@ -46,7 +46,8 @@ function roomSubtitle(room: ChatRoom): string | null {
   return [s.vacancyTitle, s.companyName].filter(Boolean).join(' · ') || null;
 }
 
-function Avatar({ name, url, size = 40 }: { name: string; url?: string | null; size?: number }) {
+/** logo — вместо фото собеседника логотип компании: вписываем целиком, не обрезая. */
+function Avatar({ name, url, size = 40, logo = false }: { name: string; url?: string | null; size?: number; logo?: boolean }) {
   const [broken, setBroken] = React.useState(false);
   if (url && !broken) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -55,8 +56,8 @@ function Avatar({ name, url, size = 40 }: { name: string; url?: string | null; s
         src={url}
         alt=""
         onError={() => setBroken(true)}
-        style={{ width: size, height: size }}
-        className="shrink-0 rounded-full object-cover"
+        style={{ width: size, height: size, padding: logo ? size * 0.12 : undefined }}
+        className={cn('shrink-0 rounded-full', logo ? 'border border-line bg-white object-contain' : 'object-cover')}
       />
     );
   }
@@ -82,7 +83,7 @@ function RoomRow({ room, active, onClick }: { room: ChatRoom; active: boolean; o
         active ? 'border-accent bg-surface shadow-card' : 'border-line bg-surface hover:border-line-strong',
       )}
     >
-      <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} />
+      <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} logo={!room.peer?.avatar} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
           <span className="truncate font-semibold text-text-primary">{roomTitle(room)}</span>
@@ -267,7 +268,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex items-center gap-3 border-b border-line px-5 py-3.5">
-        <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} size={36} />
+        <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} logo={!room.peer?.avatar} size={36} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-text-primary">{roomTitle(room)}</p>
           {roomSubtitle(room) && (

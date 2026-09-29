@@ -29,8 +29,9 @@ export function CompanyAvatar({ company, size = 44 }: { company: CompanyDraft; s
         alt=""
         width={size}
         height={size}
-        className="shrink-0 rounded-full border border-line bg-surface object-cover"
-        style={{ width: size, height: size }}
+        // contain: вытянутый логотип в круге не обрезается (см. vacancy-card).
+        className="shrink-0 rounded-full border border-line bg-white object-contain"
+        style={{ width: size, height: size, padding: size * 0.12 }}
       />
     );
   }
