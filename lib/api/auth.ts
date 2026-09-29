@@ -47,6 +47,20 @@ export function isApplicant(role: string | undefined | null): boolean {
   return role === 'APPLICANT';
 }
 
+/**
+ * Боевой сервер отдаёт компанию вложенным объектом, а company_name — пустым:
+ * {company: {id: 7, name: '…'}, company_name: null}. Приводим к одному виду,
+ * иначе название компании нигде не подставляется (найдено проверкой на проде).
+ */
+function normalizeUser(u: CurrentUser): CurrentUser {
+  const c = u.company as unknown;
+  if (c && typeof c === 'object') {
+    const obj = c as { id?: number; name?: string | null };
+    return { ...u, company: obj.id ?? null, company_name: u.company_name || obj.name || null };
+  }
+  return u;
+}
+
 export const authApi = {
   sendCode(contact: string, purpose: Purpose, role?: BackendRole) {
     return http.post<SendCodeResult>(API.auth.sendCode, {
@@ -94,8 +108,8 @@ export const authApi = {
     return pair;
   },
 
-  me() {
-    return http.get<CurrentUser>(API.auth.me);
+  async me() {
+    return normalizeUser(await http.get<CurrentUser>(API.auth.me));
   },
 
   logout() {

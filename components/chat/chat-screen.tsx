@@ -16,6 +16,7 @@ import {
   type QuickReplyTemplate,
 } from '@/lib/api/chats';
 import { isSample, SAMPLE_MESSAGES, SAMPLE_ROOMS } from '@/lib/demo/samples';
+import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +38,12 @@ const DAY_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long'
 function roomTitle(room: ChatRoom): string {
   if (room.chatType === 'SUPPORT') return 'Support';
   if (room.chatType === 'ASSISTANT') return 'Assistant';
-  return room.peer?.displayName ?? room.applicationSummary?.companyName ?? 'Chat';
+  // Со стороны кандидата собеседник — компания: без личного имени рекрутера
+  // понятнее название компании, чем «Employer».
+  const peer = room.peer;
+  const company = room.applicationSummary?.companyName;
+  if (peer && !peer.firstName && !peer.lastName && isCompany(peer.role) && company) return company;
+  return peer?.displayName ?? company ?? 'Chat';
 }
 
 function roomSubtitle(room: ChatRoom): string | null {
@@ -192,7 +198,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
     };
   }, [room.id, onRead]);
 
-  // Живое соединение. Departmentьно от загрузки истории: если вебсокет не поднялся,
+  // Живое соединение. Отдельно от загрузки истории: если вебсокет не поднялся,
   // переписку всё равно можно читать и отправлять сообщения по REST.
   React.useEffect(() => {
     if (isSample(room.id)) return;
@@ -227,10 +233,13 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages.length]);
 
-  // Заготовки ответов есть только у компании; соискателю сервер вернёт 403.
+  // Заготовки ответов есть только у компании; соискателю сервер отвечает 403,
+  // поэтому у него и не спрашиваем.
+  const company = isCompany(user?.role);
   React.useEffect(() => {
+    if (!company) return;
     chatsApi.quickReplies().then(setTemplates).catch(() => setTemplates([]));
-  }, []);
+  }, [company]);
 
   const submit = async () => {
     const value = text.trim();
