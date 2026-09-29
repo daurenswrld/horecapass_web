@@ -5,6 +5,7 @@ import { Mic, MicOff, Send, SkipForward, Upload } from "lucide-react";
 import { Button, ChoiceChip } from "@/components/ui/primitives";
 import { DemoNotice } from "@/components/demo-notice";
 import { speechRecognitionAvailable } from "@/lib/demo/storage";
+import { setVoiceLang, useVoiceLang, VOICE_LANGS, type VoiceLang } from "@/lib/demo/voice-lang";
 import type { Question } from "@/lib/professions";
 import { cn } from "@/lib/utils";
 
@@ -37,14 +38,14 @@ interface SpeechRecognitionLike {
   onend: (() => void) | null;
 }
 
-function createRecognition(): SpeechRecognitionLike | null {
+function createRecognition(lang: VoiceLang): SpeechRecognitionLike | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as Record<string, unknown>;
   const Ctor = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as
     (new () => SpeechRecognitionLike) | undefined;
   if (!Ctor) return null;
   const r = new Ctor();
-  r.lang = "en-US";
+  r.lang = lang;
   r.interimResults = true;
   r.continuous = true;
   return r;
@@ -59,6 +60,7 @@ export function VoiceButton({
 }) {
   const [listening, setListening] = React.useState(false);
   const recRef = React.useRef<SpeechRecognitionLike | null>(null);
+  const lang = useVoiceLang();
 
   // Распознавание останавливаем при размонтировании: иначе на телефоне
   // остаётся гореть индикатор микрофона после ухода со страницы.
@@ -74,7 +76,7 @@ export function VoiceButton({
       setListening(false);
       return;
     }
-    const rec = createRecognition();
+    const rec = createRecognition(lang);
     if (!rec) return;
     recRef.current = rec;
     rec.onresult = (e) => {
@@ -90,19 +92,37 @@ export function VoiceButton({
   };
 
   return (
-    <Button
-      type="button"
-      variant={listening ? "primary" : "secondary"}
-      size="md"
-      onClick={toggle}
-      disabled={disabled}
-      aria-pressed={listening}
-      aria-label={listening ? "Stop recording" : "Answer by voice"}
-      className="shrink-0"
-    >
-      {listening ? <MicOff size={18} /> : <Mic size={18} />}
-      <span className="hidden sm:inline">{listening ? "Stop" : "Voice"}</span>
-    </Button>
+    <span className="inline-flex shrink-0 items-center gap-1">
+      {/* Язык распознавания. Во время записи не меняется — браузер
+          применяет его только при старте. */}
+      <select
+        value={lang}
+        onChange={(e) => setVoiceLang(e.target.value as VoiceLang)}
+        disabled={listening || disabled}
+        aria-label="Voice language"
+        title="Voice language"
+        className="h-11 rounded-full border border-line-strong bg-surface px-2 text-xs font-semibold text-text-secondary focus-ring disabled:opacity-60"
+      >
+        {VOICE_LANGS.map((l) => (
+          <option key={l.code} value={l.code}>
+            {l.short}
+          </option>
+        ))}
+      </select>
+      <Button
+        type="button"
+        variant={listening ? "primary" : "secondary"}
+        size="md"
+        onClick={toggle}
+        disabled={disabled}
+        aria-pressed={listening}
+        aria-label={listening ? "Stop recording" : "Answer by voice"}
+        className="shrink-0"
+      >
+        {listening ? <MicOff size={18} /> : <Mic size={18} />}
+        <span className="hidden sm:inline">{listening ? "Stop" : "Voice"}</span>
+      </Button>
+    </span>
   );
 }
 

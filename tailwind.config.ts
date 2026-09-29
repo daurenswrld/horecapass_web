@@ -57,7 +57,7 @@ const config: Config = {
         13: '3.25rem',
       },
       fontFamily: {
-        sans: ['var(--font-raleway)', 'system-ui', 'sans-serif'],
+        sans: ['Arial', 'var(--font-arimo)', 'Helvetica', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: 'var(--radius)',

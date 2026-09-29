@@ -4,11 +4,12 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Check, LogOut, Mail, UserPlus, X } from 'lucide-react';
 import { DemoNotice } from '@/components/demo-notice';
-import { Button, Card, Field } from '@/components/ui/primitives';
+import { Button, Card, ChoiceChip, Field } from '@/components/ui/primitives';
 import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
 import { ASSISTANTS, setAssistant, useAssistant, type AssistantKind } from '@/lib/demo/assistant';
 import { cvConsent, type CvConsent } from '@/lib/demo/storage';
+import { setVoiceLang, useVoiceLang, VOICE_LANGS } from '@/lib/demo/voice-lang';
 import { companyApi } from '@/lib/api/company';
 import { canSyncToServer, syncError } from '@/lib/demo/employer-sync';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,30 @@ export function AssistantSection() {
             </button>
           );
         })}
+      </div>
+    </Section>
+  );
+}
+
+/** Язык голосового ввода — тот же выбор, что у кнопок Voice. */
+export function VoiceSection() {
+  const lang = useVoiceLang();
+  return (
+    <Section
+      title="Voice input"
+      lead="The language you speak when answering by voice. Your CV is kept in English."
+    >
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Voice language">
+        {VOICE_LANGS.map((l) => (
+          <ChoiceChip
+            key={l.code}
+            selected={lang === l.code}
+            aria-pressed={lang === l.code}
+            onClick={() => setVoiceLang(l.code)}
+          >
+            {l.label}
+          </ChoiceChip>
+        ))}
       </div>
     </Section>
   );

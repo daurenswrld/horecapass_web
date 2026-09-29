@@ -1,13 +1,19 @@
 import type { Metadata } from 'next';
-import { Raleway } from 'next/font/google';
+import { Arimo } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth/context';
 import './globals.css';
 
-const raleway = Raleway({
-  subsets: ['latin'],
+// Шрифт — Arial, как в текстовых стилях макета (Figma → UI kit: H1/H2/Label/
+// Text/Subtitle — все Arial). Aldi, 29.09: «шрифты берёт из палитры шрифтов».
+// На Windows, macOS и iOS Arial системный; где его нет (Android, Linux), встаёт
+// Arimo — метрически совместимая копия Arial. Без preload: где есть Arial,
+// Arimo не скачивается вовсе.
+const arimo = Arimo({
+  subsets: ['latin', 'cyrillic'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-raleway',
+  variable: '--font-arimo',
   display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -17,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={raleway.variable} suppressHydrationWarning>
+    <html lang="en" className={arimo.variable} suppressHydrationWarning>
       <head>
         {/* Тема применяется до первого кадра, иначе страница моргает светлым. */}
         <script
