@@ -24,7 +24,7 @@ import { Bubble } from '@/components/landing/bubble';
 import { DemoNotice } from '@/components/demo-notice';
 import { VoiceButton } from '@/components/onboarding/answer-input';
 import { Button, ChoiceChip, Field } from '@/components/ui/primitives';
-import { aiApi } from '@/lib/api/ai';
+import { aiApi, plainAiText } from '@/lib/api/ai';
 import { vacanciesApi } from '@/lib/api/vacancies';
 import { speechRecognitionAvailable } from '@/lib/demo/storage';
 import { useAssistant } from '@/lib/demo/assistant';
@@ -646,12 +646,13 @@ export function VacancyChatStep({ draft, update, go, server }: StepProps) {
     }
 
     const botId = msgId();
-    let started = false;
+    // Добавить ответ или обновить уже добавленный — решаем по самому списку:
+    // React применяет обновления позже, флаг тут ненадёжен.
     const show = (t: string) =>
       update((d) =>
-        started
-          ? { ...d, vacancyChat: d.vacancyChat.map((m) => (m.id === botId ? { ...m, text: t } : m)) }
-          : { ...d, vacancyChat: [...d.vacancyChat, { id: botId, from: 'assistant', text: t }] },
+        d.vacancyChat.some((m) => m.id === botId)
+          ? { ...d, vacancyChat: d.vacancyChat.map((m) => (m.id === botId ? { ...m, text: plainAiText(t) } : m)) }
+          : { ...d, vacancyChat: [...d.vacancyChat, { id: botId, from: 'assistant', text: plainAiText(t) }] },
       );
     setTyping(true);
     const ctrl = new AbortController();
@@ -667,12 +668,10 @@ export function VacancyChatStep({ draft, update, go, server }: StepProps) {
         (t) => {
           setTyping(false);
           show(t);
-          started = true;
         },
         ctrl.signal,
       );
       show(res.reply.trim() || 'Could you tell me a bit more about the role?');
-      started = true;
       setAiOptions(res.suggestions.filter((o) => !PUBLISH_RE.test(o)));
       if (/responsibilit/i.test(res.reply) && /hiring|benefit/i.test(res.reply)) setAiDraft(true);
       // Если ИИ всё же создал вакансию — держим её черновиком и дальше обновляем её же.
@@ -684,7 +683,6 @@ export function VacancyChatStep({ draft, update, go, server }: StepProps) {
     } catch {
       if (ctrl.signal.aborted) return;
       show("Sorry, I couldn't reach the assistant just now. Please send that again, or review the details when you're ready.");
-      started = true;
     } finally {
       setTyping(false);
     }

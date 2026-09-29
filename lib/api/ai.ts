@@ -13,6 +13,8 @@ import { BASE_URL, refreshTokens, tokens } from './client';
 export interface AiMessage {
   role: 'user' | 'assistant';
   text: string;
+  /** Вложения в base64 без префикса data: — PDF, PNG, JPEG (сервер различает сам). */
+  images?: string[];
 }
 
 export interface AiDone {
@@ -20,6 +22,8 @@ export interface AiDone {
   suggestions: string[];
   /** Сервер создаёт вакансию, только если рекрутёр прямо попросил опубликовать. */
   vacancyId: number | null;
+  /** Конструктор резюме сохраняет резюме сам и возвращает его id. */
+  resumeId: number | null;
 }
 
 async function post(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
@@ -78,11 +82,12 @@ async function stream(
           reply: String(data.reply ?? text),
           suggestions: Array.isArray(data.suggestions) ? data.suggestions.map(String).filter(Boolean) : [],
           vacancyId: data.vacancy_id == null ? null : Number(data.vacancy_id),
+          resumeId: data.resume_id == null ? null : Number(data.resume_id),
         };
       }
     }
   }
-  return done ?? { reply: text, suggestions: [], vacancyId: null };
+  return done ?? { reply: text, suggestions: [], vacancyId: null, resumeId: null };
 }
 
 export const aiApi = {
@@ -90,4 +95,33 @@ export const aiApi = {
   vacancyBuilder(messages: AiMessage[], onDelta: (text: string) => void, signal?: AbortSignal) {
     return stream(API.ai.vacancyBuilderStream, { messages }, onDelta, signal);
   },
+
+  /** Конструктор резюме: читает загруженное CV, задаёт вопросы, сохраняет резюме. */
+  cvBuilder(messages: AiMessage[], onDelta: (text: string) => void, resumeId?: number | null, signal?: AbortSignal) {
+    return stream(API.ai.cvBuilderStream, { messages, resume_id: resumeId ?? null }, onDelta, signal);
+  },
 };
+
+/** Файл → base64 без префикса data:…;base64, — так его ждёт сервер. */
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+/**
+ * Ответы ИИ иногда приходят с markdown (**жирный**, «* пункт», «## заголовок»),
+ * хотя промпт просит простой текст. В пузыре чата звёздочки видны как есть —
+ * убираем разметку, пункты превращаем в «•».
+ */
+export function plainAiText(t: string): string {
+  return t
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*[*-]\s+/gm, '• ')
+    .replace(/`([^`]+)`/g, '$1');
+}

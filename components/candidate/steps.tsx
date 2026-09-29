@@ -39,6 +39,7 @@ import {
 } from '@/lib/demo/candidate';
 import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/storage';
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
+import { CvBuilder } from './cv-builder';
 import { cn } from '@/lib/utils';
 
 export interface CProps {
@@ -247,6 +248,11 @@ export function MaterialsStep({ draft, update, go, upload }: CProps) {
   const [letterOpen, setLetterOpen] = React.useState(false);
   React.useEffect(() => setBuiltCv(!!profileDraft.load().professionId), []);
   const set = (patch: Partial<CandidateDraft>) => update((d) => ({ ...d, ...patch }));
+  // Настоящий вход — Smart CV builder с серверным ИИ; в демо — прежний конструктор.
+  const live = canSyncToServer();
+  const [builder, setBuilder] = React.useState<{ file: File | null } | null>(null);
+  const [cvRaw, setCvRaw] = React.useState<File | null>(null);
+  const hasCv = !!draft.cvFile || builtCv || !!draft.cvBuilt;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
@@ -257,15 +263,43 @@ export function MaterialsStep({ draft, update, go, upload }: CProps) {
           <FilePick label={draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.doc,.docx" onFiles={(n, f) => {
               set({ cvFile: n[0] ?? null });
               if (f[0]) upload?.('cv', f[0]);
+              setCvRaw(f[0] ?? null);
             }}
           />
+          {/* Созвон 29.09: загрузил резюме → ИИ задаёт вопросы и адаптирует под GCC. */}
+          {live && cvRaw && (
+            <button
+              type="button"
+              onClick={() => setBuilder({ file: cvRaw })}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring"
+            >
+              Adapt it for GCC employers with Smart
+              <ArrowRight size={14} aria-hidden />
+            </button>
+          )}
         </Tile>
 
-        <Tile Icon={PenLine} title="Create a CV" note={builtCv ? 'Started in the CV builder' : 'Build it in a short conversation'} done={builtCv}>
-          <Link href="/profile" className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring">
-            {builtCv ? 'Open the CV builder' : 'Start the CV builder'}
-            <ArrowRight size={14} aria-hidden />
-          </Link>
+        <Tile
+          Icon={PenLine}
+          title="Create a CV"
+          note={draft.cvBuilt ? 'Built with Smart and saved' : builtCv ? 'Started in the CV builder' : 'Build it in a short conversation'}
+          done={builtCv || !!draft.cvBuilt}
+        >
+          {live ? (
+            <button
+              type="button"
+              onClick={() => setBuilder({ file: null })}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring"
+            >
+              {draft.cvBuilt ? 'Open the Smart CV builder' : 'Build it with Smart'}
+              <ArrowRight size={14} aria-hidden />
+            </button>
+          ) : (
+            <Link href="/profile" className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring">
+              {builtCv ? 'Open the CV builder' : 'Start the CV builder'}
+              <ArrowRight size={14} aria-hidden />
+            </Link>
+          )}
         </Tile>
 
         <Tile
@@ -349,8 +383,17 @@ export function MaterialsStep({ draft, update, go, upload }: CProps) {
         endpoint="Certificate type on /api/resumes/my/certificates/, POST /api/resumes/my/<id>/portfolio/, cover letter file"
       />
 
-      <Continue disabled={!draft.cvFile && !builtCv} onClick={() => go('countries')} />
-      {!draft.cvFile && !builtCv && <p className="text-sm text-text-secondary">Upload your CV or start the CV builder to continue.</p>}
+      <Continue disabled={!hasCv} onClick={() => go('countries')} />
+      {!hasCv && <p className="text-sm text-text-secondary">Upload your CV or start the CV builder to continue.</p>}
+      {builder && (
+        <CvBuilder
+          initialFile={builder.file}
+          onClose={(built) => {
+            setBuilder(null);
+            if (built) set({ cvBuilt: true });
+          }}
+        />
+      )}
     </div>
   );
 }

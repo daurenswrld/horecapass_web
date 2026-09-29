@@ -63,6 +63,8 @@ export interface CandidateDraft {
   /** Кандидат запросил квалификацию — вопросы генерирует сервер. */
   qualRequested: boolean;
   video: 'added' | 'later' | null;
+  /** Резюме собрано в Smart CV builder и сохранено на сервере. */
+  cvBuilt?: boolean;
   videoFile: string | null;
   references: string[];
   updatedAt: string;

@@ -56,7 +56,8 @@ export function MessageBubble({ m, children }: { m: ChatMessage; children?: Reac
 }
 
 interface ComposerProps {
-  onSend: (text: string, file?: string) => void;
+  /** file — имя вложения; raw — сам файл, если его нужно отправить на сервер. */
+  onSend: (text: string, file?: string, raw?: File) => void;
   suggestion?: string | null;
   options?: { list: string[]; multi: boolean } | null;
   disabled?: boolean;
@@ -68,6 +69,7 @@ export function Composer({ onSend, suggestion, options, disabled, placeholder = 
   const [text, setText] = React.useState('');
   const [picked, setPicked] = React.useState<string[]>([]);
   const [file, setFile] = React.useState<string | null>(null);
+  const [raw, setRaw] = React.useState<File | null>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const voice = speechRecognitionAvailable();
 
@@ -78,9 +80,10 @@ export function Composer({ onSend, suggestion, options, disabled, placeholder = 
   const send = () => {
     const v = text.trim();
     if ((!v && !file) || disabled) return;
-    onSend(v || 'Attached a file.', file ?? undefined);
+    onSend(v || 'Attached a file.', file ?? undefined, raw ?? undefined);
     setText('');
     setFile(null);
+    setRaw(null);
   };
 
   return (
@@ -147,6 +150,7 @@ export function Composer({ onSend, suggestion, options, disabled, placeholder = 
               disabled={disabled}
               onChange={(e) => {
                 setFile(e.target.files?.[0]?.name ?? null);
+                setRaw(e.target.files?.[0] ?? null);
                 e.target.value = '';
               }}
             />
