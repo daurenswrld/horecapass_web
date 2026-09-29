@@ -168,6 +168,11 @@ export const chatsApi = {
   startSupport(): Promise<Json> {
     return http.post<Json>(API.chats.startSupport);
   },
+
+  /** Чат по отклику: сервер создаёт его или отдаёт уже существующий. */
+  async startForApplication(applicationId: number): Promise<ChatRoom> {
+    return parseRoom(await http.post<Json>(API.chats.startForApplication(applicationId)));
+  },
 };
 
 /** Подставляет {name} и {vacancy} в заготовку ответа — как в мобилке.

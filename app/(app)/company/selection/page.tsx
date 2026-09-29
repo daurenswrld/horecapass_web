@@ -5,6 +5,7 @@ import { Check, MessageSquare, Search, ShoppingBasket, UserCheck, UserX, X } fro
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { DemoNotice } from '@/components/demo-notice';
+import { CandidatePanel } from '@/components/employer/candidate-panel';
 import {
   companyApplicationsApi,
   FUNNEL,
@@ -22,6 +23,8 @@ import { cn, plural } from '@/lib/utils';
  *
  * Список кандидатов и перевод по этапам работают по-настоящему: эндпоинты
  * `/api/applications/company/` и `/api/applications/<id>/status/` есть.
+ * Карточка кандидата со сменой этапа, чатом и AI-разбором —
+ * components/employer/candidate-panel.tsx.
  *
  * Корзина и массовые действия — показ замысла: «Employer добавляет кандидатов
  * в свою корзину... и одним действием отправляет приглашение сразу нескольким».
@@ -67,6 +70,14 @@ export default function SelectionPage() {
   const [selected, setSelected] = React.useState<number[]>([]);
   const [bulkNote, setBulkNote] = React.useState<string | null>(null);
   const [sample, setSample] = React.useState(false);
+  const [openId, setOpenId] = React.useState<number | null>(null);
+  const opened = items.find((a) => a.id === openId) ?? null;
+  const setStatus = React.useCallback(
+    (id: number, status: ApplicationStatus) =>
+      setItems((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a))),
+    [],
+  );
+  const close = React.useCallback(() => setOpenId(null), []);
 
   React.useEffect(() => setSelected(basketStore.load()), []);
   React.useEffect(() => basketStore.save(selected), [selected]);
@@ -218,8 +229,15 @@ export default function SelectionPage() {
                       aria-label={`Select ${a.applicant}`}
                       className="mt-3 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
                     />
-                    <Avatar name={a.applicant} url={a.avatarUrl} />
-                    <div className="min-w-0 flex-1">
+                    {/* Вся карточка, кроме галочки, открывает кандидата. */}
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(a.id)}
+                      aria-label={`Open ${a.applicant}`}
+                      className="flex min-w-0 flex-1 items-start gap-3 rounded-md text-left focus-ring"
+                    >
+                      <Avatar name={a.applicant} url={a.avatarUrl} />
+                      <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="truncate font-semibold text-text-primary">{a.applicant}</span>
                         {a.matchScore != null && <MatchBadge score={a.matchScore} />}
@@ -241,7 +259,8 @@ export default function SelectionPage() {
                       <p className="mt-0.5 text-xs text-text-secondary">
                         Applied {DATE_FMT.format(a.createdAt)}
                       </p>
-                    </div>
+                      </div>
+                    </button>
                   </Card>
                 );
               })}
@@ -249,6 +268,8 @@ export default function SelectionPage() {
           </>
         )}
       </div>
+
+      {opened && <CandidatePanel app={opened} onClose={close} onStatus={setStatus} />}
 
       {/* Панель массовых действий — «25 Candidates selected → Invite selected». */}
       {selected.length > 0 && (

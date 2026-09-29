@@ -167,8 +167,37 @@ const CURRENCY_SIGNS: Record<string, string> = {
 
 /* ─────────────── Сторона работодателя ─────────────── */
 
+export interface ApplicantExperience {
+  position: string;
+  company: string;
+  period: string;
+  description: string;
+}
+
+/** Карточка кандидата из `applicant_profile` — только то, что прислал сервер. */
+export interface ApplicantProfile {
+  email: string | null;
+  phone: string | null;
+  age: number | null;
+  nationality: string | null;
+  location: string | null;
+  position: string | null;
+  positionLevel: string | null;
+  visaStatus: string | null;
+  targetCountry: string | null;
+  desiredSalary: string | null;
+  availableFrom: string | null;
+  relocationReady: boolean;
+  languages: string[];
+  skills: string[];
+  experiences: ApplicantExperience[];
+  educations: string[];
+  certificates: string[];
+}
+
 export interface CompanyApplication {
   id: number;
+  vacancyId: number | null;
   applicant: string;
   vacancyTitle: string;
   status: ApplicationStatus;
@@ -177,8 +206,59 @@ export interface CompanyApplication {
   matchScore: number | null;
   requiresVideoGreeting: boolean;
   videoGreetingUrl: string | null;
+  coverLetter: string | null;
+  relocationStep: RelocationStep | null;
+  details: ApplicantProfile;
   /** Сырой `applicant_profile` — из него открывается карточка кандидата. */
   profile: Record<string, unknown>;
+}
+
+/** Элемент списка в строку: сервер шлёт то строки, то объекты ({name, level}). */
+function label(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === 'string' || typeof v === 'number') return nonEmpty(v);
+  if (typeof v === 'object') {
+    const o = v as Json;
+    const main = nonEmpty(o.name ?? o.title ?? o.language ?? o.degree ?? o.institution);
+    const extra = nonEmpty(o.level ?? o.issuer ?? o.institution ?? o.year);
+    if (!main) return null;
+    return extra && extra !== main ? `${main} — ${extra}` : main;
+  }
+  return null;
+}
+
+const list = (v: unknown): string[] => (Array.isArray(v) ? v : []).map(label).filter((x): x is string => !!x);
+
+export function parseApplicantProfile(p: Record<string, unknown>): ApplicantProfile {
+  const salary = nonEmpty(p.desired_salary);
+  const salaryTail = [nonEmpty(p.salary_currency), nonEmpty(p.salary_period)].filter(Boolean).join(' / ');
+  return {
+    email: nonEmpty(p.email),
+    phone: nonEmpty(p.phone),
+    age: typeof p.age === 'number' ? p.age : null,
+    nationality: nonEmpty(p.nationality),
+    location: nonEmpty(p.location),
+    position: nonEmpty(p.position),
+    positionLevel: nonEmpty(p.position_level),
+    visaStatus: nonEmpty(p.visa_status),
+    targetCountry: nonEmpty(p.target_country),
+    desiredSalary: salary ? [salary.replace(/\.00$/, ''), salaryTail].filter(Boolean).join(' ') : null,
+    availableFrom: nonEmpty(p.available_from),
+    relocationReady: p.relocation_ready === true,
+    languages: list(p.languages),
+    skills: list(p.skills),
+    experiences: (Array.isArray(p.experiences) ? p.experiences : []).map((e) => {
+      const x = (e ?? {}) as Json;
+      return {
+        position: String(x.position ?? '').trim(),
+        company: String(x.company ?? '').trim(),
+        period: String(x.period ?? '').trim(),
+        description: String(x.description ?? '').trim(),
+      };
+    }),
+    educations: list(p.educations),
+    certificates: list(p.certificates),
+  };
 }
 
 export function parseCompanyApplication(json: Json): CompanyApplication {
@@ -187,6 +267,7 @@ export function parseCompanyApplication(json: Json): CompanyApplication {
   const fromRoot = String(json.applicant_name ?? '').trim();
   return {
     id: Number(json.id),
+    vacancyId: json.vacancy == null ? null : Number(json.vacancy),
     applicant: fromProfile || fromRoot || 'Candidate',
     vacancyTitle: String(json.vacancy_title ?? 'Job'),
     status: (String(json.status ?? 'NEW').toUpperCase() as ApplicationStatus) ?? 'NEW',
@@ -195,8 +276,20 @@ export function parseCompanyApplication(json: Json): CompanyApplication {
     matchScore: json.match_score == null ? null : Math.round(Number(json.match_score)),
     requiresVideoGreeting: json.requires_video_greeting === true,
     videoGreetingUrl: nonEmpty(json.video_greeting_url),
+    coverLetter: nonEmpty(json.cover_letter),
+    relocationStep: json.relocation_step ? (String(json.relocation_step) as RelocationStep) : null,
+    details: parseApplicantProfile(profile),
     profile,
   };
+}
+
+/** Разбор кандидата под вакансию: GET /api/applications/company/<id>/ai-summary/. */
+export interface CandidateSummary {
+  fitScore: number | null;
+  verdict: string;
+  strengths: string[];
+  gaps: string[];
+  interviewQuestions: string[];
 }
 
 export const companyApplicationsApi = {
@@ -208,5 +301,18 @@ export const companyApplicationsApi = {
   /** Перевод кандидата на другой этап. Эндпоинт есть и работает. */
   setStatus(applicationId: number, status: ApplicationStatus) {
     return http.patch<unknown>(API.applications.status(applicationId), { status });
+  },
+
+  /** Сервер спрашивает Gemini и кэширует ответ — повторный запрос дешёвый. */
+  async aiSummary(applicationId: number): Promise<CandidateSummary> {
+    const d = (await http.get<Json>(API.applications.aiSummary(applicationId))) ?? {};
+    const strs = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []);
+    return {
+      fitScore: typeof d.fit_score === 'number' ? Math.round(d.fit_score) : null,
+      verdict: String(d.verdict ?? '').trim(),
+      strengths: strs(d.strengths),
+      gaps: strs(d.gaps),
+      interviewQuestions: strs(d.interview_questions),
+    };
   },
 };
