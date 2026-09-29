@@ -1,13 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, Search, SlidersHorizontal } from 'lucide-react';
 import { CandidateSetupInvite, ProfileProgress } from '@/components/candidate/profile-overview';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { VacancyCard } from '@/components/vacancy/vacancy-card';
 import { VacancyDetails } from '@/components/vacancy/vacancy-details';
-import { vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
+import { vacanciesApi, type Vacancy, type VacancyFilters } from '@/lib/api/vacancies';
 import { cn } from '@/lib/utils';
 
 /**
@@ -21,6 +21,18 @@ import { cn } from '@/lib/utils';
 
 type Tab = 'all' | 'matches';
 
+/** Фильтры — только те, что боевой сервер действительно применяет (проверено
+ *  запросами): city, currency, min_salary. Тип занятости, бенефиты и тип
+ *  заведения в коде бэкенда есть, но прод их пока игнорирует. */
+interface Filters {
+  city: string;
+  currency: string;
+  minSalary: string;
+}
+const NO_FILTERS: Filters = { city: '', currency: '', minSalary: '' };
+const CURRENCIES = ['AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'USD'] as const;
+const SELECT = 'h-11 w-full rounded-full border border-line-strong bg-surface px-4 text-text-primary focus-ring';
+
 export default function JobsPage() {
   const [tab, setTab] = React.useState<Tab>('all');
   const [items, setItems] = React.useState<Vacancy[]>([]);
@@ -29,19 +41,46 @@ export default function JobsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState('');
   const [query, setQuery] = React.useState('');
+  const [filters, setFilters] = React.useState<Filters>(NO_FILTERS);
+  const [applied, setApplied] = React.useState<Filters>(NO_FILTERS);
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [cities, setCities] = React.useState<string[]>([]);
+  // На телефоне список и вакансия рядом не помещаются — показываем что-то
+  // одно. Раньше вакансия там была просто скрыта: открыть её и откликнуться
+  // с телефона было нельзя.
+  const [open, setOpen] = React.useState(false);
 
-  // Поиск не дёргает сервер на каждую букву.
+  // Поиск и фильтры не дёргают сервер на каждую букву.
   React.useEffect(() => {
-    const t = setTimeout(() => setQuery(search.trim()), 400);
+    const t = setTimeout(() => {
+      setQuery(search.trim());
+      setApplied(filters);
+    }, 400);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, filters]);
+
+  React.useEffect(() => {
+    vacanciesApi
+      .cities()
+      .then((list) => setCities(Array.isArray(list) ? list : []))
+      .catch(() => setCities([]));
+  }, []);
+
+  const activeFilters = Object.values(applied).filter(Boolean).length;
 
   React.useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    const load = tab === 'matches' ? vacanciesApi.matches() : vacanciesApi.list({ search: query || undefined });
+    const params: VacancyFilters = {
+      search: query || undefined,
+      city: applied.city || undefined,
+      currency: applied.currency || undefined,
+      // Сервер отвечает 400 на нечисло — такое просто не отправляем.
+      min_salary: /^\d+$/.test(applied.minSalary) ? Number(applied.minSalary) : undefined,
+    };
+    const load = tab === 'matches' ? vacanciesApi.matches() : vacanciesApi.list(params);
 
     load
       .then((list) => {
@@ -60,7 +99,7 @@ export default function JobsPage() {
     return () => {
       cancelled = true;
     };
-  }, [tab, query]);
+  }, [tab, query, applied]);
 
   const patch = (v: Vacancy) => {
     setItems((list) => list.map((x) => (x.id === v.id ? { ...x, ...v } : x)));
@@ -93,7 +132,7 @@ export default function JobsPage() {
         }
       />
 
-      <div className="space-y-3 px-5 py-4 md:px-8">
+      <div className={cn('space-y-3 px-5 py-4 md:px-8 lg:block', open && 'hidden')}>
         {/* Бриф кандидата, пункт 9: вместо пустой шкалы — прогресс профиля
             с конкретным следующим действием. */}
         <CandidateSetupInvite />
@@ -109,15 +148,88 @@ export default function JobsPage() {
               className="h-11 w-full rounded-full border border-line-strong bg-surface pl-10 pr-4 text-text-primary placeholder:text-text-tertiary focus-ring"
             />
           </div>
-          <Button variant="secondary" className="shrink-0" disabled title="Filters will arrive with the backend sections">
+          <Button
+            variant="secondary"
+            className="shrink-0"
+            onClick={() => setShowFilters((x) => !x)}
+            disabled={tab === 'matches'}
+            title={tab === 'matches' ? 'Filters apply to All jobs' : undefined}
+            aria-expanded={showFilters}
+            aria-controls="job-filters"
+            aria-label={activeFilters > 0 ? `Filters, ${activeFilters} active` : 'Filters'}
+          >
             <SlidersHorizontal size={16} />
             <span className="hidden sm:inline">Filters</span>
+            {activeFilters > 0 && (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent-strong px-1 text-xs text-on-accent">
+                {activeFilters}
+              </span>
+            )}
           </Button>
         </div>
+
+        {showFilters && tab === 'all' && (
+          <Card id="job-filters" className="grid gap-3 p-4 sm:grid-cols-3">
+            <label className="text-sm text-text-secondary">
+              City
+              <select
+                value={filters.city}
+                onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value }))}
+                className={cn(SELECT, 'mt-1')}
+              >
+                <option value="">All cities</option>
+                {cities.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-text-secondary">
+              Currency
+              <select
+                value={filters.currency}
+                onChange={(e) => setFilters((f) => ({ ...f, currency: e.target.value }))}
+                className={cn(SELECT, 'mt-1')}
+              >
+                <option value="">Any</option>
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-text-secondary">
+              Salary from
+              <input
+                inputMode="numeric"
+                value={filters.minSalary}
+                onChange={(e) => setFilters((f) => ({ ...f, minSalary: e.target.value.replace(/\D/g, '') }))}
+                placeholder="e.g. 4000"
+                className={cn(SELECT, 'mt-1 placeholder:text-text-tertiary')}
+              />
+            </label>
+            {Object.values(filters).some(Boolean) && (
+              <button
+                type="button"
+                onClick={() => setFilters(NO_FILTERS)}
+                className="w-fit rounded text-sm font-medium text-accent-text underline-offset-2 hover:underline focus-ring sm:col-span-3"
+              >
+                Reset filters
+              </button>
+            )}
+          </Card>
+        )}
       </div>
 
       <div className="grid gap-4 px-5 pb-8 md:px-8 lg:grid-cols-[minmax(0,460px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
-        <div className="space-y-3 lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto lg:pr-1 scroll-slim">
+        <div
+          className={cn(
+            'space-y-3 lg:block lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto lg:pr-1 scroll-slim',
+            open && 'hidden',
+          )}
+        >
           {loading && (
             <div className="grid place-items-center py-16">
               <Spinner />
@@ -139,7 +251,9 @@ export default function JobsPage() {
               <p className="mt-1 text-sm text-text-secondary">
                 {tab === 'matches'
                   ? 'The selection is built from your CV. Fill in your profile to see it.'
-                  : 'Try a different query.'}
+                  : activeFilters > 0
+                    ? 'Try a different query or reset the filters.'
+                    : 'Try a different query.'}
               </p>
             </Card>
           )}
@@ -151,7 +265,12 @@ export default function JobsPage() {
                 key={v.id}
                 vacancy={v}
                 selected={selected?.id === v.id}
-                onSelect={setSelected}
+                onSelect={(x) => {
+                  setSelected(x);
+                  setOpen(true);
+                  // На телефоне вакансия открывается вместо списка — с её начала.
+                  if (window.matchMedia('(max-width: 1023px)').matches) window.scrollTo({ top: 0 });
+                }}
                 onToggleSave={(x) => {
                   patch({ ...x, isSaved: !x.isSaved });
                   void vacanciesApi.toggleFavorite(x.id).catch(() => patch(x));
@@ -160,7 +279,20 @@ export default function JobsPage() {
             ))}
         </div>
 
-        <Card className="hidden p-6 lg:block lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto scroll-slim">
+        <Card
+          className={cn(
+            'p-6 lg:block lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto scroll-slim',
+            open ? 'block' : 'hidden',
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="-ml-1 mb-4 inline-flex items-center gap-1 rounded text-sm font-medium text-text-secondary hover:text-text-primary focus-ring lg:hidden"
+          >
+            <ChevronLeft size={18} />
+            Back to jobs
+          </button>
           {selected ? (
             <VacancyDetails vacancy={selected} onChanged={patch} />
           ) : (

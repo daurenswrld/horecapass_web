@@ -113,7 +113,9 @@ export interface VacancyFilters {
   [key: string]: string | number | undefined;
   search?: string;
   city?: string;
-  salary_min?: number;
+  currency?: string;
+  /** Нижняя граница вилки вакансии (VacancyFilter.min_salary → salary_min >= n). */
+  min_salary?: number;
   venue_type?: string;
   page?: number;
 }
