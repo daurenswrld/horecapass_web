@@ -78,6 +78,19 @@ export const candidateApi = {
     return http.patch<Json>(`${RESUME_MINE}${resume.id}/`, fd);
   },
 
+  /**
+   * PDF резюме собирает сервер: GET /api/resumes/my/<id>/pdf/ →
+   * {"cv_file_url": "/media/resumes/…pdf"}. Файл берём через свой прокси.
+   */
+  async pdfUrl(): Promise<string> {
+    const resume = await candidateApi.myResume();
+    if (!resume) throw new Error('no resume yet');
+    const d = await http.get<Json>(`${RESUME_MINE}${resume.id}/pdf/`);
+    const path = String(d.cv_file_url ?? '');
+    if (!path) throw new Error('no pdf');
+    return path.startsWith('http') ? path : `/backend${path.startsWith('/') ? '' : '/'}${path}`;
+  },
+
   addCertificate(file: File, title: string) {
     const fd = new FormData();
     fd.set('title', title);

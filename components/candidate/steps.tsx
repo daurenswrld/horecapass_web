@@ -39,6 +39,7 @@ import {
 } from '@/lib/demo/candidate';
 import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/storage';
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
+import { candidateApi } from '@/lib/api/candidate';
 import { CvBuilder } from './cv-builder';
 import { cn } from '@/lib/utils';
 
@@ -522,6 +523,29 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
     update((d) => ({ ...d, upgrade }));
     go('consent');
   };
+  // Настоящий вход (вариант «б», 30.09): платёжки ещё нет — на запуске PDF
+  // скачивается бесплатно, его собирает сервер (/api/resumes/my/<id>/pdf/).
+  const live = canSyncToServer();
+  const [downloading, setDownloading] = React.useState(false);
+  const [dlError, setDlError] = React.useState<string | null>(null);
+  const download = async () => {
+    setDlError(null);
+    setDownloading(true);
+    // Вкладку открываем сразу по клику: открытую после ожидания сервера
+    // браузер сочтёт всплывающим окном и заблокирует.
+    const tab = window.open('', '_blank');
+    try {
+      const url = await candidateApi.pdfUrl();
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+      choose('yes');
+    } catch {
+      tab?.close();
+      setDlError("Couldn't prepare the PDF. Finish your profile first, then try again from your profile.");
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
       <Title
@@ -555,15 +579,23 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
       />
 
       <div className="flex flex-wrap gap-2">
-        <Continue onClick={() => choose('yes')}>
-          <Sparkles size={17} aria-hidden />
-          Download PDF — {CV_DOWNLOAD_PRICE}
-        </Continue>
+        {live ? (
+          <Continue onClick={download} disabled={downloading}>
+            <Sparkles size={17} aria-hidden />
+            {downloading ? 'Preparing your PDF…' : 'Download PDF — free during launch'}
+          </Continue>
+        ) : (
+          <Continue onClick={() => choose('yes')}>
+            <Sparkles size={17} aria-hidden />
+            Download PDF — {CV_DOWNLOAD_PRICE}
+          </Continue>
+        )}
         {/* Отказ не блокирует — сразу дальше, без экранов-препятствий. */}
         <Button variant="secondary" size="lg" onClick={() => choose('no')}>
           Continue for free
         </Button>
       </div>
+      {dlError && <p className="text-sm text-danger">{dlError}</p>}
     </div>
   );
 }

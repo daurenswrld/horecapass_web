@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, MessageSquare, Search, ShoppingBasket, UserCheck, UserX, X } from 'lucide-react';
+import { Check, Search, ShoppingBasket, UserCheck, UserX, X } from 'lucide-react';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { DemoNotice } from '@/components/demo-notice';
@@ -16,6 +16,7 @@ import {
 } from '@/lib/api/applications';
 import { basket as basketStore } from '@/lib/demo/storage';
 import { isSample, SAMPLE_CANDIDATES } from '@/lib/demo/samples';
+import { demoSession } from '@/lib/demo/session';
 import { cn, plural } from '@/lib/utils';
 
 /**
@@ -97,13 +98,17 @@ export default function SelectionPage() {
         if (cancelled) return;
         // На пустом аккаунте показываем примеры — иначе раздел выглядит
         // сломанным. Как появятся живые отклики, примеры исчезнут сами.
-        setSample(list.length === 0);
-        setItems(list.length > 0 ? list : SAMPLE_CANDIDATES);
+        // Образцы кандидатов — только в демо; у настоящего аккаунта честно пусто.
+        const demo = !!demoSession.get();
+        setSample(demo && list.length === 0);
+        setItems(list.length > 0 || !demo ? list : SAMPLE_CANDIDATES);
       })
       .catch(() => {
         if (cancelled) return;
-        setSample(true);
-        setItems(SAMPLE_CANDIDATES);
+        if (demoSession.get()) {
+          setSample(true);
+          setItems(SAMPLE_CANDIDATES);
+        } else setError('Could not load candidates. Please refresh.');
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -117,10 +122,24 @@ export default function SelectionPage() {
   const toggle = (id: number) =>
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  const bulk = (label: string) => {
+  // Массовые действия — через смену этапа у каждого выбранного (тот же
+  // PATCH /api/applications/<id>/status/): отдельной пакетной ручки нет, а
+  // результат для работодателя тот же. В демо и на образцах — только на экране.
+  const BULK: Record<string, ApplicationStatus> = { Invite: 'INVITED', Shortlist: 'REVIEWED', Reject: 'REJECTED' };
+  const bulk = async (label: string) => {
+    const status = BULK[label];
+    const ids = selected.filter((id) => items.some((a) => a.id === id));
+    if (!status || !ids.length) return;
+    setItems((prev) => prev.map((a) => (ids.includes(a.id) ? { ...a, status } : a)));
+    setSelected([]);
+    setBulkNote(`Updating ${ids.length} ${plural(ids.length, 'candidate')}…`);
+    const real = ids.filter((id) => !isSample(id));
+    const results = await Promise.allSettled(real.map((id) => companyApplicationsApi.setStatus(id, status)));
+    const failed = results.filter((r) => r.status === 'rejected').length;
     setBulkNote(
-      `${label} for ${selected.length} ${plural(selected.length, 'candidate')}: ` +
-        'bulk actions run on the server, and the endpoint does not exist yet.',
+      failed
+        ? `${failed} of ${real.length} could not be updated. Please try again.`
+        : `${STATUS_LABEL[status]}: ${ids.length} ${plural(ids.length, 'candidate')}. They are notified.`,
     );
   };
 
@@ -269,6 +288,12 @@ export default function SelectionPage() {
         )}
       </div>
 
+      {bulkNote && selected.length === 0 && (
+        <p role="status" className="sticky bottom-0 z-20 border-t border-line bg-surface/95 px-5 py-3 text-sm text-text-primary backdrop-blur md:px-8">
+          {bulkNote}
+        </p>
+      )}
+
       {opened && <CandidatePanel app={opened} onClose={close} onStatus={setStatus} />}
 
       {/* Панель массовых действий — «25 Candidates selected → Invite selected». */}
@@ -281,19 +306,15 @@ export default function SelectionPage() {
             </span>
 
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => bulk('Invite to interview')}>
+              <Button size="sm" onClick={() => void bulk('Invite')}>
                 <UserCheck size={15} />
                 Invite
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => bulk('Shortlist')}>
+              <Button variant="secondary" size="sm" onClick={() => void bulk('Shortlist')}>
                 <Check size={15} />
                 Shortlist
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => bulk('Send a message')}>
-                <MessageSquare size={15} />
-                Message
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => bulk('Reject')}>
+              <Button variant="secondary" size="sm" onClick={() => void bulk('Reject')}>
                 <UserX size={15} />
                 Reject
               </Button>
@@ -312,9 +333,7 @@ export default function SelectionPage() {
             </button>
           </div>
 
-          {bulkNote && (
-            <DemoNotice className="mt-3" what={bulkNote} endpoint="POST /api/applications/company/bulk/" />
-          )}
+
         </div>
       )}
     </>

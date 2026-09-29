@@ -1,3 +1,4 @@
+import * as React from 'react';
 import type { CurrentUser } from '@/lib/api/auth';
 
 /**
@@ -38,6 +39,16 @@ export const DEMO_USERS: Record<DemoRole, CurrentUser> = {
     company_name: 'Steppe Garden Hotel',
   },
 };
+
+/**
+ * Демо-вход ли это (кнопки «As a candidate / As an employer»). До гидрации —
+ * false, чтобы сервер и браузер нарисовали одно и то же.
+ */
+export function useIsDemo(): boolean {
+  const [demo, setDemo] = React.useState(false);
+  React.useEffect(() => setDemo(!!demoSession.get()), []);
+  return demo;
+}
 
 export const demoSession = {
   get(): DemoRole | null {
