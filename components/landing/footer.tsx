@@ -98,7 +98,7 @@ export function Footer() {
             links={[
               // App Store появится в списке, когда будет ссылка (lib/stores.ts).
               ...(APP_STORE_URL ? [{ label: 'App Store', href: APP_STORE_URL, external: true }] : []),
-              { label: 'Google Play', href: GOOGLE_PLAY_URL, external: true },
+              ...(GOOGLE_PLAY_URL ? [{ label: 'Google Play', href: GOOGLE_PLAY_URL, external: true }] : []),
               { label: 'Privacy policy', href: PRIVACY_URL, external: true },
               { label: 'Terms of use', href: TERMS_URL, external: true },
             ]}

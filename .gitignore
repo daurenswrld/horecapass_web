@@ -44,3 +44,5 @@ WhatsApp Chat - */
 # client context: notes, voice transcripts, Figma exports, copy doc (local only)
 docs/
 HorecaPass_Web_Copy.docx
+# client materials dropped by the team (voice notes, briefs, credentials in chat text)
+контекст/
