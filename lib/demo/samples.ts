@@ -1,4 +1,4 @@
-import type { CompanyApplication } from '@/lib/api/applications';
+import { parseApplicantProfile, type CompanyApplication } from '@/lib/api/applications';
 import type { ChatMessage, ChatRoom, ChatUser } from '@/lib/api/chats';
 
 /**
@@ -18,64 +18,99 @@ const day = (offset: number) => {
   return d;
 };
 
+/** Образец отклика: профиль в том же виде, что присылает сервер. */
+function sampleCandidate(
+  id: number,
+  name: string,
+  vacancyTitle: string,
+  status: CompanyApplication['status'],
+  daysAgo: number,
+  matchScore: number,
+  raw: Record<string, unknown>,
+  coverLetter: string | null = null,
+): CompanyApplication {
+  const profile = { name, ...raw };
+  return {
+    id,
+    vacancyId: null,
+    applicant: name,
+    vacancyTitle,
+    status,
+    createdAt: day(daysAgo),
+    avatarUrl: null,
+    matchScore,
+    requiresVideoGreeting: false,
+    videoGreetingUrl: null,
+    coverLetter,
+    relocationStep: null,
+    details: parseApplicantProfile(profile),
+    profile,
+  };
+}
+
+// Имена и заведения вымышленные. Интерфейс английский, рынок — GCC:
+// русские имена в образцах выглядели чужеродно.
 export const SAMPLE_CANDIDATES: CompanyApplication[] = [
-  {
-    id: -1,
-    applicant: 'Айгерим Сарсенова',
-    vacancyTitle: 'Banquet Supervisor',
-    status: 'NEW',
-    createdAt: day(1),
-    avatarUrl: null,
-    matchScore: 92,
-    requiresVideoGreeting: true,
-    videoGreetingUrl: null,
-    profile: {},
-  },
-  {
-    id: -2,
-    applicant: 'Ерлан Мухамедов',
-    vacancyTitle: 'Chef de Partie',
-    status: 'REVIEWED',
-    createdAt: day(3),
-    avatarUrl: null,
-    matchScore: 74,
-    requiresVideoGreeting: false,
-    videoGreetingUrl: null,
-    profile: {},
-  },
-  {
-    id: -3,
-    applicant: 'Дина Абишева',
-    vacancyTitle: 'Hostess',
-    status: 'INVITED',
-    createdAt: day(6),
-    avatarUrl: null,
-    matchScore: 61,
-    requiresVideoGreeting: false,
-    videoGreetingUrl: null,
-    profile: {},
-  },
-  {
-    id: -4,
-    applicant: 'Тимур Байжанов',
-    vacancyTitle: 'Waiter',
-    status: 'REJECTED',
-    createdAt: day(9),
-    avatarUrl: null,
-    matchScore: 38,
-    requiresVideoGreeting: false,
-    videoGreetingUrl: null,
-    profile: {},
-  },
+  sampleCandidate(
+    -1,
+    'Maria Santos',
+    'Banquet Supervisor',
+    'NEW',
+    1,
+    92,
+    {
+      nationality: 'Filipino',
+      location: 'Dubai, UAE',
+      position: 'Banquet Supervisor',
+      position_level: 'Supervisor',
+      visa_status: 'Visit visa',
+      desired_salary: '7000',
+      salary_currency: 'AED',
+      salary_period: 'month',
+      languages: ['English — fluent', 'Tagalog — native'],
+      skills: ['Banquet service', 'Team leadership', 'Event setup'],
+      experiences: [
+        {
+          position: 'Banquet Captain',
+          company: 'Marina Grand Hotel',
+          period: '03/2022 — Now',
+          description: 'Events up to 300 guests, team of 12.',
+        },
+        { position: 'Waitress', company: 'Manila Bay Resort', period: '06/2018 — 02/2022', description: '' },
+      ],
+    },
+    'I have run banquets for up to 300 guests and would love to join a new team.',
+  ),
+  sampleCandidate(-2, 'Rahul Nair', 'Chef de Partie', 'REVIEWED', 3, 74, {
+    nationality: 'Indian',
+    location: 'Abu Dhabi, UAE',
+    position: 'Chef de Partie',
+    languages: ['English', 'Hindi', 'Malayalam'],
+    skills: ['Hot kitchen', 'HACCP'],
+    experiences: [{ position: 'Demi Chef de Partie', company: 'Palm Coast Hotel', period: '01/2021 — Now', description: '' }],
+  }),
+  sampleCandidate(-3, 'Aisha Rahman', 'Hostess', 'INVITED', 6, 81, {
+    nationality: 'Bangladeshi',
+    location: 'Riyadh, KSA',
+    position: 'Hostess',
+    languages: ['English', 'Arabic — basic'],
+    skills: ['Guest relations', 'Reservations'],
+  }),
+  sampleCandidate(-4, 'Omar Haddad', 'Waiter', 'REJECTED', 9, 38, {
+    nationality: 'Jordanian',
+    location: 'Amman, Jordan',
+    position: 'Waiter',
+    languages: ['Arabic', 'English — basic'],
+  }),
 ];
 
 const candidate: ChatUser = {
   id: -11,
-  firstName: 'Айгерим',
-  lastName: 'Сарсенова',
+  firstName: 'Maria',
+  lastName: 'Santos',
   role: 'APPLICANT',
   avatar: null,
-  displayName: 'Айгерим Сарсенова',
+  displayName: 'Maria Santos',
 };
 
 const recruiter: ChatUser = {

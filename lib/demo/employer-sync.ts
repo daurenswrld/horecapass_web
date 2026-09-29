@@ -68,11 +68,20 @@ export async function saveCompany(d: EmployerDraft): Promise<CompanyProfile> {
   return saved;
 }
 
+/**
+ * Без пустых полей. Боевой сервер отвечает 400 на hours: "" («Это поле не
+ * может быть пустым»), хотя само поле необязательное, — незаполненное
+ * просто не отправляем.
+ */
+function compact<T extends Record<string, unknown>>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o).filter(([, x]) => x !== null && x !== undefined && x !== '')) as Partial<T>;
+}
+
 /** Вакансия черновиком. Возвращает её id на сервере. */
 export async function saveVacancyDraft(d: EmployerDraft): Promise<number> {
   const v = d.vacancy;
   const opening = d.company.preOpening ? d.project[3] : undefined;
-  const payload = {
+  const payload = compact({
     title: v.title ?? 'Open role',
     description: vacancyText(v, d.company, opening),
     salary_min: v.salaryMin,
@@ -89,7 +98,7 @@ export async function saveVacancyDraft(d: EmployerDraft): Promise<number> {
     responsibilities: v.responsibilities,
     hiring_steps: v.hiringSteps,
     status: 'DRAFT',
-  };
+  });
   const saved = d.serverVacancyId
     ? await vacanciesApi.update(d.serverVacancyId, payload)
     : await vacanciesApi.create(payload);

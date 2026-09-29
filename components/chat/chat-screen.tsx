@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { MessageSquare, Mic, RefreshCw, Send } from 'lucide-react';
+import { ChevronLeft, MessageSquare, Mic, RefreshCw, Send } from 'lucide-react';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { DemoNotice } from '@/components/demo-notice';
@@ -16,6 +16,7 @@ import {
   type QuickReplyTemplate,
 } from '@/lib/api/chats';
 import { isSample, SAMPLE_MESSAGES, SAMPLE_ROOMS } from '@/lib/demo/samples';
+import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +38,12 @@ const DAY_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long'
 function roomTitle(room: ChatRoom): string {
   if (room.chatType === 'SUPPORT') return 'Support';
   if (room.chatType === 'ASSISTANT') return 'Assistant';
-  return room.peer?.displayName ?? room.applicationSummary?.companyName ?? 'Chat';
+  // Со стороны кандидата собеседник — компания: без личного имени рекрутера
+  // понятнее название компании, чем «Employer».
+  const peer = room.peer;
+  const company = room.applicationSummary?.companyName;
+  if (peer && !peer.firstName && !peer.lastName && isCompany(peer.role) && company) return company;
+  return peer?.displayName ?? company ?? 'Chat';
 }
 
 function roomSubtitle(room: ChatRoom): string | null {
@@ -46,7 +52,8 @@ function roomSubtitle(room: ChatRoom): string | null {
   return [s.vacancyTitle, s.companyName].filter(Boolean).join(' · ') || null;
 }
 
-function Avatar({ name, url, size = 40 }: { name: string; url?: string | null; size?: number }) {
+/** logo — вместо фото собеседника логотип компании: вписываем целиком, не обрезая. */
+function Avatar({ name, url, size = 40, logo = false }: { name: string; url?: string | null; size?: number; logo?: boolean }) {
   const [broken, setBroken] = React.useState(false);
   if (url && !broken) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -55,8 +62,8 @@ function Avatar({ name, url, size = 40 }: { name: string; url?: string | null; s
         src={url}
         alt=""
         onError={() => setBroken(true)}
-        style={{ width: size, height: size }}
-        className="shrink-0 rounded-full object-cover"
+        style={{ width: size, height: size, padding: logo ? size * 0.12 : undefined }}
+        className={cn('shrink-0 rounded-full', logo ? 'border border-line bg-white object-contain' : 'object-cover')}
       />
     );
   }
@@ -82,7 +89,7 @@ function RoomRow({ room, active, onClick }: { room: ChatRoom; active: boolean; o
         active ? 'border-accent bg-surface shadow-card' : 'border-line bg-surface hover:border-line-strong',
       )}
     >
-      <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} />
+      <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} logo={!room.peer?.avatar} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
           <span className="truncate font-semibold text-text-primary">{roomTitle(room)}</span>
@@ -150,7 +157,15 @@ function DayDivider({ date }: { date: Date }) {
   );
 }
 
-function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: number) => void }) {
+function Conversation({
+  room,
+  onRead,
+  onBack,
+}: {
+  room: ChatRoom;
+  onRead: (roomId: number) => void;
+  onBack?: () => void;
+}) {
   const { user } = useAuth();
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -191,7 +206,7 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
     };
   }, [room.id, onRead]);
 
-  // Живое соединение. Departmentьно от загрузки истории: если вебсокет не поднялся,
+  // Живое соединение. Отдельно от загрузки истории: если вебсокет не поднялся,
   // переписку всё равно можно читать и отправлять сообщения по REST.
   React.useEffect(() => {
     if (isSample(room.id)) return;
@@ -222,14 +237,39 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
     };
   }, [room.id]);
 
+  // Без живого соединения новые сообщения подтягиваем сами, раз в 8 секунд
+  // и только на открытой вкладке. На проде вебсокет открывается и сразу
+  // рвётся (проблема сервера) — без этого собеседник не видел ответа,
+  // пока не обновит страницу.
+  React.useEffect(() => {
+    if (live || isSample(room.id)) return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      chatsApi
+        .messages(room.id)
+        .then((list) =>
+          setMessages((prev) => {
+            const known = new Set(prev.map((m) => m.id));
+            const fresh = [...list].reverse().filter((m) => !known.has(m.id));
+            return fresh.length ? [...prev, ...fresh] : prev;
+          }),
+        )
+        .catch(() => {});
+    }, 8000);
+    return () => clearInterval(t);
+  }, [live, room.id]);
+
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages.length]);
 
-  // Заготовки ответов есть только у компании; соискателю сервер вернёт 403.
+  // Заготовки ответов есть только у компании; соискателю сервер отвечает 403,
+  // поэтому у него и не спрашиваем.
+  const company = isCompany(user?.role);
   React.useEffect(() => {
+    if (!company) return;
     chatsApi.quickReplies().then(setTemplates).catch(() => setTemplates([]));
-  }, []);
+  }, [company]);
 
   const submit = async () => {
     const value = text.trim();
@@ -267,7 +307,17 @@ function Conversation({ room, onRead }: { room: ChatRoom; onRead: (roomId: numbe
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex items-center gap-3 border-b border-line px-5 py-3.5">
-        <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} size={36} />
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to chats"
+            className="-ml-2 rounded-full p-1.5 text-text-secondary hover:bg-surface-muted hover:text-text-primary focus-ring lg:hidden"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
+        <Avatar name={roomTitle(room)} url={room.peer?.avatar ?? room.applicationSummary?.companyLogoUrl} logo={!room.peer?.avatar} size={36} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-text-primary">{roomTitle(room)}</p>
           {roomSubtitle(room) && (
@@ -373,6 +423,10 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
   const [error, setError] = React.useState<string | null>(null);
   const [reloadKey, setReloadKey] = React.useState(0);
   const [sample, setSample] = React.useState(false);
+  // На узком экране список и переписка рядом не помещаются — показываем
+  // что-то одно. Раньше переписка там была просто скрыта, и открыть чат
+  // с телефона было нельзя.
+  const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -387,7 +441,12 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
         setSample(list.length === 0);
         list = list.length > 0 ? list : SAMPLE_ROOMS;
         setRooms(list);
-        setSelected((prev) => (prev && list.some((r) => r.id === prev.id) ? prev : (list[0] ?? null)));
+        // ?room=<id> — переход из карточки кандидата сразу в нужный чат.
+        const wanted = Number(new URLSearchParams(window.location.search).get('room'));
+        if (wanted && list.some((r) => r.id === wanted)) setOpen(true);
+        setSelected((prev) =>
+          prev && list.some((r) => r.id === prev.id) ? prev : (list.find((r) => r.id === wanted) ?? list[0] ?? null),
+        );
       })
       .catch(() => {
         if (cancelled) return;
@@ -430,7 +489,7 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
       )}
 
       <div className="grid gap-4 px-5 pb-6 pt-4 md:px-8 lg:h-[calc(100dvh-8.5rem)] lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-        <div className="space-y-2.5 lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-slim">
+        <div className={cn('space-y-2.5 lg:block lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-slim', open && 'hidden')}>
           {loading && (
             <div className="grid place-items-center py-16">
               <Spinner />
@@ -454,13 +513,26 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
           )}
 
           {rooms.map((r) => (
-            <RoomRow key={r.id} room={r} active={selected?.id === r.id} onClick={() => setSelected(r)} />
+            <RoomRow
+              key={r.id}
+              room={r}
+              active={selected?.id === r.id}
+              onClick={() => {
+                setSelected(r);
+                setOpen(true);
+              }}
+            />
           ))}
         </div>
 
-        <Card className="hidden min-h-0 overflow-hidden p-0 lg:flex lg:flex-col">
+        <Card
+          className={cn(
+            'min-h-0 flex-col overflow-hidden p-0 lg:flex lg:h-auto',
+            open ? 'flex h-[calc(100dvh-12.5rem)] md:h-[calc(100dvh-8.5rem)]' : 'hidden',
+          )}
+        >
           {selected ? (
-            <Conversation room={selected} onRead={clearUnread} />
+            <Conversation room={selected} onRead={clearUnread} onBack={() => setOpen(false)} />
           ) : (
             <p className="grid flex-1 place-items-center p-8 text-center text-sm text-text-secondary">
               Pick a conversation on the left.

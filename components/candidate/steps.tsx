@@ -439,6 +439,9 @@ export function buildCv(d: CandidateDraft, name: { first: string; last: string }
   };
 }
 
+/** Цена CV upgrade — Aldi, 29.09: «8$ за резюме». Разовая оплата. */
+const CV_UPGRADE_PRICE = '$8';
+
 export function UpgradeStep({ draft, update, go, name }: CProps) {
   const choose = (upgrade: 'yes' | 'no') => {
     update((d) => ({ ...d, upgrade }));
@@ -469,14 +472,14 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
       </div>
 
       <DemoNotice
-        what="The preview is assembled from your answers in the browser; Smart would rewrite the full CV. No payment is taken, and the price is not set yet."
+        what={`The preview is assembled from your answers in the browser; Smart would rewrite the full CV. The upgrade costs ${CV_UPGRADE_PRICE}, but no payment is taken yet: payment needs the server.`}
         endpoint="POST /api/resumes/my/<id>/upgrade/ (preview) and a payment step"
       />
 
       <div className="flex flex-wrap gap-2">
         <Continue onClick={() => choose('yes')}>
           <Sparkles size={17} aria-hidden />
-          Upgrade my CV
+          Upgrade my CV — {CV_UPGRADE_PRICE}
         </Continue>
         {/* Отказ не блокирует — сразу дальше, без экранов-препятствий. */}
         <Button variant="secondary" size="lg" onClick={() => choose('no')}>

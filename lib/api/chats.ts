@@ -71,7 +71,9 @@ function parseUser(json: unknown): ChatUser {
     lastName,
     role: str(j.role),
     avatar: str(j.avatar) || null,
-    displayName: full || 'Unknown user',
+    // Имя в профиле могут не заполнить (на проде так у свежих аккаунтов) —
+    // тогда хотя бы роль, а не «Unknown user».
+    displayName: full || (/COMPANY/.test(str(j.role)) ? 'Employer' : str(j.role) === 'APPLICANT' ? 'Candidate' : 'Unknown user'),
   };
 }
 
@@ -165,6 +167,11 @@ export const chatsApi = {
 
   startSupport(): Promise<Json> {
     return http.post<Json>(API.chats.startSupport);
+  },
+
+  /** Чат по отклику: сервер создаёт его или отдаёт уже существующий. */
+  async startForApplication(applicationId: number): Promise<ChatRoom> {
+    return parseRoom(await http.post<Json>(API.chats.startForApplication(applicationId)));
   },
 };
 

@@ -330,10 +330,11 @@ export const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '500+'];
  * то, что работодатель уже ввёл.
  */
 export function sampleAbout(c: CompanyDraft): string {
-  const name = c.name.trim() || 'We';
+  // Без названия — «We are», а не «We is».
+  const who = c.name.trim() ? `${c.name.trim()} is` : 'We are';
   const where = c.city.trim() ? ` in ${c.city.trim()}` : '';
   const size = c.size ? ` with a team of ${c.size} people` : '';
-  return `${name} is a hospitality business${where}${size}. Tell candidates what a day here is like, what you offer, and why people stay.`;
+  return `${who} a hospitality business${where}${size}. Tell candidates what a day here is like, what you offer, and why people stay.`;
 }
 
 /* Разговор о pre-opening проекте ---------------------------------------------------- */

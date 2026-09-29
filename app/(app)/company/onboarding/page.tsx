@@ -260,6 +260,7 @@ export default function EmployerOnboardingPage() {
           <button
             type="button"
             onClick={restart}
+            aria-label="Start over"
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-muted hover:text-text-primary focus-ring"
           >
             <RotateCcw size={14} aria-hidden />

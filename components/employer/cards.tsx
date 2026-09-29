@@ -11,6 +11,7 @@ import {
   type VacancyDraft,
 } from '@/lib/demo/employer';
 import { cn } from '@/lib/utils';
+import { LocationMap } from './location-map';
 
 /**
  * Карточки, которые видит кандидат: вакансия и профиль компании.
@@ -28,8 +29,9 @@ export function CompanyAvatar({ company, size = 44 }: { company: CompanyDraft; s
         alt=""
         width={size}
         height={size}
-        className="shrink-0 rounded-full border border-line bg-surface object-cover"
-        style={{ width: size, height: size }}
+        // contain: вытянутый логотип в круге не обрезается (см. vacancy-card).
+        className="shrink-0 rounded-full border border-line bg-white object-contain"
+        style={{ width: size, height: size, padding: size * 0.12 }}
       />
     );
   }
@@ -243,10 +245,7 @@ export function CompanyProfileCard({ company }: { company: CompanyDraft }) {
         {company.city && (
           <section>
             <h4 className="font-semibold text-heading">Location</h4>
-            <p className="mt-2 flex items-center gap-2 text-sm text-text-primary">
-              <MapPin size={16} aria-hidden className="text-danger" />
-              {company.city}
-            </p>
+            <LocationMap address={company.city} />
           </section>
         )}
 
