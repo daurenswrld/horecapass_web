@@ -11,6 +11,7 @@ import {
   type VacancyDraft,
 } from '@/lib/demo/employer';
 import { cn } from '@/lib/utils';
+import { LocationMap } from './location-map';
 
 /**
  * Карточки, которые видит кандидат: вакансия и профиль компании.
@@ -243,10 +244,7 @@ export function CompanyProfileCard({ company }: { company: CompanyDraft }) {
         {company.city && (
           <section>
             <h4 className="font-semibold text-heading">Location</h4>
-            <p className="mt-2 flex items-center gap-2 text-sm text-text-primary">
-              <MapPin size={16} aria-hidden className="text-danger" />
-              {company.city}
-            </p>
+            <LocationMap address={company.city} />
           </section>
         )}
 
