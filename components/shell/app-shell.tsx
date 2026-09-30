@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  Bell,
   Briefcase,
   FileText,
   LogOut,
@@ -17,6 +18,7 @@ import { DemoBanner } from '@/components/auth/demo-login';
 import { Wordmark } from '@/components/brand';
 import { Spinner } from '@/components/ui/primitives';
 import { ToastProvider } from '@/components/ui/toast';
+import { notificationsApi } from '@/lib/api/notifications';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
@@ -38,13 +40,28 @@ import { cn } from '@/lib/utils';
 interface NavItem {
   href: string;
   label: string;
+  /** Короткая подпись для нижней панели телефона. */
+  short?: string;
   Icon: typeof Search;
 }
+
+/** Число непрочитанных уведомлений: страница уведомлений обновляет его сама. */
+const UnreadContext = React.createContext<{ unread: number; setUnread: (n: number) => void }>({
+  unread: 0,
+  setUnread: () => undefined,
+});
+
+export function useUnread() {
+  return React.useContext(UnreadContext);
+}
+
+const NOTIFICATIONS_ITEM: NavItem = { href: '/notifications', label: 'Notifications', short: 'Alerts', Icon: Bell };
 
 const APPLICANT_NAV: NavItem[] = [
   { href: '/jobs', label: 'Jobs', Icon: Search },
   { href: '/responses', label: 'Applications', Icon: FileText },
   { href: '/chats', label: 'Chats', Icon: MessageSquare },
+  NOTIFICATIONS_ITEM,
   { href: '/profile', label: 'Profile', Icon: User },
   { href: '/settings', label: 'Settings', Icon: Settings },
 ];
@@ -53,6 +70,7 @@ const COMPANY_NAV: NavItem[] = [
   { href: '/company/vacancies', label: 'Jobs', Icon: Briefcase },
   { href: '/company/selection', label: 'Candidates', Icon: UserSearch },
   { href: '/company/chats', label: 'Chats', Icon: MessageSquare },
+  NOTIFICATIONS_ITEM,
   { href: '/company/profile', label: 'Profile', Icon: User },
   { href: '/company/settings', label: 'Settings', Icon: Settings },
 ];
@@ -61,6 +79,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [unread, setUnread] = React.useState(0);
+
+  // Счётчик непрочитанных: при входе, раз в минуту и когда вкладку снова открыли.
+  React.useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const load = () => {
+      if (document.visibilityState === 'hidden') return;
+      notificationsApi
+        .list()
+        .then((list) => alive && setUnread(list.filter((n) => !n.isRead).length))
+        .catch(() => undefined);
+    };
+    load();
+    const timer = window.setInterval(load, 60_000);
+    document.addEventListener('visibilitychange', load);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', load);
+    };
+  }, [user]);
 
   // Разделы приложения закрыты для неавторизованных — как и в мобилке,
   // где RootScreen пускает дальше только при валидном токене.
@@ -83,7 +123,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     user.email ||
     'Account';
 
+  const badge = (href: string) => (href === NOTIFICATIONS_ITEM.href ? unread : 0);
+
   return (
+    <UnreadContext.Provider value={{ unread, setUnread }}>
     <ToastProvider>
     <div className="flex min-h-[100dvh]">
       <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
@@ -108,6 +151,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon size={18} className={active ? 'text-accent' : undefined} />
                 {label}
+                {badge(href) > 0 && (
+                  <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-accent-strong px-1.5 text-[11px] font-bold leading-5 text-on-accent dark:bg-accent">
+                    {badge(href) > 99 ? '99+' : badge(href)}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -137,20 +185,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* На узком экране — нижняя панель, как в приложении. */}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-surface md:hidden">
-        {nav.map(({ href, label, Icon }) => {
+        {nav.map(({ href, label, short, Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
               key={href}
               href={href}
               aria-current={active ? 'page' : undefined}
+              aria-label={badge(href) > 0 ? `${label}, ${badge(href)} unread` : label}
               className={cn(
                 'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors active:scale-95 focus-ring',
                 active ? 'text-accent' : 'text-text-secondary',
               )}
             >
-              <Icon size={20} />
-              {label}
+              <span className="relative">
+                <Icon size={20} />
+                {badge(href) > 0 && (
+                  <span className="absolute -right-2 -top-1.5 grid min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-[10px] font-bold leading-4 text-on-accent dark:bg-accent">
+                    {badge(href) > 9 ? '9+' : badge(href)}
+                  </span>
+                )}
+              </span>
+              {short ?? label}
             </Link>
           );
         })}
@@ -162,6 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
     </div>
     </ToastProvider>
+    </UnreadContext.Provider>
   );
 }
 
