@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Plus, X } from 'lucide-react';
 import { JobStats } from '@/components/employer/stats';
+import { CURRENCIES, VacancyActions } from '@/components/employer/vacancy-manage';
 import { SetupInvite } from '@/components/employer/setup-invite';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Chip, Field, Spinner } from '@/components/ui/primitives';
@@ -109,9 +110,9 @@ export default function CompanyVacanciesPage() {
         {!loading && !error && items.length > 0 && (
           <>
             <JobStats vacancies={items} />
-            <VacancyGroup title="Active" items={active} />
-            {drafts.length > 0 && <VacancyGroup title="Drafts" items={drafts} onPublished={load} />}
-            {archived.length > 0 && <VacancyGroup title="Archived" items={archived} muted />}
+            <VacancyGroup title="Active" items={active} onChanged={load} />
+            <VacancyGroup title="Drafts" items={drafts} onChanged={load} />
+            <VacancyGroup title="Archived" items={archived} muted onChanged={load} />
           </>
         )}
       </div>
@@ -132,7 +133,7 @@ export default function CompanyVacanciesPage() {
  * и SAR; остальные коды сервером пока не проверены — если он их не примет,
  * форма покажет его ответ.
  */
-const CURRENCIES = ['AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR'] as const;
+
 
 function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
   const [title, setTitle] = React.useState('');
@@ -316,13 +317,13 @@ function VacancyGroup({
   title,
   items,
   muted,
-  onPublished,
+  onChanged,
 }: {
   title: string;
   items: Vacancy[];
   muted?: boolean;
-  /** Есть только у черновиков: кнопка «Publish» на карточке. */
-  onPublished?: () => void;
+  /** Вызывается после любого изменения вакансии: список перечитывается. */
+  onChanged: () => void;
 }) {
   if (items.length === 0) return null;
   return (
@@ -347,7 +348,8 @@ function VacancyGroup({
                     <Chip key={t}>{t}</Chip>
                   ))}
               </div>
-              {onPublished && <PublishButton vacancy={v} onDone={onPublished} />}
+              {v.status === 'DRAFT' && <PublishButton vacancy={v} onDone={onChanged} />}
+              <VacancyActions vacancy={v} onChanged={onChanged} />
             </Card>
           );
         })}
