@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Check, MapPin, Plane, Video, X } from 'lucide-react';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
+import { ListSkeleton, riseStyle } from '@/components/ui/motion';
 import {
   applicationsApi,
   FUNNEL,
@@ -102,12 +103,12 @@ function Funnel({ status }: { status: ApplicationStatus }) {
   );
 }
 
-function ApplicationCard({ a }: { a: ApplicantApplication }) {
+function ApplicationCard({ a, index = 0 }: { a: ApplicantApplication; index?: number }) {
   return (
     // min-w-0 обязателен: элемент сетки по умолчанию не сжимается уже своего
     // содержимого, и длинная цепочка этапов распирала карточку вместе
     // со страницей вместо того, чтобы прокручиваться внутри себя.
-    <Card className="min-w-0 p-5">
+    <Card className="rise min-w-0 p-5" style={riseStyle(index)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="font-semibold text-text-primary">{a.vacancyTitle}</h3>
@@ -248,9 +249,7 @@ export default function ResponsesPage() {
 
       <div className="px-5 py-6 md:px-8">
         {loading && (
-          <div className="grid place-items-center py-20">
-            <Spinner />
-          </div>
+          <ListSkeleton count={4} />
         )}
 
         {!loading && error && (
@@ -277,8 +276,8 @@ export default function ResponsesPage() {
 
         {!loading && !error && shown.length > 0 && (
           <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-            {shown.map((a) => (
-              <ApplicationCard key={a.id} a={a} />
+            {shown.map((a, i) => (
+              <ApplicationCard key={a.id} a={a} index={i} />
             ))}
           </div>
         )}

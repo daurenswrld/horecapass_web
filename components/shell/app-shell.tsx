@@ -16,6 +16,7 @@ import {
 import { DemoBanner } from '@/components/auth/demo-login';
 import { Wordmark } from '@/components/brand';
 import { Spinner } from '@/components/ui/primitives';
+import { ToastProvider } from '@/components/ui/toast';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
@@ -83,6 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     'Account';
 
   return (
+    <ToastProvider>
     <div className="flex min-h-[100dvh]">
       <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
         <Link href={nav[0].href} className="mb-6 block px-2 rounded focus-ring">
@@ -98,7 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-3 rounded px-3 py-2.5 text-sm font-medium transition-colors focus-ring',
+                  'nav-item flex items-center gap-3 rounded px-3 py-2.5 text-sm font-medium transition-colors focus-ring',
                   active
                     ? 'bg-accent-muted text-text-primary'
                     : 'text-text-secondary hover:bg-surface-muted hover:text-text-primary',
@@ -143,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href={href}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium focus-ring',
+                'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors active:scale-95 focus-ring',
                 active ? 'text-accent' : 'text-text-secondary',
               )}
             >
@@ -159,6 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
     </div>
+    </ToastProvider>
   );
 }
 
