@@ -121,7 +121,7 @@ export function InterviewPrep({ vacancy }: { vacancy: Vacancy }) {
       <div>
         <Button variant="secondary" onClick={start}>
           <Sparkles size={16} aria-hidden />
-          Prepare for interview with AI
+          Prepare for interview with Smart
         </Button>
         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary">
           <Lock size={12} aria-hidden />

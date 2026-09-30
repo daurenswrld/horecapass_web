@@ -144,8 +144,8 @@ export function CandidatePanel({
       setSummaryState({
         error:
           e instanceof ApiError && e.status === 503
-            ? 'The AI summary is unavailable right now. Try again in a minute.'
-            : 'Could not get the AI summary. Please try again.',
+            ? 'The Smart summary is unavailable right now. Try again in a minute.'
+            : 'Could not get the Smart summary. Please try again.',
       });
     }
   };
@@ -237,7 +237,7 @@ export function CandidatePanel({
         {chatError && <p className="px-6 pb-4 text-sm text-danger">{chatError}</p>}
         {sample && (
           <p className="px-6 pb-4 text-xs text-text-secondary">
-            This is a sample candidate: the stage changes only on this screen, messages and the AI summary are off.
+            This is a sample candidate: the stage changes only on this screen, messages and the Smart summary are off.
           </p>
         )}
 
@@ -274,7 +274,7 @@ export function CandidatePanel({
           )}
         </Section>
 
-        <Section title="AI summary">
+        <Section title="Smart summary">
           {!summary && summaryState !== 'loading' && (
             <>
               <p className="text-sm text-text-secondary">
@@ -282,7 +282,7 @@ export function CandidatePanel({
               </p>
               <Button variant="secondary" size="sm" className="mt-3" onClick={loadSummary} disabled={sample}>
                 <Sparkles size={15} />
-                Get AI summary
+                Get Smart summary
               </Button>
             </>
           )}

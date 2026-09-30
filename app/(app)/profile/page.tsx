@@ -94,7 +94,7 @@ export default function ProfilePage() {
               What do you do?
             </h2>
             <p className="mt-1.5 text-sm text-text-secondary">
-              The profession decides what we ask: a hostess, a waiter, a chef and a manager each
+              The profession decides what we ask: a hostess, a waiter, a bartender, a chef and a manager each
               have their own set of parameters.
             </p>
 
