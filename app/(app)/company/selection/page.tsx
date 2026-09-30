@@ -10,6 +10,7 @@ import { CandidatePanel } from '@/components/employer/candidate-panel';
 import {
   companyApplicationsApi,
   FUNNEL,
+  funnelStage,
   STATUS_LABEL,
   STATUS_TONE,
   type ApplicationStatus,
@@ -117,7 +118,7 @@ export default function SelectionPage() {
     };
   }, [query]);
 
-  const shown = stage === 'ALL' ? items : items.filter((a) => a.status === stage);
+  const shown = stage === 'ALL' ? items : items.filter((a) => funnelStage(a.status) === stage);
   const allShownSelected = shown.length > 0 && shown.every((a) => selected.includes(a.id));
 
   const toggle = (id: number) =>

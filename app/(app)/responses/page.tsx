@@ -8,6 +8,7 @@ import { ListSkeleton, riseStyle } from '@/components/ui/motion';
 import {
   applicationsApi,
   FUNNEL,
+  funnelStage,
   RELOCATION_LABEL,
   salaryLabel,
   STATUS_LABEL,
@@ -55,7 +56,7 @@ function Funnel({ status }: { status: ApplicationStatus }) {
     );
   }
 
-  const current = FUNNEL.indexOf(status);
+  const current = FUNNEL.indexOf(funnelStage(status));
   if (current < 0) return null;
 
   return (

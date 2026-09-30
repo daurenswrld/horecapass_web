@@ -290,6 +290,7 @@ function PublishButton({ vacancy, onDone }: { vacancy: Vacancy; onDone: () => vo
       <Button
         size="sm"
         disabled={busy}
+        aria-label={`Publish ${vacancy.title}`}
         onClick={async () => {
           setBusy(true);
           setError(null);
