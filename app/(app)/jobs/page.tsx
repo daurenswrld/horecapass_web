@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, Search, SlidersHorizontal } from 'lucide-react';
 import { CandidateSetupInvite, ProfileProgress } from '@/components/candidate/profile-overview';
 import { PageHeader } from '@/components/shell/app-shell';
@@ -36,7 +37,17 @@ const CURRENCIES = ['AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'USD'] as const;
 const SELECT = 'h-11 w-full rounded-full border border-line-strong bg-surface px-4 text-text-primary focus-ring';
 
 export default function JobsPage() {
+  // useSearchParams требует Suspense: без него страница не соберётся статически.
+  return (
+    <React.Suspense fallback={null}>
+      <JobsInner />
+    </React.Suspense>
+  );
+}
+
+function JobsInner() {
   const toast = useToast();
+  const queryParam = useSearchParams().get('q');
   const [tab, setTab] = React.useState<Tab>('all');
   const [items, setItems] = React.useState<Vacancy[]>([]);
   const [selected, setSelected] = React.useState<Vacancy | null>(null);
@@ -52,6 +63,12 @@ export default function JobsPage() {
   // одно. Раньше вакансия там была просто скрыта: открыть её и откликнуться
   // с телефона было нельзя.
   const [open, setOpen] = React.useState(false);
+
+  // Ссылка вида /jobs?q=Barista (из чата-ассистента) сразу ищет по этому слову.
+  // Следим за самим параметром: на странице вакансий ссылка не перемонтирует её.
+  React.useEffect(() => {
+    if (queryParam) setSearch(queryParam.slice(0, 80));
+  }, [queryParam]);
 
   // Поиск и фильтры не дёргают сервер на каждую букву.
   React.useEffect(() => {

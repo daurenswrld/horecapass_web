@@ -241,3 +241,68 @@ export function errorText(e: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+/* --- Ассистент: база знаний, вопросы без ответа, настройки ------------------ */
+
+export interface KnowledgeDoc {
+  id: number;
+  title: string;
+  chars: number;
+  chunks: number;
+  embedded: number;
+  updated_at: string;
+  content?: string;
+  chunk_texts?: string[];
+}
+
+export interface UnansweredQuestion {
+  id: number;
+  text: string;
+  asked_by: string | null;
+  created_at: string;
+  resolved: boolean;
+}
+
+export interface KnowledgeHit {
+  id: number;
+  document_id: number;
+  title: string;
+  text: string;
+  score: number;
+  method: 'vector' | 'keyword';
+}
+
+export interface SearchTest {
+  query: string;
+  knowledge: KnowledgeHit[];
+  vacancies: { id: number; title: string; company: string; city: string; salary: string; score: number | null }[];
+}
+
+export interface AssistantSettings {
+  active: boolean;
+  extra_instructions: string;
+  updated_at: string;
+}
+
+const K = '/api/admin/knowledge';
+
+export const assistantAdminApi = {
+  documents: () => http.get<{ results: KnowledgeDoc[] }>(`${K}/documents/`),
+  document: (id: number) => http.get<KnowledgeDoc>(`${K}/documents/${id}/`),
+  addDocument: (title: string, content: string) => http.post<KnowledgeDoc>(`${K}/documents/`, { title, content }),
+  updateDocument: (id: number, title: string, content: string) =>
+    http.put<KnowledgeDoc>(`${K}/documents/${id}/`, { title, content }),
+  deleteDocument: (id: number) => http.delete<void>(`${K}/documents/${id}/`),
+  reindex: (id: number) => http.post<KnowledgeDoc>(`${K}/documents/${id}/reindex/`),
+  search: (q: string) => http.get<SearchTest>(`${K}/search/`, { query: { q } }),
+  unanswered: (resolved: 'open' | 'all' | '1' = 'open') =>
+    http.get<{ results: UnansweredQuestion[]; open: number }>(`${K}/unanswered/`, {
+      query: { resolved: resolved === 'open' ? undefined : resolved },
+    }),
+  resolveQuestion: (id: number, resolved: boolean) =>
+    http.patch<{ id: number; resolved: boolean }>(`${K}/unanswered/${id}/`, { resolved }),
+  deleteQuestion: (id: number) => http.delete<void>(`${K}/unanswered/${id}/`),
+  settings: () => http.get<AssistantSettings>(`${K}/settings/`),
+  saveSettings: (active: boolean, extra_instructions: string) =>
+    http.put<AssistantSettings>(`${K}/settings/`, { active, extra_instructions }),
+};

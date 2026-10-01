@@ -11,6 +11,12 @@
  */
 
 export const API = {
+  /** Ассистент на сайте (чат: вопросы о платформе и подбор вакансий). */
+  assistant: {
+    status: "/api/assistant/status/",
+    stream: "/api/assistant/stream/",
+  },
+
   /** Админ-панель (только сотрудники). Серверная часть: приложение adminpanel. */
   admin: {
     me: "/api/admin/me/",

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
+  Bot,
   Briefcase,
   ClipboardList,
   Gauge,
@@ -53,6 +54,7 @@ const NAV: NavItem[] = [
   { href: '/admin/feed', label: 'Daily feed', Icon: ClipboardList },
   { href: '/admin/vacancies', label: 'Vacancies', Icon: Briefcase },
   { href: '/admin/people', label: 'People', Icon: Users },
+  { href: '/admin/knowledge', label: 'Assistant', Icon: Bot },
   { href: '/admin/tickets', label: 'Support', Icon: LifeBuoy },
   { href: '/admin/managers', label: 'Managers', Icon: UserCog, needs: 'manage_staff' },
   { href: '/admin/audit', label: 'Audit log', Icon: ShieldCheck, needs: 'manage_staff' },
