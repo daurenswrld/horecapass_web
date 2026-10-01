@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ChatScreen } from '@/components/chat/chat-screen';
 import { Communities } from '@/components/community/communities';
+import { useIsDemo } from '@/lib/demo/session';
 import { cn } from '@/lib/utils';
 
 /**
@@ -13,6 +14,10 @@ import { cn } from '@/lib/utils';
  */
 export default function Page() {
   const [tab, setTab] = React.useState<'messages' | 'communities'>('messages');
+  // Communities пока живут только в браузере — у настоящих аккаунтов раздел
+  // скрыт до серверной части (вариант «б»), в демо — показан.
+  const demo = useIsDemo();
+  if (!demo) return <ChatScreen />;
 
   const segment = (
     <div className="flex rounded-full bg-surface-muted p-1" role="tablist" aria-label="Chats">

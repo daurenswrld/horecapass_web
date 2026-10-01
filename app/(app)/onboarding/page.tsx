@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Spinner } from '@/components/ui/primitives';
-import { WizardHeader } from '@/components/ui/wizard-header';
+import { WizardHeader, type ServerSync } from '@/components/ui/wizard-header';
 import {
   BasedStep,
   CheckStep,
@@ -25,12 +25,19 @@ import {
   type CStep,
   type CandidateDraft,
 } from '@/lib/demo/candidate';
+import { canSyncToServer, syncCandidate, uploadCandidateFile, type CandidateFile } from '@/lib/demo/candidate-sync';
+import { syncError } from '@/lib/demo/employer-sync';
 import { cn } from '@/lib/utils';
 
 /**
- * Онбординг кандидата — демо по брифу кандидата (см. lib/demo/candidate.ts).
- * Черновик сохраняется после каждого изменения и открывается на том же шаге.
+ * Онбординг кандидата по брифу кандидата (см. lib/demo/candidate.ts).
+ * Черновик сохраняется в браузере после каждого изменения и открывается на том
+ * же шаге. При настоящем входе профиль и резюме уходят на сервер при переходе
+ * между шагами, файлы — сразу при выборе (lib/demo/candidate-sync.ts).
  */
+
+/** После каких шагов отправляем профиль и резюме на сервер. */
+const SYNC_AFTER: CStep[] = ['based', 'countries', 'check', 'consent', 'qualification'];
 
 const BACK: Partial<Record<CStep, CStep>> = {
   materials: 'based',
@@ -64,12 +71,39 @@ export default function CandidateOnboardingPage() {
     setDraft((prev) => (prev ? fn(prev) : prev));
   }, []);
 
+  const [server, setServer] = React.useState<ServerSync | undefined>(undefined);
+  const draftRef = React.useRef<CandidateDraft | null>(null);
+  draftRef.current = draft;
+  const nameRef = React.useRef({ first: '', last: '' });
+  nameRef.current = { first: user?.first_name ?? '', last: user?.last_name ?? '' };
+
+  const run = React.useCallback(async (job: () => Promise<unknown>) => {
+    if (!canSyncToServer()) return;
+    setServer('saving');
+    try {
+      await job();
+      setServer('saved');
+    } catch (e) {
+      setServer({ error: syncError(e), retry: () => void run(job) });
+    }
+  }, []);
+
   const go = React.useCallback(
     (step: CStep) => {
+      const from = draftRef.current?.step;
       update((d) => ({ ...d, step }));
       window.scrollTo({ top: 0 });
+      if (from && SYNC_AFTER.includes(from) && draftRef.current) {
+        const d = draftRef.current;
+        void run(() => syncCandidate(d, nameRef.current));
+      }
     },
-    [update],
+    [update, run],
+  );
+
+  const upload = React.useCallback(
+    (kind: CandidateFile, file: File) => void run(() => uploadCandidateFile(kind, file)),
+    [run],
   );
 
   if (!draft) {
@@ -85,6 +119,7 @@ export default function CandidateOnboardingPage() {
     update,
     go,
     name: { first: user?.first_name ?? '', last: user?.last_name ?? '' },
+    upload,
   };
   const n = C_STEP_INDEX[draft.step];
   const back = BACK[draft.step];
@@ -97,6 +132,7 @@ export default function CandidateOnboardingPage() {
         title={C_STEP_TITLE[n]}
         saved={saved}
         onBack={back ? () => go(back) : undefined}
+        server={server}
         onRestart={() => {
           candidateDraft.clear();
           setDraft(emptyCandidate());

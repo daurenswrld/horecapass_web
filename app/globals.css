@@ -210,8 +210,25 @@
 
 /* Голосовое 21.09 про фото: «они очень яркие, слишком броские — их нужно
    чуть-чуть успокоить, как будто фоном». Приглушаем, а не обесцвечиваем. */
+/* Созвон 29.09: «картинки слишком яркие». Приглушаем и чуть утепляем под бежевый. */
 .photo-calm {
-  filter: saturate(0.78) brightness(0.98) contrast(0.96);
+  filter: saturate(0.68) brightness(0.95) contrast(0.92) sepia(0.1);
+}
+
+/* Фото растворяется в фоне страницы со всех сторон, без жёсткой рамки. */
+.photo-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 55%, transparent 98%),
+    linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 55%, transparent 98%),
+    linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect;
+}
+
+/* Мягче — для портретов в карточках: только низ уходит в фон. */
+.photo-fade-soft {
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent);
 }
 
 .hero-reveal {

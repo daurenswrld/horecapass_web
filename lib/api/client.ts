@@ -17,7 +17,7 @@ import { demoResponse, demoSession } from "@/lib/demo/session";
 
 /** Всё идёт через прокси Next (см. rewrites в next.config.ts): у мобилки нет
  *  origin и CORS её не касается, у браузера — касается. */
-const BASE_URL = "/backend";
+export const BASE_URL = "/backend";
 
 const ACCESS_KEY = "hp_access";
 const REFRESH_KEY = "hp_refresh";
@@ -59,7 +59,7 @@ const isAuthPath = (path: string) => AUTH_PATHS.some((p) => path.startsWith(p));
 
 let refreshInFlight: Promise<boolean> | null = null;
 
-async function refreshTokens(): Promise<boolean> {
+export async function refreshTokens(): Promise<boolean> {
   // Single-flight: сколько бы запросов ни словили 401, refresh уйдёт один.
   refreshInFlight ??= (async () => {
     try {

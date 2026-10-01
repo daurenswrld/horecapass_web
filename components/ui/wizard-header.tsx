@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
  * Бриф: полоски — «для тревожных людей, чтобы контролировали процесс»,
  * а неопределённая длина пугает сильнее, чем реальное число шагов.
  */
+export type ServerSync = 'idle' | 'saving' | 'saved' | { error: string; retry: () => void };
+
 export function WizardHeader({
   step,
   total,
@@ -15,6 +17,7 @@ export function WizardHeader({
   saved,
   onBack,
   onRestart,
+  server,
 }: {
   step: number;
   total: number;
@@ -22,6 +25,8 @@ export function WizardHeader({
   saved: boolean;
   onBack?: () => void;
   onRestart: () => void;
+  /** Состояние сохранения на сервер — только при настоящем входе. */
+  server?: ServerSync;
 }) {
   return (
     <header className="sticky top-0 z-10 shrink-0 border-b border-line bg-background/95 backdrop-blur">
@@ -54,6 +59,16 @@ export function WizardHeader({
           <p className="mt-1.5 text-xs text-text-secondary">
             Step {step} of {total} · {title}
             <span className="ml-2 text-text-tertiary">{saved ? '· Saved in this browser' : '· Could not save'}</span>
+            {server === 'saving' && <span className="ml-2 text-text-tertiary">· Saving to your account…</span>}
+            {server === 'saved' && <span className="ml-2 text-success">· Saved to your account</span>}
+            {server && typeof server === 'object' && (
+              <span className="ml-2 text-danger">
+                · Not saved to your account ({server.error}){' '}
+                <button type="button" onClick={server.retry} className="font-semibold underline underline-offset-2 focus-ring">
+                  Retry
+                </button>
+              </span>
+            )}
           </p>
         </div>
 

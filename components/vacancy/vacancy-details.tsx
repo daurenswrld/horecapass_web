@@ -6,6 +6,7 @@ import { Button, Chip, Spinner } from '@/components/ui/primitives';
 import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { InterviewPrep } from './interview-prep';
 import { ApiError } from '@/lib/api/client';
+import { candidateDraft } from '@/lib/demo/candidate';
 
 /**
  * Карточка вакансии целиком — то же содержимое, что на экране
@@ -60,7 +61,7 @@ export function VacancyDetails({
     setError(null);
     setApplying(true);
     try {
-      await vacanciesApi.apply(vacancy.id);
+      await vacanciesApi.apply(vacancy.id, candidateDraft.load().coverLetterText);
       setApplied(true);
       onChanged?.({ ...vacancy, isApplied: true });
     } catch (e) {

@@ -24,6 +24,9 @@ import { Bubble } from '@/components/landing/bubble';
 import { DemoNotice } from '@/components/demo-notice';
 import { VoiceButton } from '@/components/onboarding/answer-input';
 import { Button, ChoiceChip, Field } from '@/components/ui/primitives';
+import { aiApi, plainAiText } from '@/lib/api/ai';
+import { saveVacancyDraft, syncError } from '@/lib/demo/employer-sync';
+import { vacanciesApi } from '@/lib/api/vacancies';
 import { speechRecognitionAvailable } from '@/lib/demo/storage';
 import { useAssistant } from '@/lib/demo/assistant';
 import { CompanyAvatar, CompanyProfileCard, PhotoHeader, VacancyCard } from './cards';
@@ -598,9 +601,21 @@ export function VacancyIntroStep({ go }: StepProps) {
 
 /* Smart vacancy --------------------------------------------------------------------------- */
 
-export function VacancyChatStep({ draft, update, go }: StepProps) {
+/**
+ * «Publish» ИИ не отправляем: серверный конструктор на такую просьбу сразу
+ * создаёт активную вакансию, а у нас впереди проверка, соглашение и оплата.
+ */
+const PUBLISH_RE = /\b(publish|post it|go live)\b|опубликуй|опубликовать/i;
+
+export function VacancyChatStep({ draft, update, go, server }: StepProps) {
   const [typing, setTyping] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Настоящий вход: отвечает серверный ИИ (/api/ai/vacancy-builder/stream/),
+  // тот же, что в мобилке. В демо — сценарий в браузере, как раньше.
+  const [aiOptions, setAiOptions] = React.useState<string[]>([]);
+  const [aiDraft, setAiDraft] = React.useState(false);
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => abortRef.current?.abort(), []);
 
   // Первая реплика — сразу при входе в чат (голосовое 15.09: «нажимает Create,
   // и в этом же окошке появляется чат»).
@@ -616,7 +631,69 @@ export function VacancyChatStep({ draft, update, go }: StepProps) {
 
   React.useEffect(() => () => clearTimeout(timer.current), []);
 
+  const replyLive = async (text: string, file?: string) => {
+    const onlyFile = !!file && text === 'Attached a file.';
+    // Структуру вакансии для шага «Check the details» по-прежнему собираем
+    // из слов работодателя — ИИ отдаёт её только при публикации.
+    let v: VacancyDraft = onlyFile ? draft.vacancy : parseVacancy(text, draft.vacancy);
+    if (file) v = { ...v, jdFile: file };
+    const userMsg: ChatMessage = { id: msgId(), from: 'user', text, file };
+    const history = [...draft.vacancyChat, userMsg];
+    update((d) => ({ ...d, vacancy: v, vacancyChat: [...d.vacancyChat, userMsg] }));
+    setAiOptions([]);
+    if (PUBLISH_RE.test(text)) {
+      toDetails();
+      return;
+    }
+
+    const botId = msgId();
+    // Добавить ответ или обновить уже добавленный — решаем по самому списку:
+    // React применяет обновления позже, флаг тут ненадёжен.
+    const show = (t: string) =>
+      update((d) =>
+        d.vacancyChat.some((m) => m.id === botId)
+          ? { ...d, vacancyChat: d.vacancyChat.map((m) => (m.id === botId ? { ...m, text: plainAiText(t) } : m)) }
+          : { ...d, vacancyChat: [...d.vacancyChat, { id: botId, from: 'assistant', text: plainAiText(t) }] },
+      );
+    setTyping(true);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const res = await aiApi.vacancyBuilder(
+        history
+          .filter((m) => !m.draft && m.text)
+          .map((m) => ({
+            role: m.from,
+            text: m.file && m.text === 'Attached a file.' ? `I attached the job description file ${m.file}.` : m.text,
+          })),
+        (t) => {
+          setTyping(false);
+          show(t);
+        },
+        ctrl.signal,
+      );
+      show(res.reply.trim() || 'Could you tell me a bit more about the role?');
+      setAiOptions(res.suggestions.filter((o) => !PUBLISH_RE.test(o)));
+      if (/responsibilit/i.test(res.reply) && /hiring|benefit/i.test(res.reply)) setAiDraft(true);
+      // Если ИИ всё же создал вакансию — держим её черновиком и дальше обновляем её же.
+      if (res.vacancyId) {
+        const id = res.vacancyId;
+        void vacanciesApi.update(id, { status: 'DRAFT' }).catch(() => {});
+        update((d) => ({ ...d, serverVacancyId: id }));
+      }
+    } catch {
+      if (ctrl.signal.aborted) return;
+      show("Sorry, I couldn't reach the assistant just now. Please send that again, or review the details when you're ready.");
+    } finally {
+      setTyping(false);
+    }
+  };
+
   const reply = (text: string, file?: string) => {
+    if (server) {
+      void replyLive(text, file);
+      return;
+    }
     const turn = draft.turn;
     const onlyFile = !!file && text === 'Attached a file.';
     let v: VacancyDraft = draft.vacancy;
@@ -692,6 +769,10 @@ export function VacancyChatStep({ draft, update, go }: StepProps) {
   const turn = draft.turn;
   const done = turn?.kind === 'draft';
   const v = draft.vacancy;
+  const last = draft.vacancyChat[draft.vacancyChat.length - 1];
+  // С ИИ разговор не «заканчивается» — к деталям можно перейти, как только
+  // понятна роль; когда ИИ показал полный черновик, это основная кнопка.
+  const canReview = server && (aiDraft || !!v.title);
 
   return (
     <ChatLayout
@@ -701,9 +782,23 @@ export function VacancyChatStep({ draft, update, go }: StepProps) {
           ? 'Pre-opening · tell us about the first role you are hiring for'
           : 'Describe the role in your own words — the assistant asks about anything missing'
       }
-      scrollKey={`${draft.vacancyChat.length}-${typing}`}
+      scrollKey={`${draft.vacancyChat.length}-${last?.text.length ?? 0}-${typing}`}
       composer={
-        done ? (
+        server ? (
+          <div className="space-y-3">
+            {canReview && (
+              <Button variant={aiDraft ? 'primary' : 'secondary'} size={aiDraft ? 'lg' : 'sm'} onClick={toDetails}>
+                Review the details
+              </Button>
+            )}
+            <Composer
+              onSend={reply}
+              disabled={typing}
+              suggestion={!aiOptions.length && turn?.kind === 'text' ? turn.suggestion : null}
+              options={aiOptions.length ? { list: aiOptions, multi: false } : null}
+            />
+          </div>
+        ) : done ? (
           <div className="space-y-3">
             <DemoNotice
               what="The assistant here is a script in the browser: it picks out role, city, salary and benefits from your text and asks about the rest. The real one runs on the server."
@@ -1177,6 +1272,66 @@ export function AgreementStep({ draft, update, go }: StepProps) {
 
 export function PaymentStep({ draft, update, go, server }: StepProps) {
   const picked = draft.plan ?? 'bundle';
+  const [publishing, setPublishing] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Настоящий вход (вариант «б», 30.09): платёжки ещё нет — на запуске
+  // публикуем бесплатно и по-настоящему, тарифы показываем как будущие.
+  const publishFree = async () => {
+    setError(null);
+    setPublishing(true);
+    try {
+      const id = await saveVacancyDraft(draft);
+      await vacanciesApi.update(id, { status: 'ACTIVE' });
+      update((d) => ({ ...d, serverVacancyId: id, published: true }));
+      go('done');
+    } catch (e) {
+      setError(`Could not publish: ${syncError(e)}. Please try again.`);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  if (server) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-8 px-5 py-8 md:px-8 lg:py-12">
+        <StepTitle title="Publish your vacancy" lead="Posting is free while we launch. Paid plans start later — this is what they will look like." />
+        <div className="rounded-lg border-[1.5px] border-accent-strong bg-accent-muted px-5 py-4 dark:border-accent">
+          <p className="font-semibold text-heading">Free during launch</p>
+          <p className="mt-1 text-sm text-text-primary">
+            Your vacancy goes live now and candidates can apply right away. No card needed.
+          </p>
+        </div>
+        <div className="grid gap-4 opacity-70 md:grid-cols-3">
+          {PLANS.map((p) => (
+            <div key={p.id} className="flex flex-col rounded-lg border border-line bg-surface p-5">
+              <span className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-heading">{p.name}</span>
+                <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-text-secondary">After launch</span>
+              </span>
+              <span className="mt-3 text-3xl font-bold text-heading">
+                {p.price} <span className="text-base font-semibold">SAR</span>
+              </span>
+              <span className="text-sm text-text-secondary">{p.period}</span>
+              <ul className="mt-4 space-y-1.5 text-sm text-text-primary">
+                {p.lines.map((l) => (
+                  <li key={l} className="flex gap-2">
+                    <Check size={15} aria-hidden className="mt-0.5 shrink-0 text-accent-text" />
+                    {l}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <Continue onClick={publishFree} disabled={publishing}>
+          {publishing ? 'Publishing…' : 'Publish for free'}
+        </Continue>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-5 py-8 md:px-8 lg:py-12">
       <StepTitle title="Publish your vacancy" lead="Your vacancy is reviewed and ready. Choose how you want to post." />
@@ -1245,10 +1400,13 @@ export function DoneStep({ draft, restart, server }: StepProps & { restart: () =
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent-strong text-on-accent dark:bg-accent">
         <Check size={30} aria-hidden />
       </span>
-      <h1 className="text-3xl font-bold tracking-tight text-heading lg:text-4xl">You&apos;re all set</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-heading lg:text-4xl">
+        {draft.published ? 'Your vacancy is live' : 'You\u2019re all set'}
+      </h1>
       <p className="text-lg leading-relaxed text-text-secondary">
-        {draft.company.name || 'Your company'} and the {draft.vacancy.title?.toLowerCase() ?? 'first'} vacancy are
-        ready to go live{plan ? ` on the ${plan.name} plan` : ''}.
+        {draft.published
+          ? `${draft.company.name || 'Your company'} is set up, and the ${draft.vacancy.title?.toLowerCase() ?? 'new'} vacancy is live — candidates can apply now.`
+          : `${draft.company.name || 'Your company'} and the ${draft.vacancy.title?.toLowerCase() ?? 'first'} vacancy are ready to go live${plan ? ` on the ${plan.name} plan` : ''}.`}
       </p>
       <DemoNotice
         className="text-left"

@@ -70,7 +70,7 @@ export interface Profession {
   questions: readonly Question[];
 }
 
-export type ProfessionId = "hostess" | "waiter" | "manager" | "chef";
+export type ProfessionId = "hostess" | "waiter" | "manager" | "chef" | "bar";
 
 export type AnswerValue = string | string[] | number | boolean | null;
 export type Answers = Record<string, AnswerValue>;

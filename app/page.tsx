@@ -151,20 +151,10 @@ function Hero() {
               ),
             )}
           </ul>
-
-          <a
-            href="#video"
-            className="hero-reveal group mt-8 inline-flex items-center gap-3 rounded-full text-sm font-semibold text-heading focus-ring"
-            style={reveal(460)}
-          >
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-accent-strong text-on-accent transition-transform group-hover:scale-105 dark:bg-accent">
-              <Play size={16} aria-hidden className="translate-x-px" fill="currentColor" />
-            </span>
-            Watch how it works
-          </a>
         </div>
 
-        {/* Фото команды уходит в фон снизу — как на экране приветствия в макете. */}
+        {/* Фото команды растворяется в бежевом фоне по краям — созвон 29.09: «плавный
+            переход из фонового бежевого», без жёсткой рамки. */}
         <div className="hero-reveal relative mx-auto w-full max-w-md lg:max-w-none" style={reveal(200)}>
           <Image
             src="/landing/team.webp"
@@ -173,7 +163,7 @@ function Hero() {
             height={1350}
             priority
             unoptimized
-            className="photo-calm h-auto w-full rounded-t-[2rem] [mask-image:linear-gradient(to_bottom,black_70%,transparent)]"
+            className="photo-calm photo-fade h-auto w-full"
           />
         </div>
       </div>
@@ -259,7 +249,7 @@ function Portrait({ src, alt, line }: { src: string; alt: string; line: string }
         width={720}
         height={1209}
         unoptimized
-        className="photo-calm aspect-[4/5] w-full rounded-lg object-cover object-top shadow-lift"
+        className="photo-calm photo-fade-soft aspect-[4/5] w-full rounded-lg object-cover object-top"
       />
       <Bubble className="absolute -bottom-2 left-4 right-4 sm:-left-8 sm:right-10">{line}</Bubble>
     </div>
@@ -439,7 +429,12 @@ function Trust() {
 function Faq() {
   const items = [
     // В документе пометка: «требует подтверждения как факта перед публикацией».
-    ['Is it really free for candidates?', 'Yes — no fee to apply or get hired.'],
+    // Созвон 29.09: кандидат не платит за профиль и отклики — только за
+    // скачивание своего резюме в PDF ($8), по желанию.
+    [
+      'Is it really free for candidates?',
+      'Yes — your profile, applications and chats are free. You only pay $8 if you want to download your CV as a PDF.',
+    ],
     [
       'How is this different from a general job board?',
       'Built specifically for hospitality — qualification and verification are part of the profile, not an afterthought.',

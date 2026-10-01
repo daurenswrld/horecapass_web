@@ -38,6 +38,9 @@ import {
   type CandidateDraft,
 } from '@/lib/demo/candidate';
 import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/storage';
+import { canSyncToServer } from '@/lib/demo/candidate-sync';
+import { candidateApi } from '@/lib/api/candidate';
+import { CvBuilder } from './cv-builder';
 import { cn } from '@/lib/utils';
 
 export interface CProps {
@@ -45,6 +48,8 @@ export interface CProps {
   update: (fn: (d: CandidateDraft) => CandidateDraft) => void;
   go: (step: CStep) => void;
   name: { first: string; last: string };
+  /** Файл — сразу на сервер (при настоящем входе). Статус показывает шапка. */
+  upload?: (kind: 'cv' | 'certificate' | 'video', file: File) => void;
 }
 
 function Continue({ children = 'Continue', className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -201,7 +206,17 @@ function Tile({
   );
 }
 
-function FilePick({ label, accept, multiple, onFiles }: { label: string; accept: string; multiple?: boolean; onFiles: (names: string[]) => void }) {
+function FilePick({
+  label,
+  accept,
+  multiple,
+  onFiles,
+}: {
+  label: string;
+  accept: string;
+  multiple?: boolean;
+  onFiles: (names: string[], files: File[]) => void;
+}) {
   return (
     <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent focus-within:ring-2 focus-within:ring-[rgb(var(--accent-focus))]">
       <Upload size={15} aria-hidden />
@@ -212,7 +227,11 @@ function FilePick({ label, accept, multiple, onFiles }: { label: string; accept:
         multiple={multiple}
         className="sr-only"
         onChange={(e) => {
-          onFiles(Array.from(e.target.files ?? []).map((f) => f.name));
+          const files = Array.from(e.target.files ?? []);
+          onFiles(
+            files.map((f) => f.name),
+            files,
+          );
           e.target.value = '';
         }}
       />
@@ -225,11 +244,16 @@ function FilePick({ label, accept, multiple, onFiles }: { label: string; accept:
  * без «Skip» — профиль не может остаться пустым. Нужно хотя бы резюме:
  * загруженное или собранное в конструкторе.
  */
-export function MaterialsStep({ draft, update, go }: CProps) {
+export function MaterialsStep({ draft, update, go, upload }: CProps) {
   const [builtCv, setBuiltCv] = React.useState(false);
   const [letterOpen, setLetterOpen] = React.useState(false);
   React.useEffect(() => setBuiltCv(!!profileDraft.load().professionId), []);
   const set = (patch: Partial<CandidateDraft>) => update((d) => ({ ...d, ...patch }));
+  // Настоящий вход — Smart CV builder с серверным ИИ; в демо — прежний конструктор.
+  const live = canSyncToServer();
+  const [builder, setBuilder] = React.useState<{ file: File | null } | null>(null);
+  const [cvRaw, setCvRaw] = React.useState<File | null>(null);
+  const hasCv = !!draft.cvFile || builtCv || !!draft.cvBuilt;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
@@ -237,14 +261,46 @@ export function MaterialsStep({ draft, update, go }: CProps) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Tile Icon={Upload} title="Upload CV" note={draft.cvFile ?? 'PDF, DOC or DOCX'} done={!!draft.cvFile}>
-          <FilePick label={draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.doc,.docx" onFiles={(n) => set({ cvFile: n[0] ?? null })} />
+          <FilePick label={draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.doc,.docx" onFiles={(n, f) => {
+              set({ cvFile: n[0] ?? null });
+              if (f[0]) upload?.('cv', f[0]);
+              setCvRaw(f[0] ?? null);
+            }}
+          />
+          {/* Созвон 29.09: загрузил резюме → ИИ задаёт вопросы и адаптирует под GCC. */}
+          {live && cvRaw && (
+            <button
+              type="button"
+              onClick={() => setBuilder({ file: cvRaw })}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring"
+            >
+              Adapt it for GCC employers with Smart
+              <ArrowRight size={14} aria-hidden />
+            </button>
+          )}
         </Tile>
 
-        <Tile Icon={PenLine} title="Create a CV" note={builtCv ? 'Started in the CV builder' : 'Build it in a short conversation'} done={builtCv}>
-          <Link href="/profile" className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring">
-            {builtCv ? 'Open the CV builder' : 'Start the CV builder'}
-            <ArrowRight size={14} aria-hidden />
-          </Link>
+        <Tile
+          Icon={PenLine}
+          title="Create a CV"
+          note={draft.cvBuilt ? 'Built with Smart and saved' : builtCv ? 'Started in the CV builder' : 'Build it in a short conversation'}
+          done={builtCv || !!draft.cvBuilt}
+        >
+          {live ? (
+            <button
+              type="button"
+              onClick={() => setBuilder({ file: null })}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring"
+            >
+              {draft.cvBuilt ? 'Open the Smart CV builder' : 'Build it with Smart'}
+              <ArrowRight size={14} aria-hidden />
+            </button>
+          ) : (
+            <Link href="/profile" className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring">
+              {builtCv ? 'Open the CV builder' : 'Start the CV builder'}
+              <ArrowRight size={14} aria-hidden />
+            </Link>
+          )}
         </Tile>
 
         <Tile
@@ -281,7 +337,10 @@ export function MaterialsStep({ draft, update, go }: CProps) {
             label="Add files"
             accept=".pdf,image/*"
             multiple
-            onFiles={(n) => set({ certificates: [...draft.certificates, ...n.map((name) => ({ name, type: 'Other' as const }))] })}
+            onFiles={(n, f) => {
+              set({ certificates: [...draft.certificates, ...n.map((name) => ({ name, type: 'Other' as const }))] });
+              f.forEach((file) => upload?.('certificate', file));
+            }}
           />
           {draft.certificates.length > 0 && (
             <ul className="mt-3 space-y-2">
@@ -317,12 +376,25 @@ export function MaterialsStep({ draft, update, go }: CProps) {
       </div>
 
       <DemoNotice
-        what="Only file names are kept, in this browser: nothing is uploaded yet."
-        endpoint="POST /api/resumes/my/ (cv file), /api/resumes/my/certificates/ (with type), /api/resumes/my/<id>/portfolio/, cover letter"
+        what={
+          canSyncToServer()
+            ? 'Your CV file and certificates are saved to your account. The certificate type, the cover letter file and the portfolio stay in this browser for now.'
+            : 'Only file names are kept, in this browser: nothing is uploaded yet.'
+        }
+        endpoint="Certificate type on /api/resumes/my/certificates/, POST /api/resumes/my/<id>/portfolio/, cover letter file"
       />
 
-      <Continue disabled={!draft.cvFile && !builtCv} onClick={() => go('countries')} />
-      {!draft.cvFile && !builtCv && <p className="text-sm text-text-secondary">Upload your CV or start the CV builder to continue.</p>}
+      <Continue disabled={!hasCv} onClick={() => go('countries')} />
+      {!hasCv && <p className="text-sm text-text-secondary">Upload your CV or start the CV builder to continue.</p>}
+      {builder && (
+        <CvBuilder
+          initialFile={builder.file}
+          onClose={(built) => {
+            setBuilder(null);
+            if (built) set({ cvBuilt: true });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -410,7 +482,7 @@ export function CheckStep({ draft, update, go }: CProps) {
   );
 }
 
-/* CV upgrade: сначала результат, потом предложение ---------------------------------------------- */
+/* Резюме под GCC: сначала результат, потом предложение скачать -------------------------------- */
 
 export function buildCv(d: CandidateDraft, name: { first: string; last: string }): CvData {
   const certs = d.certificates.map((c) => (c.type === 'Other' ? c.name.replace(/\.[a-z]+$/i, '') : c.type));
@@ -439,17 +511,47 @@ export function buildCv(d: CandidateDraft, name: { first: string; last: string }
   };
 }
 
-/** Цена CV upgrade — Aldi, 29.09: «8$ за резюме». Разовая оплата. */
-const CV_UPGRADE_PRICE = '$8';
+/**
+ * Созвон 29.09: адаптированное под GCC резюме есть у каждого кандидата и его
+ * видит работодатель — бесплатно. Платно ($8, разово) — только скачать и
+ * распечатать PDF самому кандидату. Отказ ничего не блокирует.
+ */
+const CV_DOWNLOAD_PRICE = '$8';
 
 export function UpgradeStep({ draft, update, go, name }: CProps) {
   const choose = (upgrade: 'yes' | 'no') => {
     update((d) => ({ ...d, upgrade }));
     go('consent');
   };
+  // Настоящий вход (вариант «б», 30.09): платёжки ещё нет — на запуске PDF
+  // скачивается бесплатно, его собирает сервер (/api/resumes/my/<id>/pdf/).
+  const live = canSyncToServer();
+  const [downloading, setDownloading] = React.useState(false);
+  const [dlError, setDlError] = React.useState<string | null>(null);
+  const download = async () => {
+    setDlError(null);
+    setDownloading(true);
+    // Вкладку открываем сразу по клику: открытую после ожидания сервера
+    // браузер сочтёт всплывающим окном и заблокирует.
+    const tab = window.open('', '_blank');
+    try {
+      const url = await candidateApi.pdfUrl();
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+      choose('yes');
+    } catch {
+      tab?.close();
+      setDlError("Couldn't prepare the PDF. Finish your profile first, then try again from your profile.");
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-      <Title title="Want a CV that actually gets noticed?" lead="Let Smart turn your answers into a polished, professional resume — see it before you decide." />
+      <Title
+        title="Your CV is ready for GCC employers"
+        lead="Smart turned your answers into a polished resume in the format employers here expect. It stays on your profile for free, and employers see it when you apply."
+      />
 
       <div className="grid gap-5 lg:grid-cols-[0.7fr_1.3fr]">
         <div className="rounded-lg border border-line bg-surface p-5">
@@ -472,20 +574,28 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
       </div>
 
       <DemoNotice
-        what={`The preview is assembled from your answers in the browser; Smart would rewrite the full CV. The upgrade costs ${CV_UPGRADE_PRICE}, but no payment is taken yet: payment needs the server.`}
-        endpoint="POST /api/resumes/my/<id>/upgrade/ (preview) and a payment step"
+        what={`The preview is assembled from your answers in the browser; Smart would rewrite the full CV. Downloading the PDF costs ${CV_DOWNLOAD_PRICE}, but no payment is taken yet: payment needs the server.`}
+        endpoint="Stripe checkout for the CV download + GET /api/resumes/my/<id>/pdf/ after payment"
       />
 
       <div className="flex flex-wrap gap-2">
-        <Continue onClick={() => choose('yes')}>
-          <Sparkles size={17} aria-hidden />
-          Upgrade my CV — {CV_UPGRADE_PRICE}
-        </Continue>
+        {live ? (
+          <Continue onClick={download} disabled={downloading}>
+            <Sparkles size={17} aria-hidden />
+            {downloading ? 'Preparing your PDF…' : 'Download PDF — free during launch'}
+          </Continue>
+        ) : (
+          <Continue onClick={() => choose('yes')}>
+            <Sparkles size={17} aria-hidden />
+            Download PDF — {CV_DOWNLOAD_PRICE}
+          </Continue>
+        )}
         {/* Отказ не блокирует — сразу дальше, без экранов-препятствий. */}
         <Button variant="secondary" size="lg" onClick={() => choose('no')}>
-          No thanks, continue
+          Continue for free
         </Button>
       </div>
+      {dlError && <p className="text-sm text-danger">{dlError}</p>}
     </div>
   );
 }
@@ -585,7 +695,7 @@ export function QualificationStep({ draft, update, go }: CProps) {
   );
 }
 
-export function VideoStep({ draft, update, go }: CProps) {
+export function VideoStep({ draft, update, go, upload }: CProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
       <Title title="Add a short video intro" lead="Optional. 30–60 seconds: who you are and what you do. Not speaking on camera won't count against you." />
@@ -599,7 +709,9 @@ export function VideoStep({ draft, update, go }: CProps) {
             className="sr-only"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) update((d) => ({ ...d, video: 'added', videoFile: f.name }));
+              if (!f) return;
+              update((d) => ({ ...d, video: 'added', videoFile: f.name }));
+              upload?.('video', f);
             }}
           />
         </label>
@@ -643,7 +755,10 @@ export function DoneStep({ draft }: CProps) {
           ? 'Once your qualification and video intro are reviewed, the Verified star appears on your profile.'
           : 'Add your video intro any time to complete the Verified star.'}
       </p>
-      <DemoNotice className="text-left" what="Nothing was sent to the server: this walkthrough keeps everything in the browser." />
+      {/* При настоящем входе профиль уже на сервере — плашка только для демо. */}
+      {!canSyncToServer() && (
+        <DemoNotice className="text-left" what="Nothing was sent to the server: this walkthrough keeps everything in the browser." />
+      )}
       <div className="flex flex-wrap justify-center gap-2">
         <Link href="/jobs" className="inline-flex h-13 items-center gap-2 rounded-full bg-accent-strong px-6 font-semibold text-on-accent focus-ring dark:bg-accent">
           See matching jobs

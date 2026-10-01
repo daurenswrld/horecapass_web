@@ -7,7 +7,10 @@ import { DemoNotice } from '@/components/demo-notice';
 import { Button } from '@/components/ui/primitives';
 import { candidateDraft } from '@/lib/demo/candidate';
 import { speechRecognitionAvailable } from '@/lib/demo/storage';
+import { http } from '@/lib/api/client';
+import { API } from '@/lib/api/endpoints';
 import type { Vacancy } from '@/lib/api/vacancies';
+import { canSyncToServer } from '@/lib/demo/employer-sync';
 
 /**
  * «Prepare for interview with AI» — бриф кандидата, пункт 10. Формулировку
@@ -45,6 +48,34 @@ function questionsFor(v: Vacancy): string[] {
   return [...likely, ...situational.slice(0, 2)];
 }
 
+/**
+ * Настоящий коуч на сервере: GET /api/vacancies/<id>/interview-prep/ — вопросы
+ * под эту вакансию и резюме кандидата, готовность, на что сделать упор и что
+ * подтянуть. Отзыв на ответ сервер не даёт — он остаётся подсказкой ниже.
+ */
+interface ServerPrep {
+  readiness: number | null;
+  questions: string[];
+  talkingPoints: string[];
+  prepare: string[];
+}
+
+async function loadPrep(id: number): Promise<ServerPrep | null> {
+  try {
+    const d = await http.get<Record<string, unknown>>(API.vacancies.interviewPrep(id));
+    const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []);
+    const prep = {
+      readiness: typeof d.readiness === 'number' ? Math.round(d.readiness) : null,
+      questions: list(d.questions),
+      talkingPoints: list(d.talking_points),
+      prepare: list(d.prepare),
+    };
+    return prep.questions.length ? prep : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Отзыв по форме ответа, а не оценка: где конкретика, где результат. */
 function feedback(answer: string): string {
   const hasNumber = /\d/.test(answer);
@@ -61,13 +92,28 @@ export function InterviewPrep({ vacancy }: { vacancy: Vacancy }) {
   const [text, setText] = React.useState('');
   const [note, setNote] = React.useState<string | null>(null);
 
-  const start = () => {
-    // Каждый заход — новая подборка, чтобы тренировка не превращалась в шпаргалку.
-    setQuestions(questionsFor(vacancy));
+  const [prep, setPrep] = React.useState<ServerPrep | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const start = async () => {
     setI(0);
     setText('');
     setNote(null);
     setOpen(true);
+    // Настоящий вход — вопросы от серверного коуча, иначе (или если он
+    // недоступен) — подборка правил в браузере, каждый раз новая.
+    if (canSyncToServer()) {
+      setLoading(true);
+      const p = await loadPrep(vacancy.id);
+      setLoading(false);
+      setPrep(p);
+      if (p) {
+        setQuestions(p.questions);
+        return;
+      }
+    }
+    setPrep(null);
+    setQuestions(questionsFor(vacancy));
   };
 
   if (!open) {
@@ -75,7 +121,7 @@ export function InterviewPrep({ vacancy }: { vacancy: Vacancy }) {
       <div>
         <Button variant="secondary" onClick={start}>
           <Sparkles size={16} aria-hidden />
-          Prepare for interview with AI
+          Prepare for interview with Smart
         </Button>
         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary">
           <Lock size={12} aria-hidden />
@@ -85,16 +131,56 @@ export function InterviewPrep({ vacancy }: { vacancy: Vacancy }) {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-line-strong bg-surface-alt p-5 text-sm text-text-secondary">
+        Preparing questions for this role and your CV…
+      </div>
+    );
+  }
+
   const done = i >= questions.length;
   return (
     <div className="space-y-4 rounded-lg border border-line-strong bg-surface-alt p-5">
       <div className="flex items-center justify-between gap-3">
         <p className="font-semibold text-heading">Interview game plan</p>
-        <button type="button" onClick={start} className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary focus-ring">
-          <RotateCcw size={14} aria-hidden />
-          New questions
-        </button>
+        {!prep && (
+          <button type="button" onClick={start} className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary focus-ring">
+            <RotateCcw size={14} aria-hidden />
+            New questions
+          </button>
+        )}
       </div>
+
+      {prep && i === 0 && !note && (
+        <div className="space-y-3 rounded-md bg-surface px-4 py-3 text-sm">
+          {prep.readiness !== null && (
+            <p className="text-text-primary">
+              <span className="font-bold text-heading">{prep.readiness}% ready</span> for this interview, based on your CV.
+            </p>
+          )}
+          {prep.talkingPoints.length > 0 && (
+            <div>
+              <p className="font-semibold text-text-primary">Make sure to mention</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-primary">
+                {prep.talkingPoints.map((t, k) => (
+                  <li key={k}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {prep.prepare.length > 0 && (
+            <div>
+              <p className="font-semibold text-text-primary">Brush up on</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-primary">
+                {prep.prepare.map((t, k) => (
+                  <li key={k}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {done ? (
         <p className="text-text-primary">
@@ -142,7 +228,12 @@ export function InterviewPrep({ vacancy }: { vacancy: Vacancy }) {
           )}
         </>
       )}
-      <DemoNotice what="Questions and feedback here are simple rules in the browser. The real coach runs on the server." endpoint="POST /api/vacancies/<id>/interview-prep/ (already exists in the mobile app)" />
+      {!prep && (
+        <DemoNotice
+          what="Questions and feedback here are simple rules in the browser. The real coach runs on the server."
+          endpoint="GET /api/vacancies/<id>/interview-prep/"
+        />
+      )}
     </div>
   );
 }
