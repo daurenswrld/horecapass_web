@@ -41,7 +41,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     <button
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center rounded-full font-semibold transition-colors focus-ring',
+        'inline-flex items-center justify-center rounded-full font-semibold focus-ring',
+        'transition-[color,background-color,border-color,filter,transform,box-shadow] duration-150 active:scale-[0.97]',
         'disabled:pointer-events-none',
         BUTTON_VARIANTS[variant],
         BUTTON_SIZES[size],
@@ -152,7 +153,7 @@ export function ChoiceChip({ className, selected, ...props }: ChoiceChipProps) {
       type="button"
       aria-pressed={selected}
       className={cn(
-        "inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm transition-colors focus-ring",
+        "inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm transition-[color,background-color,border-color,transform] duration-150 active:scale-95 focus-ring",
         selected
           ? "border-accent bg-accent-strong text-on-accent"
           : "border-line bg-surface text-text-primary hover:border-accent hover:bg-surface-muted",
@@ -175,7 +176,7 @@ export function Progress({ value, className }: { value: number; className?: stri
       aria-label="Profile completeness"
     >
       <div
-        className="h-full rounded-full bg-accent transition-[width] duration-500 ease-out"
+        className="bar-grow h-full rounded-full bg-accent transition-[width] duration-500 ease-out"
         style={{ width: `${pct}%` }}
       />
     </div>

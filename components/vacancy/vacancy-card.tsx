@@ -57,7 +57,7 @@ export function VacancyCard({ vacancy, selected, onSelect, onToggleSave }: Props
     <article
       onClick={() => onSelect?.(vacancy)}
       className={cn(
-        'cursor-pointer rounded-lg border bg-surface p-4 transition-[border-color,box-shadow]',
+        'lift cursor-pointer rounded-lg border bg-surface p-4',
         selected ? 'border-accent shadow-card' : 'border-line hover:border-line-strong hover:shadow-card',
       )}
     >

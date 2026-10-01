@@ -7,6 +7,7 @@ import { FinalCta, HeroCta, SectionCta } from '@/components/landing/cta';
 import { Footer } from '@/components/landing/footer';
 import { LandingHeader } from '@/components/landing/header';
 import { IntroSplash } from '@/components/landing/intro';
+import { Reveal } from '@/components/ui/motion';
 import { cn } from '@/lib/utils';
 
 /**
@@ -87,12 +88,16 @@ function Section({
   return (
     <section id={id} className={cn('scroll-mt-20', className)}>
       <div className="mx-auto max-w-6xl px-6 py-16 lg:px-10 lg:py-24">
-        {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-        <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-tight tracking-tight text-heading lg:text-[2.75rem]">
-          {title}
-        </h2>
-        {lead && <p className="mt-4 max-w-2xl text-lg leading-relaxed text-text-secondary">{lead}</p>}
-        <div className="mt-10 lg:mt-14">{children}</div>
+        <Reveal>
+          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+          <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-tight tracking-tight text-heading lg:text-[2.75rem]">
+            {title}
+          </h2>
+          {lead && <p className="mt-4 max-w-2xl text-lg leading-relaxed text-text-secondary">{lead}</p>}
+        </Reveal>
+        <Reveal delay={120} className="mt-10 lg:mt-14">
+          {children}
+        </Reveal>
       </div>
     </section>
   );
@@ -198,8 +203,9 @@ function Pain() {
   return (
     <Section title="Hospitality hiring still runs on email attachments and WhatsApp chains.">
       <div className="grid gap-5 md:grid-cols-2">
-        {columns.map(({ Icon, who, items }) => (
-          <div key={who} className="rounded-lg border border-line bg-surface p-6 shadow-card lg:p-8">
+        {columns.map(({ Icon, who, items }, ci) => (
+          <Reveal key={who} delay={ci * 140}>
+          <div className="h-full rounded-lg border border-line bg-surface p-6 shadow-card lg:p-8">
             <h3 className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wider text-text-secondary">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-accent-muted text-accent-text">
                 <Icon size={19} aria-hidden />
@@ -217,6 +223,7 @@ function Pain() {
               ))}
             </ul>
           </div>
+          </Reveal>
         ))}
       </div>
     </Section>
@@ -228,12 +235,14 @@ function Pain() {
 function Points({ items }: { items: string[] }) {
   return (
     <ul className="mt-8 space-y-5">
-      {items.map((t) => (
-        <li key={t} className="flex gap-3.5 text-lg leading-relaxed text-text-primary">
-          <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-strong text-on-accent dark:bg-accent">
-            <Check size={14} strokeWidth={3} aria-hidden />
-          </span>
-          {t}
+      {items.map((t, i) => (
+        <li key={t}>
+          <Reveal delay={i * 120} className="flex gap-3.5 text-lg leading-relaxed text-text-primary">
+            <span className="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-strong text-on-accent dark:bg-accent">
+              <Check size={14} strokeWidth={3} aria-hidden />
+            </span>
+            {t}
+          </Reveal>
         </li>
       ))}
     </ul>
@@ -260,11 +269,13 @@ function ForCandidates() {
   return (
     <section id="candidates" className="scroll-mt-20 bg-surface-muted">
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-24">
-        <Portrait
-          src="/landing/recruiter.webp"
-          alt="A HorecaPass recruiter"
-          line="Perfect — let's build your profile so employers come to you, not the other way around."
-        />
+        <Reveal>
+          <Portrait
+            src="/landing/recruiter.webp"
+            alt="A HorecaPass recruiter"
+            line="Perfect — let's build your profile so employers come to you, not the other way around."
+          />
+        </Reveal>
         <div>
           <Eyebrow>For candidates</Eyebrow>
           <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-heading lg:text-[2.75rem]">
@@ -288,13 +299,13 @@ function ForEmployers() {
   return (
     <section id="employers" className="scroll-mt-20">
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-24">
-        <div className="lg:order-2">
+        <Reveal className="lg:order-2">
           <Portrait
             src="/landing/kitchen.webp"
             alt="A restaurant team at work in the kitchen"
             line="Got it — let's set you up to start receiving matched candidates."
           />
-        </div>
+        </Reveal>
         <div>
           <Eyebrow>For employers</Eyebrow>
           <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-heading lg:text-[2.75rem]">
@@ -377,6 +388,7 @@ function HowItWorks() {
         <span aria-hidden className="absolute left-6 right-6 top-6 hidden h-px bg-line-strong lg:block" />
         {steps.map(([Icon, title, text], i) => (
           <li key={title} className="relative">
+            <Reveal delay={i * 110}>
             <span className="relative grid h-12 w-12 place-items-center rounded-full bg-accent-strong text-on-accent ring-8 ring-background dark:bg-accent">
               <Icon size={20} aria-hidden />
               <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-surface text-[11px] font-bold text-heading shadow">
@@ -385,6 +397,7 @@ function HowItWorks() {
             </span>
             <h3 className="mt-5 text-lg font-semibold text-heading">{title}</h3>
             <p className="mt-1.5 leading-relaxed text-text-secondary">{text}</p>
+            </Reveal>
           </li>
         ))}
       </ol>

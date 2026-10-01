@@ -98,7 +98,7 @@ export default function ProfilePage() {
               have their own set of parameters.
             </p>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
               {PROFESSIONS.map((p) => {
                 const count = activeQuestions(p, {}).length;
                 return (

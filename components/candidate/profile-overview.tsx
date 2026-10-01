@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight, BadgeCheck, ChevronRight, Plus } from 'lucide-react';
+import { CountUp } from '@/components/ui/motion';
 import { Card } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth/context';
 import { candidateDraft, profileProgress, qualificationStatus, type CandidateDraft } from '@/lib/demo/candidate';
@@ -18,7 +19,9 @@ export function ProfileProgress({ className }: { className?: string }) {
   return (
     <div className={cn('rounded-lg border border-line bg-surface p-4', className)}>
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-semibold text-heading">Profile {state.pct}% ready</span>
+        <span className="font-semibold text-heading">
+          Profile <CountUp value={state.pct} suffix="%" /> ready
+        </span>
         {state.next && (
           <Link href={hrefFor(state.next.key)} className="inline-flex items-center gap-1 font-semibold text-accent-text underline-offset-4 hover:underline focus-ring">
             {state.next.action}
