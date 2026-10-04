@@ -4,13 +4,11 @@ import { ApiError, http } from './client';
 /**
  * Профиль и резюме кандидата на сервере.
  *
- * Формы сверены с боевым сервером (OPTIONS и пробные запросы 29.09), а не
- * с кодом бэкенда в репозитории — прод собран из другой версии:
+ * Поддерживаем текущий list API и старый сервер с одним объектом:
  * - профиль: PATCH /users/api/users/me/ — nationality, current_location,
  *   target_country, first_name, last_name, cv_file (файл);
- * - резюме одно на кандидата: GET /api/resumes/my/ отдаёт его (404 — ещё нет),
- *   POST создаёт, PATCH /api/resumes/my/<id>/ обновляет; salary_period —
- *   MONTH / HOUR; languages — массив строк;
+ * - GET /api/resumes/my/ отдаёт список, пагинацию либо старый объект;
+ *   работаем с последним обновлённым резюме, POST создаёт, PATCH обновляет;
  * - сертификаты: POST /api/resumes/my/certificates/ (title, file).
  *
  * Работодатель видит это в отклике сразу (applicant_profile собирается из
@@ -30,13 +28,32 @@ export interface ServerResume {
 const RESUME_MINE = '/api/resumes/my/';
 
 function parseResume(j: Json): ServerResume {
+  const id = Number(j.id);
+  if (!Number.isSafeInteger(id) || id <= 0) throw new ApiError(502, j, 'Invalid resume id');
   return {
-    id: Number(j.id),
+    id,
     title: String(j.title ?? ''),
-    position: String(j.position ?? ''),
+    position: String(j.position ?? j.title ?? ''),
     languages: Array.isArray(j.languages) ? j.languages.map(String) : [],
     aboutMe: String(j.about_me ?? ''),
   };
+}
+
+function currentResume(value: unknown): ServerResume | null {
+  const object = value && typeof value === 'object' && !Array.isArray(value) ? value as Json : null;
+  const rows: unknown[] = Array.isArray(value) ? value : Array.isArray(object?.results) ? object.results : object ? [object] : [];
+  if (!rows.length) return null;
+  const valid = rows.filter((row): row is Json => {
+    if (!row || typeof row !== 'object') return false;
+    const id = Number((row as Json).id);
+    return Number.isSafeInteger(id) && id > 0;
+  });
+  if (!valid.length) throw new ApiError(502, value, 'Invalid resume list');
+  valid.sort((a, b) => {
+    const date = (r: Json) => Date.parse(String(r.updated_at ?? r.created_at ?? '')) || 0;
+    return date(b) - date(a) || Number(b.id) - Number(a.id);
+  });
+  return parseResume(valid[0]);
 }
 
 export const candidateApi = {
@@ -54,7 +71,7 @@ export const candidateApi = {
 
   async myResume(): Promise<ServerResume | null> {
     try {
-      return parseResume(await http.get<Json>(RESUME_MINE));
+      return currentResume(await http.get<unknown>(RESUME_MINE));
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return null;
       throw e;
@@ -66,6 +83,8 @@ export const candidateApi = {
     const body = Object.fromEntries(
       Object.entries(fields).filter(([, v]) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0)),
     );
+    // Текущий backend хранит целевую роль в title; position остаётся для legacy.
+    if (!body.title && body.position) body.title = body.position;
     const current = await candidateApi.myResume();
     if (current) return parseResume(await http.patch<Json>(`${RESUME_MINE}${current.id}/`, body));
     return parseResume(await http.post<Json>(RESUME_MINE, { title: 'Hospitality professional', ...body }));

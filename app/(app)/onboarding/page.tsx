@@ -139,15 +139,17 @@ export default function CandidateOnboardingPage() {
         }}
       />
 
-      {draft.step === 'based' && <BasedStep {...props} />}
-      {draft.step === 'materials' && <MaterialsStep {...props} />}
-      {draft.step === 'countries' && <CountriesStep {...props} />}
-      {draft.step === 'check' && <CheckStep {...props} />}
-      {draft.step === 'upgrade' && <UpgradeStep {...props} />}
-      {draft.step === 'consent' && <ConsentStep {...props} />}
-      {draft.step === 'qualification' && <QualificationStep {...props} />}
-      {draft.step === 'video' && <VideoStep {...props} />}
-      {draft.step === 'done' && <DoneStep {...props} />}
+      <div key={draft.step} className="page-enter flex min-h-0 flex-1 flex-col">
+        {draft.step === 'based' && <BasedStep {...props} />}
+        {draft.step === 'materials' && <MaterialsStep {...props} />}
+        {draft.step === 'countries' && <CountriesStep {...props} />}
+        {draft.step === 'check' && <CheckStep {...props} />}
+        {draft.step === 'upgrade' && <UpgradeStep {...props} />}
+        {draft.step === 'consent' && <ConsentStep {...props} />}
+        {draft.step === 'qualification' && <QualificationStep {...props} />}
+        {draft.step === 'video' && <VideoStep {...props} />}
+        {draft.step === 'done' && <DoneStep {...props} />}
+      </div>
     </div>
   );
 }

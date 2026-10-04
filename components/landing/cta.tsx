@@ -51,7 +51,7 @@ export function HeroCta() {
           <Link
             key={href}
             href={href}
-            className="group flex items-center gap-4 rounded-lg border-[1.5px] border-accent-strong bg-surface p-4 transition-colors hover:bg-accent-muted focus-ring dark:border-accent"
+            className="lift group flex items-center gap-4 rounded-lg border-[1.5px] border-accent-strong bg-surface p-4 transition-colors hover:bg-accent-muted active:scale-[0.98] focus-ring dark:border-accent"
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-accent-muted text-accent-text">
               <Icon size={20} aria-hidden />

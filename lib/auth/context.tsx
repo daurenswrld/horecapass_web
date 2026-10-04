@@ -79,5 +79,6 @@ export function useAuth(): AuthState {
 /** Куда отправить пользователя после входа — по его роли. */
 export function homeFor(user: CurrentUser | null): string {
   if (!user) return '/';
+  if (user.role === 'ADMIN') return '/admin';
   return isCompany(user.role) ? '/company/vacancies' : '/jobs';
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { SuccessMark } from '@/components/ui/motion';
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -746,9 +747,7 @@ export function DoneStep({ draft }: CProps) {
   const kitchen = isKitchen(draft.role);
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-5 py-12 text-center md:px-8 lg:py-20">
-      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent-strong text-on-accent dark:bg-accent">
-        <FileText size={28} aria-hidden />
-      </span>
+      <SuccessMark />
       <h1 className="text-3xl font-bold tracking-tight text-heading lg:text-4xl">Your profile is ready</h1>
       <p className="text-lg leading-relaxed text-text-secondary">
         {draft.video === 'added' || kitchen

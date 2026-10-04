@@ -1,5 +1,6 @@
 'use client';
 
+import { SuccessMark } from '@/components/ui/motion';
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -1397,9 +1398,7 @@ export function DoneStep({ draft, restart, server }: StepProps & { restart: () =
   const plan = PLANS.find((p) => p.id === (draft.plan ?? 'bundle'));
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-5 py-12 text-center md:px-8 lg:py-20">
-      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent-strong text-on-accent dark:bg-accent">
-        <Check size={30} aria-hidden />
-      </span>
+      <SuccessMark />
       <h1 className="text-3xl font-bold tracking-tight text-heading lg:text-4xl">
         {draft.published ? 'Your vacancy is live' : 'You\u2019re all set'}
       </h1>

@@ -12,7 +12,7 @@ export function Bubble({ children, className }: { children: React.ReactNode; cla
   return (
     <div
       className={cn(
-        'relative rounded-lg border-[1.5px] border-accent-strong bg-surface px-5 pb-4 pt-6 text-[15px] leading-snug text-text-primary shadow-lift dark:border-accent',
+        'float-slow relative rounded-lg border-[1.5px] border-accent-strong bg-surface px-5 pb-4 pt-6 text-[15px] leading-snug text-text-primary shadow-lift dark:border-accent',
         className,
       )}
     >

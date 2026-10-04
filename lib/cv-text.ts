@@ -13,7 +13,7 @@
 
 const LIMIT = 7500;
 
-export async function extractCvText(file: File): Promise<string | null> {
+export async function extractCvText(file: File, limit = LIMIT): Promise<string | null> {
   const name = file.name.toLowerCase();
   try {
     let text: string | null = null;
@@ -22,7 +22,7 @@ export async function extractCvText(file: File): Promise<string | null> {
     else if (file.type.startsWith('text/') || name.endsWith('.txt')) text = await file.text();
     if (!text) return null;
     const clean = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-    return clean ? clean.slice(0, LIMIT) : null;
+    return clean ? clean.slice(0, limit) : null;
   } catch {
     return null;
   }

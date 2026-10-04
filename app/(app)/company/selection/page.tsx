@@ -4,11 +4,13 @@ import * as React from 'react';
 import { Check, Search, ShoppingBasket, UserCheck, UserX, X } from 'lucide-react';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
+import { ListSkeleton, riseStyle } from '@/components/ui/motion';
 import { DemoNotice } from '@/components/demo-notice';
 import { CandidatePanel } from '@/components/employer/candidate-panel';
 import {
   companyApplicationsApi,
   FUNNEL,
+  funnelStage,
   STATUS_LABEL,
   STATUS_TONE,
   type ApplicationStatus,
@@ -116,7 +118,7 @@ export default function SelectionPage() {
     };
   }, [query]);
 
-  const shown = stage === 'ALL' ? items : items.filter((a) => a.status === stage);
+  const shown = stage === 'ALL' ? items : items.filter((a) => funnelStage(a.status) === stage);
   const allShownSelected = shown.length > 0 && shown.every((a) => selected.includes(a.id));
 
   const toggle = (id: number) =>
@@ -192,9 +194,7 @@ export default function SelectionPage() {
         </div>
 
         {loading && (
-          <div className="grid place-items-center py-20">
-            <Spinner />
-          </div>
+          <ListSkeleton count={4} />
         )}
 
         {!loading && error && (
@@ -231,13 +231,14 @@ export default function SelectionPage() {
             </label>
 
             <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-              {shown.map((a) => {
+              {shown.map((a, i) => {
                 const picked = selected.includes(a.id);
                 return (
                   <Card
                     key={a.id}
+                    style={riseStyle(i)}
                     className={cn(
-                      'flex items-start gap-3 p-4 transition-[border-color,box-shadow]',
+                      'rise flex items-start gap-3 p-4 transition-[border-color,box-shadow]',
                       picked && 'border-accent shadow-card',
                     )}
                   >
