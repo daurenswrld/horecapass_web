@@ -137,7 +137,7 @@ export function CvTemplate({ data, className }: { data: CvData; className?: stri
       )}
 
       <footer className="mt-8 border-t border-[rgb(var(--cv-ink)/0.15)] pt-3 text-[11px] text-[rgb(var(--cv-ink)/0.6)]">
-        Verified hospitality profile · horecapass.com
+        Hospitality CV · horecapass.com
       </footer>
     </article>
   );
