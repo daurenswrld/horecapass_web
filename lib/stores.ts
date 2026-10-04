@@ -5,24 +5,18 @@
  * этот файл, и ссылки с QR-кодами на лендинге обновятся сами.
  */
 
-/** Идентификатор сборки: android/app/build.gradle.kts и ios/Runner.xcodeproj. */
-export const BUNDLE_ID = 'kz.zizinc.horecapass';
+/**
+ * App Store: приложение вышло 29.09.2026 (bundle com.horecapass.app, iOS 15+).
+ * Адрес без страны — Apple сам откроет витрину страны пользователя.
+ */
+export const APP_STORE_URL: string | null = 'https://apps.apple.com/app/id6810680039';
 
 /**
- * Адрес в Google Play выводится из applicationId и будет рабочим сразу после
- * публикации — угадывать ничего не нужно.
+ * Google Play: приложения там пока нет. Раньше адрес строился из
+ * kz.zizinc.horecapass и вёл на 404 — теперь до публикации честное «скоро».
+ * Как выйдет, подставить сюда адрес со страницы приложения в Google Play.
  */
-export const GOOGLE_PLAY_URL = `https://play.google.com/store/apps/details?id=${BUNDLE_ID}`;
-
-/**
- * App Store так не умеет: там в адресе числовой идентификатор, который
- * выдаётся при создании записи в App Store Connect. Пока его нет — оставляем
- * null, и кнопка честно показывает «скоро», а не ведёт в никуда.
- *
- * Как появится, подставить сюда:
- *   export const APP_STORE_URL = 'https://apps.apple.com/app/id0000000000';
- */
-export const APP_STORE_URL: string | null = null;
+export const GOOGLE_PLAY_URL: string | null = null;
 
 export interface StoreLink {
   id: 'ios' | 'android';

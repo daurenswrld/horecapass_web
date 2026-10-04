@@ -11,6 +11,35 @@
  */
 
 export const API = {
+  /** Ассистент на сайте (чат: вопросы о платформе и подбор вакансий). */
+  assistant: {
+    status: "/api/assistant/status/",
+    stream: "/api/assistant/stream/",
+  },
+
+  /** Админ-панель (только сотрудники). Серверная часть: приложение adminpanel. */
+  admin: {
+    me: "/api/admin/me/",
+    overview: "/api/admin/overview/",
+    candidateFunnel: "/api/admin/funnels/candidates/",
+    employerFunnel: "/api/admin/funnels/employers/",
+    candidateFeed: "/api/admin/feeds/candidates/",
+    employerFeed: "/api/admin/feeds/employers/",
+    vacanciesMonth: "/api/admin/vacancies/month/",
+    vacancies: "/api/admin/vacancies/",
+    vacancyBlock: (id: number) => `/api/admin/vacancies/${id}/block/`,
+    vacancyUnblock: (id: number) => `/api/admin/vacancies/${id}/unblock/`,
+    revenue: "/api/admin/revenue/",
+    trust: "/api/admin/trust/",
+    users: "/api/admin/users/",
+    companyVerify: (id: number) => `/api/admin/companies/${id}/verify/`,
+    managers: "/api/admin/managers/",
+    manager: (id: number) => `/api/admin/managers/${id}/`,
+    tickets: "/api/admin/tickets/",
+    ticket: (id: number) => `/api/admin/tickets/${id}/`,
+    auditLog: "/api/admin/audit-log/",
+  },
+
   auth: {
     sendCode: "/users/api/auth/send-code/",
     verifyCode: "/users/api/auth/verify-code/",

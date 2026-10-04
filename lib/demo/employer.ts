@@ -166,6 +166,8 @@ export interface EmployerDraft {
   plan: string | null;
   /** id черновика вакансии на сервере — чтобы обновлять его, а не плодить новые. */
   serverVacancyId: number | null;
+  /** Вакансия опубликована на сервере (на запуске — бесплатно). */
+  published?: boolean;
   updatedAt: string;
 }
 

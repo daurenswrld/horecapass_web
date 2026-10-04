@@ -12,6 +12,11 @@ import { http } from './client';
 
 export type ApplicationStatus =
   | 'NEW'
+  // Этапы расширенного конвейера бэкенда (AI_SHORTLISTED, INTERVIEW, TEST_TASK):
+  // прод ещё на старой схеме, но когда обновится, веб уже умеет их показать.
+  | 'AI_SHORTLISTED'
+  | 'INTERVIEW'
+  | 'TEST_TASK'
   | 'REVIEWED'
   | 'INVITED'
   | 'VISA'
@@ -70,7 +75,7 @@ export function parseApplication(json: Json): ApplicantApplication {
     companyId: json.company_id == null ? null : Number(json.company_id),
     companyName: String(json.company_name ?? 'Company'),
     companyLogoUrl: nonEmpty(json.company_logo),
-    status: (String(json.status ?? 'NEW').toUpperCase() as ApplicationStatus) ?? 'NEW',
+    status: parseStatus(json.status),
     createdAt: date(json.created_at) ?? new Date(),
     coverLetter: String(json.cover_letter ?? ''),
     salaryMin: json.salary_min == null ? null : String(json.salary_min),
@@ -103,6 +108,9 @@ export const applicationsApi = {
 /** Подписи статусов — те же, что видит человек в приложении. */
 export const STATUS_LABEL: Record<ApplicationStatus, string> = {
   NEW: 'Not reviewed',
+  AI_SHORTLISTED: 'Shortlisted by Smart',
+  INTERVIEW: 'Interview',
+  TEST_TASK: 'Test task',
   REVIEWED: 'Reviewed',
   INVITED: 'Invited',
   VISA: 'Visa',
@@ -114,6 +122,9 @@ export const STATUS_LABEL: Record<ApplicationStatus, string> = {
 /** Цвет статуса. Смысловые токены, а не произвольные цвета. */
 export const STATUS_TONE: Record<ApplicationStatus, string> = {
   NEW: 'bg-surface-muted text-text-secondary',
+  AI_SHORTLISTED: 'bg-info-surface text-on-info-surface',
+  INTERVIEW: 'bg-info-surface text-on-info-surface',
+  TEST_TASK: 'bg-info-surface text-on-info-surface',
   REVIEWED: 'bg-info-surface text-on-info-surface',
   INVITED: 'bg-info-surface text-on-info-surface',
   VISA: 'bg-accent-muted text-text-primary',
@@ -141,6 +152,25 @@ export const FUNNEL: readonly ApplicationStatus[] = [
   'ONBOARDING',
   'HIRED',
 ];
+
+/** Статус, который не знаем, считаем новым — лучше «Not reviewed», чем «undefined». */
+export function parseStatus(v: unknown): ApplicationStatus {
+  const s = String(v ?? 'NEW').toUpperCase();
+  return s in STATUS_LABEL ? (s as ApplicationStatus) : 'NEW';
+}
+
+/** К какому шагу основной полосы относится расширенный этап. */
+export function funnelStage(status: ApplicationStatus): ApplicationStatus {
+  switch (status) {
+    case 'AI_SHORTLISTED':
+      return 'REVIEWED';
+    case 'INTERVIEW':
+    case 'TEST_TASK':
+      return 'INVITED';
+    default:
+      return status;
+  }
+}
 
 export function salaryLabel(a: Pick<ApplicantApplication, 'salaryMin' | 'salaryMax' | 'currency'>): string {
   if (!a.salaryMin && !a.salaryMax) return 'Salary negotiable';
@@ -192,7 +222,8 @@ export interface ApplicantProfile {
   skills: string[];
   experiences: ApplicantExperience[];
   educations: string[];
-  certificates: string[];
+  /** Сертификаты со ссылкой на файл, если кандидат его загрузил. */
+  certificates: { title: string; url: string | null }[];
 }
 
 export interface CompanyApplication {
@@ -230,8 +261,9 @@ function label(v: unknown): string | null {
 const list = (v: unknown): string[] => (Array.isArray(v) ? v : []).map(label).filter((x): x is string => !!x);
 
 export function parseApplicantProfile(p: Record<string, unknown>): ApplicantProfile {
-  const salary = nonEmpty(p.desired_salary);
-  const salaryTail = [nonEmpty(p.salary_currency), nonEmpty(p.salary_period)].filter(Boolean).join(' / ');
+  const salary = nonEmpty(p.desired_salary)?.replace(/\.0+$/, '') ?? null;
+  const period = nonEmpty(p.salary_period)?.toLowerCase() ?? null;
+  const salaryTail = [nonEmpty(p.salary_currency), period].filter(Boolean).join(' / ');
   return {
     email: nonEmpty(p.email),
     phone: nonEmpty(p.phone),
@@ -247,17 +279,31 @@ export function parseApplicantProfile(p: Record<string, unknown>): ApplicantProf
     relocationReady: p.relocation_ready === true,
     languages: list(p.languages),
     skills: list(p.skills),
+    // Прод отдаёт опыт как company_name + start_date/end_date, код бэкенда — company + period.
     experiences: (Array.isArray(p.experiences) ? p.experiences : []).map((e) => {
       const x = (e ?? {}) as Json;
+      const month = (v: unknown) => {
+        const m = /^(\d{4})-(\d{2})/.exec(String(v ?? ''));
+        return m ? `${m[2]}/${m[1]}` : null;
+      };
+      const period =
+        String(x.period ?? '').trim() ||
+        (x.start_date ? `${month(x.start_date)} — ${month(x.end_date) ?? 'Now'}` : '');
       return {
         position: String(x.position ?? '').trim(),
-        company: String(x.company ?? '').trim(),
-        period: String(x.period ?? '').trim(),
+        company: String(x.company ?? x.company_name ?? '').trim(),
+        period,
         description: String(x.description ?? '').trim(),
       };
     }),
     educations: list(p.educations),
-    certificates: list(p.certificates),
+    certificates: (Array.isArray(p.certificates) ? p.certificates : [])
+      .map((c) => {
+        const x = (typeof c === 'object' && c ? c : { title: c }) as Json;
+        const title = label(x) ?? 'Certificate';
+        return { title, url: nonEmpty(x.file) };
+      })
+      .filter((c) => c.title || c.url),
   };
 }
 
@@ -270,7 +316,7 @@ export function parseCompanyApplication(json: Json): CompanyApplication {
     vacancyId: json.vacancy == null ? null : Number(json.vacancy),
     applicant: fromProfile || fromRoot || 'Candidate',
     vacancyTitle: String(json.vacancy_title ?? 'Job'),
-    status: (String(json.status ?? 'NEW').toUpperCase() as ApplicationStatus) ?? 'NEW',
+    status: parseStatus(json.status),
     createdAt: date(json.created_at) ?? new Date(),
     avatarUrl: nonEmpty(profile.avatar),
     matchScore: json.match_score == null ? null : Math.round(Number(json.match_score)),

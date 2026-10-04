@@ -3,9 +3,13 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Plus, X } from 'lucide-react';
+import { JobStats } from '@/components/employer/stats';
+import { CURRENCIES, VacancyActions } from '@/components/employer/vacancy-manage';
 import { SetupInvite } from '@/components/employer/setup-invite';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Chip, Field, Spinner } from '@/components/ui/primitives';
+import { ListSkeleton, riseStyle } from '@/components/ui/motion';
+import { useToast } from '@/components/ui/toast';
 import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { ApiError } from '@/lib/api/client';
 
@@ -78,9 +82,7 @@ export default function CompanyVacanciesPage() {
         )}
 
         {loading && (
-          <div className="grid place-items-center py-16">
-            <Spinner />
-          </div>
+          <ListSkeleton count={4} />
         )}
 
         {!loading && error && (
@@ -107,9 +109,10 @@ export default function CompanyVacanciesPage() {
 
         {!loading && !error && items.length > 0 && (
           <>
-            <VacancyGroup title="Active" items={active} />
-            {drafts.length > 0 && <VacancyGroup title="Drafts" items={drafts} onPublished={load} />}
-            {archived.length > 0 && <VacancyGroup title="Archived" items={archived} muted />}
+            <JobStats vacancies={items} />
+            <VacancyGroup title="Active" items={active} onChanged={load} />
+            <VacancyGroup title="Drafts" items={drafts} onChanged={load} />
+            <VacancyGroup title="Archived" items={archived} muted onChanged={load} />
           </>
         )}
       </div>
@@ -130,7 +133,7 @@ export default function CompanyVacanciesPage() {
  * и SAR; остальные коды сервером пока не проверены — если он их не примет,
  * форма покажет его ответ.
  */
-const CURRENCIES = ['AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR'] as const;
+
 
 function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
   const [title, setTitle] = React.useState('');
@@ -282,16 +285,19 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
 function PublishButton({ vacancy, onDone }: { vacancy: Vacancy; onDone: () => void }) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const toast = useToast();
   return (
     <div className="mt-3">
       <Button
         size="sm"
         disabled={busy}
+        aria-label={`Publish ${vacancy.title}`}
         onClick={async () => {
           setBusy(true);
           setError(null);
           try {
             await vacanciesApi.update(vacancy.id, { status: 'ACTIVE' });
+            toast.success(`“${vacancy.title}” is live`);
             onDone();
           } catch (e) {
             const p = e instanceof ApiError ? e.payload : null;
@@ -311,23 +317,27 @@ function VacancyGroup({
   title,
   items,
   muted,
-  onPublished,
+  onChanged,
 }: {
   title: string;
   items: Vacancy[];
   muted?: boolean;
-  /** Есть только у черновиков: кнопка «Publish» на карточке. */
-  onPublished?: () => void;
+  /** Вызывается после любого изменения вакансии: список перечитывается. */
+  onChanged: () => void;
 }) {
   if (items.length === 0) return null;
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-secondary">{title}</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-        {items.map((v) => {
+        {items.map((v, i) => {
           const salary = formatSalary(v);
           return (
-            <Card key={v.id} className={muted ? 'min-w-0 p-4 opacity-70' : 'min-w-0 p-4'}>
+            <Card
+              key={v.id}
+              style={riseStyle(i)}
+              className={muted ? 'rise min-w-0 p-4 opacity-70' : 'rise min-w-0 p-4'}
+            >
               <h3 className="truncate font-semibold text-text-primary">{v.title}</h3>
               {salary && <p className="mt-1.5 text-sm font-medium text-text-primary">{salary}</p>}
               {v.address && <p className="mt-0.5 truncate text-sm text-text-secondary">{v.address}</p>}
@@ -338,7 +348,8 @@ function VacancyGroup({
                     <Chip key={t}>{t}</Chip>
                   ))}
               </div>
-              {onPublished && <PublishButton vacancy={v} onDone={onPublished} />}
+              {v.status === 'DRAFT' && <PublishButton vacancy={v} onDone={onChanged} />}
+              <VacancyActions vacancy={v} onChanged={onChanged} />
             </Card>
           );
         })}

@@ -159,8 +159,10 @@ export const vacanciesApi = {
     return http.get<string[]>(API.vacancies.cities);
   },
 
-  apply(id: number | string) {
-    return http.post<unknown>(API.vacancies.apply(id));
+  /** Сопроводительное письмо из онбординга уходит вместе с откликом. */
+  apply(id: number | string, coverLetter?: string) {
+    const letter = coverLetter?.trim();
+    return http.post<unknown>(API.vacancies.apply(id), letter ? { cover_letter: letter } : undefined);
   },
 
   toggleFavorite(id: number | string) {

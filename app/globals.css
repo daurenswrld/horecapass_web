@@ -210,8 +210,25 @@
 
 /* Голосовое 21.09 про фото: «они очень яркие, слишком броские — их нужно
    чуть-чуть успокоить, как будто фоном». Приглушаем, а не обесцвечиваем. */
+/* Созвон 29.09: «картинки слишком яркие». Приглушаем и чуть утепляем под бежевый. */
 .photo-calm {
-  filter: saturate(0.78) brightness(0.98) contrast(0.96);
+  filter: saturate(0.68) brightness(0.95) contrast(0.92) sepia(0.1);
+}
+
+/* Фото растворяется в фоне страницы со всех сторон, без жёсткой рамки. */
+.photo-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 55%, transparent 98%),
+    linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 55%, transparent 98%),
+    linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect;
+}
+
+/* Мягче — для портретов в карточках: только низ уходит в фон. */
+.photo-fade-soft {
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent);
 }
 
 .hero-reveal {
@@ -265,5 +282,231 @@
 
   :root {
     --intro-delay: 0s;
+  }
+}
+
+/*
+ * Система движения. Все анимации — на CSS: они не мешают первой отрисовке,
+ * не тянут библиотек и гасятся одним блоком prefers-reduced-motion ниже.
+ * Кривая одна на весь сайт, чтобы всё двигалось «одним характером».
+ */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Появление блоков при прокрутке (компонент Reveal). Скрываем только те, что
+   ниже первого экрана и только после старта JS — без него контент виден. */
+.reveal-armed,
+.reveal-in {
+  transition:
+    opacity 720ms var(--ease-out) var(--d, 0ms),
+    transform 720ms var(--ease-out) var(--d, 0ms);
+}
+.reveal-armed {
+  opacity: 0;
+  transform: translateY(24px);
+}
+.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Вход страницы внутри приложения и подъём элементов списка. */
+.page-enter {
+  animation: rise 380ms var(--ease-out) backwards;
+}
+.rise {
+  animation: rise 460ms var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 9) * 55ms);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Панели и окна: выезд сбоку, затемнение плавно. */
+.slide-in-right {
+  animation: slide-in-right 320ms var(--ease-out) backwards;
+}
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+.fade-in {
+  animation: fade-in 240ms ease-out backwards;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.pop-in {
+  animation: pop-in 260ms var(--ease-out) backwards;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+
+/* Карточки, по которым можно кликнуть: приподнимаются под курсором. */
+@media (hover: hover) {
+  .lift {
+    transition:
+      transform 220ms var(--ease-out),
+      box-shadow 220ms var(--ease-out),
+      border-color 220ms;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgb(42 33 27 / 0.06), 0 16px 40px -16px rgb(42 33 27 / 0.18);
+  }
+}
+
+/* Полоса заполненности растёт от нуля при появлении. */
+.bar-grow {
+  animation: bar-grow 900ms var(--ease-out) 120ms backwards;
+}
+@keyframes bar-grow {
+  from {
+    width: 0;
+  }
+}
+
+/* Заглушка на время загрузки: тёплый перелив вместо пустоты и спиннера. */
+.skeleton {
+  border-radius: var(--radius-sm, 8px);
+  background: linear-gradient(
+    90deg,
+    rgb(var(--surface-muted)) 25%,
+    rgb(var(--surface-alt)) 50%,
+    rgb(var(--surface-muted)) 75%
+  );
+  background-size: 220% 100%;
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+@keyframes skeleton {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* Пункт меню: коричневая полоска слева вырастает у активного раздела. */
+.nav-item {
+  position: relative;
+}
+.nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 3px;
+  background: rgb(var(--accent-strong));
+  transform: scaleY(0);
+  transition: transform 260ms var(--ease-out);
+}
+.nav-item[aria-current='page']::before {
+  transform: scaleY(1);
+}
+.nav-item svg {
+  transition: transform 220ms var(--ease-out);
+}
+@media (hover: hover) {
+  .nav-item:hover svg {
+    transform: scale(1.12);
+  }
+}
+
+/* Мягкое «дыхание» для фото и значков, которые должны казаться живыми. */
+.float-slow {
+  animation: float-slow 7s ease-in-out infinite;
+}
+@keyframes float-slow {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .float-slow {
+    animation: none;
+  }
+  .reveal-armed {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Экран «готово»: круг появляется, рисуется галочка, расходятся кольцо и искры. */
+.success-pop {
+  animation: pop-in 560ms var(--ease-out) backwards;
+}
+.success-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgb(var(--accent));
+  animation: success-halo 1500ms ease-out 350ms both;
+}
+@keyframes success-halo {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+.draw-check path {
+  stroke-dasharray: 32;
+  stroke-dashoffset: 32;
+  animation: draw-check 520ms ease-out 380ms forwards;
+}
+@keyframes draw-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgb(var(--accent));
+  opacity: 0;
+  animation: spark 900ms var(--ease-out) 380ms both;
+}
+@keyframes spark {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateX(58px) scale(0.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .draw-check path {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .success-halo,
+  .spark {
+    display: none;
   }
 }

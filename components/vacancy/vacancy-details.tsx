@@ -5,7 +5,9 @@ import { BadgeCheck, Bookmark, Check, MapPin, Video } from 'lucide-react';
 import { Button, Chip, Spinner } from '@/components/ui/primitives';
 import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { InterviewPrep } from './interview-prep';
+import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api/client';
+import { candidateDraft } from '@/lib/demo/candidate';
 
 /**
  * Карточка вакансии целиком — то же содержимое, что на экране
@@ -43,6 +45,7 @@ export function VacancyDetails({
   onChanged?: (v: Vacancy) => void;
 }) {
   const [applying, setApplying] = React.useState(false);
+  const toast = useToast();
   const [error, setError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(vacancy.isApplied);
   const [saved, setSaved] = React.useState(vacancy.isSaved);
@@ -60,8 +63,9 @@ export function VacancyDetails({
     setError(null);
     setApplying(true);
     try {
-      await vacanciesApi.apply(vacancy.id);
+      await vacanciesApi.apply(vacancy.id, candidateDraft.load().coverLetterText);
       setApplied(true);
+      toast.success('Application sent');
       onChanged?.({ ...vacancy, isApplied: true });
     } catch (e) {
       setError(
@@ -80,9 +84,11 @@ export function VacancyDetails({
     setSaved(next);
     try {
       await vacanciesApi.toggleFavorite(vacancy.id);
+      toast.success(next ? 'Saved to your list' : 'Removed from saved');
       onChanged?.({ ...vacancy, isSaved: next });
     } catch {
       setSaved(!next);
+      toast.error('Could not update saved jobs');
     }
   };
 

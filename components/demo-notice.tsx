@@ -1,3 +1,6 @@
+'use client';
+
+import { useIsDemo } from '@/lib/demo/session';
 import { cn } from '@/lib/utils';
 
 /**
@@ -8,12 +11,13 @@ import { cn } from '@/lib/utils';
  * здесь прямо написано, что данные никуда не уходят и какой эндпоинт нужен.
  */
 /**
- * Выключались на время показа заказчице 09.09.2026 и включены обратно.
- * Плашки нужны: без них демонстрационные разделы (профиль-резюме, корзина
- * кандидатов, HR-бренд) неотличимы от рабочих, а заказчица на это уже
- * отдельно указывала.
+ * Решение 30.09 (вариант «б» — рабочий сайт для видео): плашки видны только
+ * в демо-входе. У настоящих аккаунтов неготовое либо скрыто, либо сделано
+ * честно (бесплатная публикация на запуске, массовые действия через смену
+ * этапа), либо тихо хранится в браузере до появления ручки на сервере.
+ * NEXT_PUBLIC_SHOW_PREVIEW_NOTICES=1 — показать плашки всем (для проверки).
  */
-const SHOW_DEMO_NOTICES = true;
+const ALWAYS = process.env.NEXT_PUBLIC_SHOW_PREVIEW_NOTICES === '1';
 
 export function DemoNotice({
   what,
@@ -24,7 +28,8 @@ export function DemoNotice({
   endpoint?: string;
   className?: string;
 }) {
-  if (!SHOW_DEMO_NOTICES) return null;
+  const demo = useIsDemo();
+  if (!demo && !ALWAYS) return null;
 
   return (
     <div

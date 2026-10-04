@@ -269,19 +269,21 @@ export default function EmployerOnboardingPage() {
         </div>
       </header>
 
-      {draft.step === 'intro' && <IntroStep {...props} />}
-      {draft.step === 'company' && <CompanyStep {...props} />}
-      {draft.step === 'sources' && <SourcesStep {...props} />}
-      {draft.step === 'bridge' && <BridgeStep {...props} />}
-      {draft.step === 'project' && <ProjectStep {...props} />}
-      {draft.step === 'vacancy-intro' && <VacancyIntroStep {...props} />}
-      {draft.step === 'vacancy' && <VacancyChatStep {...props} />}
-      {draft.step === 'vacancy-details' && <VacancyDetailsStep {...props} />}
-      {draft.step === 'vacancy-preview' && <VacancyPreviewStep {...props} />}
-      {draft.step === 'company-preview' && <CompanyPreviewStep {...props} />}
-      {draft.step === 'agreement' && <AgreementStep {...props} />}
-      {draft.step === 'payment' && <PaymentStep {...props} />}
-      {draft.step === 'done' && <DoneStep {...props} restart={restart} />}
+      <div key={draft.step} className="page-enter">
+        {draft.step === 'intro' && <IntroStep {...props} />}
+        {draft.step === 'company' && <CompanyStep {...props} />}
+        {draft.step === 'sources' && <SourcesStep {...props} />}
+        {draft.step === 'bridge' && <BridgeStep {...props} />}
+        {draft.step === 'project' && <ProjectStep {...props} />}
+        {draft.step === 'vacancy-intro' && <VacancyIntroStep {...props} />}
+        {draft.step === 'vacancy' && <VacancyChatStep {...props} />}
+        {draft.step === 'vacancy-details' && <VacancyDetailsStep {...props} />}
+        {draft.step === 'vacancy-preview' && <VacancyPreviewStep {...props} />}
+        {draft.step === 'company-preview' && <CompanyPreviewStep {...props} />}
+        {draft.step === 'agreement' && <AgreementStep {...props} />}
+        {draft.step === 'payment' && <PaymentStep {...props} />}
+        {draft.step === 'done' && <DoneStep {...props} restart={restart} />}
+      </div>
     </div>
   );
 }

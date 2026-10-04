@@ -70,7 +70,7 @@ async function StoreCard({ store }: { store: StoreLink }) {
   );
 
   return (
-    <div className="flex items-center gap-5 rounded-lg border border-line bg-surface p-5">
+    <div className="flex flex-wrap items-center gap-5 rounded-lg border border-line bg-surface p-5">
       <div
         className="grid h-28 w-28 shrink-0 place-items-center rounded-sm border border-line bg-qr-surface p-2 text-qr-ink"
         aria-hidden={!qr}

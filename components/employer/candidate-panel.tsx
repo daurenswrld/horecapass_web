@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/components/ui/toast';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, MessageSquare, Phone, Sparkles, Video, X } from 'lucide-react';
@@ -80,6 +81,7 @@ export function CandidatePanel({
 
   const [saving, setSaving] = React.useState<ApplicationStatus | null>(null);
   const [stageError, setStageError] = React.useState<string | null>(null);
+  const toast = useToast();
   const [opening, setOpening] = React.useState(false);
   const [chatError, setChatError] = React.useState<string | null>(null);
   const [summary, setSummary] = React.useState<CandidateSummary | null>(null);
@@ -115,6 +117,7 @@ export function CandidatePanel({
     setSaving(status);
     try {
       await companyApplicationsApi.setStatus(app.id, status);
+      toast.success(status === 'REJECTED' ? 'Candidate rejected' : `Moved to ${STATUS_LABEL[status]}`);
     } catch {
       onStatus(app.id, prev);
       setStageError('Could not change the stage. Please try again.');
@@ -144,8 +147,8 @@ export function CandidatePanel({
       setSummaryState({
         error:
           e instanceof ApiError && e.status === 503
-            ? 'The AI summary is unavailable right now. Try again in a minute.'
-            : 'Could not get the AI summary. Please try again.',
+            ? 'The Smart summary is unavailable right now. Try again in a minute.'
+            : 'Could not get the Smart summary. Please try again.',
       });
     }
   };
@@ -162,13 +165,13 @@ export function CandidatePanel({
         aria-label="Close"
         tabIndex={-1}
         onClick={onClose}
-        className="absolute inset-0 bg-black/40"
+        className="fade-in absolute inset-0 bg-black/40"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="candidate-name"
-        className="relative flex h-dvh w-full flex-col overflow-y-auto bg-surface shadow-card sm:w-[34rem] scroll-slim"
+        className="slide-in-right relative flex h-dvh w-full flex-col overflow-y-auto bg-surface shadow-card sm:w-[34rem] scroll-slim"
       >
         <header className="flex items-start gap-3 px-6 pb-4 pt-5">
           <span
@@ -237,7 +240,7 @@ export function CandidatePanel({
         {chatError && <p className="px-6 pb-4 text-sm text-danger">{chatError}</p>}
         {sample && (
           <p className="px-6 pb-4 text-xs text-text-secondary">
-            This is a sample candidate: the stage changes only on this screen, messages and the AI summary are off.
+            This is a sample candidate: the stage changes only on this screen, messages and the Smart summary are off.
           </p>
         )}
 
@@ -274,7 +277,7 @@ export function CandidatePanel({
           )}
         </Section>
 
-        <Section title="AI summary">
+        <Section title="Smart summary">
           {!summary && summaryState !== 'loading' && (
             <>
               <p className="text-sm text-text-secondary">
@@ -282,7 +285,7 @@ export function CandidatePanel({
               </p>
               <Button variant="secondary" size="sm" className="mt-3" onClick={loadSummary} disabled={sample}>
                 <Sparkles size={15} />
-                Get AI summary
+                Get Smart summary
               </Button>
             </>
           )}
@@ -380,7 +383,24 @@ export function CandidatePanel({
 
         {d.certificates.length > 0 && (
           <Section title="Certificates">
-            <List items={d.certificates} />
+            <ul className="list-disc space-y-1 pl-5 text-sm text-text-primary">
+              {d.certificates.map((c, i) => (
+                <li key={i}>
+                  {c.url ? (
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-accent-text underline-offset-2 hover:underline focus-ring"
+                    >
+                      {c.title}
+                    </a>
+                  ) : (
+                    c.title
+                  )}
+                </li>
+              ))}
+            </ul>
           </Section>
         )}
 

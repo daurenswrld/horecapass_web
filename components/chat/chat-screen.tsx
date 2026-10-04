@@ -16,6 +16,7 @@ import {
   type QuickReplyTemplate,
 } from '@/lib/api/chats';
 import { isSample, SAMPLE_MESSAGES, SAMPLE_ROOMS } from '@/lib/demo/samples';
+import { demoSession } from '@/lib/demo/session';
 import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
@@ -438,8 +439,10 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
         if (cancelled) return;
         // На новом аккаунте переписок нет — показываем sample, иначе раздел
         // выглядит сломанным.
-        setSample(list.length === 0);
-        list = list.length > 0 ? list : SAMPLE_ROOMS;
+        // Образец переписки — только в демо; у настоящего аккаунта честно пусто.
+        const demo = !!demoSession.get();
+        setSample(demo && list.length === 0);
+        list = list.length > 0 || !demo ? list : SAMPLE_ROOMS;
         setRooms(list);
         // ?room=<id> — переход из карточки кандидата сразу в нужный чат.
         const wanted = Number(new URLSearchParams(window.location.search).get('room'));
@@ -450,9 +453,11 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
       })
       .catch(() => {
         if (cancelled) return;
-        setSample(true);
-        setRooms(SAMPLE_ROOMS);
-        setSelected(SAMPLE_ROOMS[0]);
+        if (demoSession.get()) {
+          setSample(true);
+          setRooms(SAMPLE_ROOMS);
+          setSelected(SAMPLE_ROOMS[0]);
+        } else setError('Could not load your chats. Please refresh.');
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {

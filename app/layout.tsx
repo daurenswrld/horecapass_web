@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Arimo } from 'next/font/google';
+import { AssistantWidget } from '@/components/assistant/assistant-widget';
 import { AuthProvider } from '@/lib/auth/context';
 import './globals.css';
 
@@ -33,7 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-sans antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <AssistantWidget />
+        </AuthProvider>
       </body>
     </html>
   );
