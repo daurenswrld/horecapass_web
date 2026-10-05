@@ -8,6 +8,7 @@ import { Button, Field, Spinner } from '@/components/ui/primitives';
 import { authApi, type BackendRole, type Purpose } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
 import { homeFor, useAuth } from '@/lib/auth/context';
+import { destinationAfterSignIn } from '@/lib/auth/destination';
 
 /**
  * Sign in и регистрация. Два шага в одном экране, как в login_screen.dart мобилки:
@@ -96,7 +97,7 @@ export function AuthForm({ purpose, role, companyName, title, subtitle }: Props)
       // Токены уже сохранены; тянем профиль, чтобы узнать роль и куда вести.
       const me = await authApi.me();
       await refresh();
-      router.replace(homeFor(me));
+      router.replace(purpose === 'REGISTER' ? homeFor(me) : await destinationAfterSignIn(me));
     } catch (e) {
       setError(readError(e));
       setCode('');

@@ -7,7 +7,7 @@ import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { InterviewPrep } from './interview-prep';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api/client';
-import { candidateDraft } from '@/lib/demo/candidate';
+import { useCandidate } from '@/lib/candidate/context';
 
 /**
  * Карточка вакансии целиком — то же содержимое, что на экране
@@ -45,6 +45,7 @@ export function VacancyDetails({
   onChanged?: (v: Vacancy) => void;
 }) {
   const [applying, setApplying] = React.useState(false);
+  const { draft } = useCandidate();
   const toast = useToast();
   const [error, setError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(vacancy.isApplied);
@@ -63,7 +64,7 @@ export function VacancyDetails({
     setError(null);
     setApplying(true);
     try {
-      await vacanciesApi.apply(vacancy.id, candidateDraft.load().coverLetterText);
+      await vacanciesApi.apply(vacancy.id, draft?.coverLetterText ?? '');
       setApplied(true);
       toast.success('Application sent');
       onChanged?.({ ...vacancy, isApplied: true });

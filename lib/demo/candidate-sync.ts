@@ -38,9 +38,9 @@ function aboutMe(d: CandidateDraft): string {
     .join(' ');
 }
 
-export async function syncCandidate(d: CandidateDraft, name: { first: string; last: string }) {
+export async function syncCandidate(d: CandidateDraft, name: { first: string; last: string }, accountId?: number) {
   // Имя: из аккаунта, а если его нет — из подписи согласия («Your full name»).
-  const signer = cvConsent.load().signer.trim();
+  const signer = cvConsent.load(accountId).signer.trim();
   const [first, ...rest] = signer.split(/\s+/);
   await candidateApi.patchProfile({
     nationality: d.nationality,

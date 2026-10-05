@@ -22,8 +22,8 @@ export type CStep =
   | 'done';
 
 export const C_STEP_INDEX: Record<CStep, number> = {
-  based: 1,
-  materials: 2,
+  materials: 1,
+  based: 2,
   countries: 3,
   check: 4,
   upgrade: 4,
@@ -34,8 +34,8 @@ export const C_STEP_INDEX: Record<CStep, number> = {
 };
 export const C_STEP_TOTAL = 6;
 export const C_STEP_TITLE: Record<number, string> = {
-  1: 'Where you are based',
-  2: 'Your CV',
+  1: 'Your CV',
+  2: 'Where you are based',
   3: 'Where you want to work',
   4: 'Profile check',
   5: 'Consent',
@@ -72,7 +72,7 @@ export interface CandidateDraft {
 
 export function emptyCandidate(): CandidateDraft {
   return {
-    step: 'based',
+    step: 'materials',
     nationality: '',
     location: '',
     cvFile: null,
@@ -97,11 +97,11 @@ export function emptyCandidate(): CandidateDraft {
 const KEY = 'hp_demo_candidate_onboarding';
 
 export const candidateDraft = {
-  load(): CandidateDraft {
+  load(accountId?: number): CandidateDraft {
     const base = emptyCandidate();
     if (typeof window === 'undefined') return base;
     try {
-      const raw = window.localStorage.getItem(KEY);
+      const raw = window.localStorage.getItem(accountId ? `${KEY}:${accountId}` : KEY);
       if (!raw) return base;
       const d = JSON.parse(raw) as Partial<CandidateDraft>;
       return {
@@ -113,23 +113,23 @@ export const candidateDraft = {
         references: Array.isArray(d.references) ? d.references : [],
         checkDone: Array.isArray(d.checkDone) ? d.checkDone : [],
         check: d.check && typeof d.check === 'object' ? d.check : {},
-        step: d.step && d.step in C_STEP_INDEX ? d.step : 'based',
+        step: d.step && d.step in C_STEP_INDEX ? d.step : 'materials',
       };
     } catch {
       return base;
     }
   },
-  save(d: CandidateDraft): boolean {
+  save(d: CandidateDraft, accountId?: number): boolean {
     if (typeof window === 'undefined') return false;
     try {
-      window.localStorage.setItem(KEY, JSON.stringify({ ...d, updatedAt: new Date().toISOString() }));
+      window.localStorage.setItem(accountId ? `${KEY}:${accountId}` : KEY, JSON.stringify({ ...d, updatedAt: new Date().toISOString() }));
       return true;
     } catch {
       return false;
     }
   },
-  clear() {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(KEY);
+  clear(accountId?: number) {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(accountId ? `${KEY}:${accountId}` : KEY);
   },
 };
 
@@ -271,8 +271,8 @@ export interface ProgressItem {
  */
 export function profileProgress(d: CandidateDraft, consentSigned: boolean): { pct: number; next: ProgressItem | null; items: ProgressItem[] } {
   const items: ProgressItem[] = [
+    { key: 'cv', label: 'Resume / CV', done: !!d.cvFile || !!d.cvBuilt, weight: 20, action: 'Upload or create your CV' },
     { key: 'based', label: 'Nationality and location', done: !!d.nationality && !!d.location, weight: 10, action: 'Tell us where you are based' },
-    { key: 'cv', label: 'Resume / CV', done: !!d.cvFile || d.upgrade === 'yes', weight: 20, action: 'Upload or create your CV' },
     { key: 'countries', label: 'Where you want to work', done: d.countries.length > 0, weight: 10, action: 'Choose the countries you are open to' },
     { key: 'consent', label: 'Consent', done: consentSigned, weight: 15, action: 'Sign your consent so employers can see you' },
     {

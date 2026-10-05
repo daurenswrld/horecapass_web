@@ -7,6 +7,7 @@ import { Composer, MessageBubble, Thread, Typing } from '@/components/employer/c
 import { aiApi, fileToBase64, plainAiText, type AiMessage } from '@/lib/api/ai';
 import type { ChatMessage } from '@/lib/demo/employer';
 import { extractCvText } from '@/lib/cv-text';
+import { candidateApi } from '@/lib/api/candidate';
 
 /**
  * Smart CV builder — разговор с серверным ИИ (/api/ai/cv-builder/stream/),
@@ -32,28 +33,51 @@ interface Turn extends ChatMessage {
   attached?: string;
 }
 
-export function CvBuilder({ initialFile, onClose }: { initialFile?: File | null; onClose: (built: boolean) => void }) {
+export function CvBuilder({ initialFile, initialResumeId = null, initialBuilt = false, onClose }: { initialFile?: File | null; initialResumeId?: number | null; initialBuilt?: boolean; onClose: (built: boolean) => void }) {
   const [messages, setMessages] = React.useState<Turn[]>([{ id: id(), from: 'assistant', text: GREETING }]);
   const [typing, setTyping] = React.useState(false);
   const [options, setOptions] = React.useState<string[]>([]);
-  const [resumeId, setResumeId] = React.useState<number | null>(null);
+  const [resumeId, setResumeId] = React.useState<number | null>(initialResumeId);
+  const [built, setBuilt] = React.useState(initialBuilt);
+  const [ready, setReady] = React.useState(false);
+  const [historyError, setHistoryError] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const abort = React.useRef<AbortController | null>(null);
   const history = React.useRef(messages);
   history.current = messages;
 
   React.useEffect(() => () => abort.current?.abort(), []);
+  const loadHistory = React.useCallback(async () => {
+    setHistoryError(false);
+    try {
+      const saved = await aiApi.cvHistory();
+      if (saved.resume_id === initialResumeId && Array.isArray(saved.history)) {
+        const restored: Turn[] = saved.history.filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string')
+          .map((m) => ({ id: id(), from: m.role, text: m.text }));
+        if (restored.length) { history.current = [history.current[0], ...restored]; setMessages(history.current); }
+      }
+      setReady(true);
+    } catch { setHistoryError(true); }
+  }, [initialResumeId]);
+  React.useEffect(() => { void loadHistory(); }, [loadHistory]);
 
   const send = React.useCallback(
-    async (text: string, fileName?: string, raw?: File) => {
+    async (text: string, fileName?: string, raw?: File, retry = false) => {
       setError(null);
       setOptions([]);
       // Картинку отдаём как есть; из PDF/DOCX достаём текст сами — сервер
       // на проде вложения пока не читает (см. lib/cv-text.ts).
       const attached = raw ? await extractCvText(raw) : null;
-      const images = raw && raw.type.startsWith('image/') ? [await fileToBase64(raw)] : undefined;
+      if (raw && !attached && !raw.type.startsWith('image/')) {
+        setError('We could not read this CV. Try a DOCX, a PDF with selectable text, or a clear image. Your uploaded file is still saved to your account.');
+        return;
+      }
+      let images: string[] | undefined;
+      try { images = raw && raw.type.startsWith('image/') ? [await fileToBase64(raw)] : undefined; }
+      catch { setError('Could not read this image. Please attach it again.'); return; }
       const mine: Turn = { id: id(), from: 'user', text, file: fileName, images, attached: attached ?? undefined };
-      const all = [...history.current, mine];
+      const all = retry ? history.current : [...history.current, mine];
+      history.current = all;
       setMessages(all);
 
       const botId = id();
@@ -79,21 +103,24 @@ export function CvBuilder({ initialFile, onClose }: { initialFile?: File | null;
 My current CV (${m.file ?? 'file'}):
 ${m.attached}`.slice(0, 7900) : m.text,
             ...(m.images ? { images: m.images } : {}),
-          }));
+          })).slice(-30);
+        await aiApi.saveCvHistory(payload, resumeId);
         const res = await aiApi.cvBuilder(
           payload,
           (t) => {
-            setTyping(false);
             show(t);
           },
-          null,
+          resumeId,
           ctrl.signal,
         );
         show(res.reply.trim() || 'Could you tell me a bit more?');
+        if (res.resumeId) {
+          const savedResume = await candidateApi.resume(res.resumeId);
+          setResumeId(savedResume.id);
+          setBuilt(!!savedResume.hasContent);
+        }
+        await aiApi.saveCvHistory([...payload, { role: 'assistant', text: res.reply }], res.resumeId ?? resumeId);
         setOptions(res.suggestions.filter((o) => !PAID_EXPORT.test(o)));
-        // Сервер отдаёт resume_id всегда, а сохраняет резюме только в конце —
-        // и тогда же (по своему промпту) предлагает «Export as PDF».
-        if (res.resumeId && res.suggestions.some((o) => PAID_EXPORT.test(o))) setResumeId(res.resumeId);
       } catch {
         if (ctrl.signal.aborted) return;
         setError("Couldn't reach the assistant. Please try again.");
@@ -107,11 +134,11 @@ ${m.attached}`.slice(0, 7900) : m.text,
   // Пришли с загруженным файлом — сразу отдаём его ИИ.
   const started = React.useRef(false);
   React.useEffect(() => {
-    if (initialFile && !started.current) {
+    if (ready && initialFile && !started.current) {
       started.current = true;
       void send(FROM_UPLOAD, initialFile.name, initialFile);
     }
-  }, [initialFile, send]);
+  }, [ready, initialFile, send]);
 
   const last = messages[messages.length - 1];
 
@@ -123,17 +150,17 @@ ${m.attached}`.slice(0, 7900) : m.text,
             Smart CV builder
           </h2>
           <p className="text-xs text-text-secondary">
-            {resumeId ? 'Your CV is saved to your profile — employers see it when you apply.' : 'Your CV for GCC employers, built in one conversation'}
+            {built ? 'Your CV is saved to your profile — employers see it when you apply.' : 'Your CV for GCC employers, built in one conversation'}
           </p>
         </div>
-        {resumeId && (
-          <Button size="sm" onClick={() => onClose(true)}>
+        {built && (
+          <Button size="sm" disabled={typing} onClick={() => onClose(true)}>
             Done
           </Button>
         )}
         <button
           type="button"
-          onClick={() => onClose(!!resumeId)}
+          onClick={() => onClose(built)}
           aria-label="Close the CV builder"
           className="-mr-2 rounded-full p-2 text-text-secondary hover:bg-surface-muted hover:text-text-primary focus-ring"
         >
@@ -145,15 +172,17 @@ ${m.attached}`.slice(0, 7900) : m.text,
         {messages.map((m) => (
           <MessageBubble key={m.id} m={m} />
         ))}
-        {typing && <Typing />}
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {typing && last.from === 'user' && <Typing />}
+        {historyError && <p role="alert" className="text-sm text-danger">Could not load your saved conversation. <button onClick={() => void loadHistory()} className="underline">Retry</button></p>}
+        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {ready && !typing && last.from === 'user' && <Button variant="secondary" onClick={() => void send(last.text, undefined, undefined, true)}>Continue this answer</Button>}
       </Thread>
 
       <div className="border-t border-line px-5 py-4 md:px-8">
         <div className="mx-auto max-w-2xl">
           <Composer
             onSend={(t, f, raw) => void send(t, f, raw)}
-            disabled={typing}
+            disabled={!ready || typing}
             options={options.length ? { list: options, multi: false } : null}
             placeholder="Message, or attach your CV"
           />

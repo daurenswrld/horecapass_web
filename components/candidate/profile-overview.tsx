@@ -6,14 +6,16 @@ import { ArrowRight, BadgeCheck, ChevronRight, Plus } from 'lucide-react';
 import { CountUp } from '@/components/ui/motion';
 import { Card } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth/context';
-import { candidateDraft, profileProgress, qualificationStatus, type CandidateDraft } from '@/lib/demo/candidate';
+import { profileProgress, qualificationStatus } from '@/lib/demo/candidate';
 import { cvConsent } from '@/lib/demo/storage';
 import { cn } from '@/lib/utils';
+import { useCandidate } from '@/lib/candidate/context';
 
 /** Прогресс профиля — один компонент для ленты вакансий и профиля (бриф, пункты 9 и 12). */
 export function ProfileProgress({ className }: { className?: string }) {
-  const [state, setState] = React.useState<ReturnType<typeof profileProgress> | null>(null);
-  React.useEffect(() => setState(profileProgress(candidateDraft.load(), !!cvConsent.load().signedAt)), []);
+  const { user } = useAuth();
+  const { draft } = useCandidate();
+  const state = draft ? profileProgress(draft, !!cvConsent.load(user?.id).signedAt) : null;
   if (!state) return null;
 
   return (
@@ -58,13 +60,12 @@ function hrefFor(key: string): string {
  */
 export function ProfileOverview() {
   const { user } = useAuth();
-  const [d, setD] = React.useState<CandidateDraft | null>(null);
+  const { draft: d, update, error, reload } = useCandidate();
   const [signed, setSigned] = React.useState(false);
   const [refDraft, setRefDraft] = React.useState('');
   React.useEffect(() => {
-    setD(candidateDraft.load());
-    setSigned(!!cvConsent.load().signedAt);
-  }, []);
+    setSigned(!!cvConsent.load(user?.id).signedAt);
+  }, [user?.id]);
   if (!d) return null;
 
   const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Your name';
@@ -99,6 +100,7 @@ export function ProfileOverview() {
 
   return (
     <div className="space-y-4">
+      {error && <p role="alert" className="text-sm text-danger">{error} <button onClick={() => void reload()} className="underline">Reload account copy</button></p>}
       <Card className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
         <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-accent-muted text-2xl font-bold text-accent-text">
           {name
@@ -159,8 +161,7 @@ export function ProfileOverview() {
               const t = refDraft.trim();
               if (!t) return;
               const next = { ...d, references: [...d.references, t] };
-              setD(next);
-              candidateDraft.save(next);
+              update(() => next);
               setRefDraft('');
             }}
           >
@@ -187,11 +188,8 @@ export function ProfileOverview() {
 
 /** Приглашение в онбординг — на ленте вакансий, пока профиль не собран. */
 export function CandidateSetupInvite() {
-  const [show, setShow] = React.useState(false);
-  React.useEffect(() => {
-    const d = candidateDraft.load();
-    setShow(d.step !== 'done');
-  }, []);
+  const { draft, status } = useCandidate();
+  const show = draft && status !== 'completed';
   if (!show) return null;
   return (
     <Link
@@ -199,8 +197,8 @@ export function CandidateSetupInvite() {
       className="flex items-center gap-4 rounded-lg border-[1.5px] border-accent-strong bg-gradient-to-r from-peach-from to-peach-to p-4 transition-shadow hover:shadow-card focus-ring dark:border-accent"
     >
       <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-heading">Set up your profile so employers can find you</span>
-        <span className="block text-sm text-text-secondary">Where you are, your CV, where you want to work — about 5 minutes.</span>
+        <span className="block font-semibold text-heading">{status === 'deferred' ? 'Continue your saved profile' : 'Set up your profile so employers can find you'}</span>
+        <span className="block text-sm text-text-secondary">Your CV, where you are, where you want to work — continue at your own pace.</span>
       </span>
       <ArrowRight size={18} aria-hidden className="shrink-0 text-accent-text" />
     </Link>

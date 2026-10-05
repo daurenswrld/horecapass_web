@@ -5,7 +5,7 @@ import { Lock, RotateCcw, Sparkles } from 'lucide-react';
 import { VoiceButton } from '@/components/onboarding/answer-input';
 import { DemoNotice } from '@/components/demo-notice';
 import { Button } from '@/components/ui/primitives';
-import { candidateDraft } from '@/lib/demo/candidate';
+import { useCandidate } from '@/lib/candidate/context';
 import { speechRecognitionAvailable } from '@/lib/demo/storage';
 import { http } from '@/lib/api/client';
 import { API } from '@/lib/api/endpoints';
@@ -36,8 +36,7 @@ const GENERAL = [
   'Why do you want to work in the GCC?',
 ];
 
-function questionsFor(v: Vacancy): string[] {
-  const years = candidateDraft.load().years;
+function questionsFor(v: Vacancy, years: number | null): string[] {
   const likely = [...GENERAL].sort(() => Math.random() - 0.5).slice(0, years !== null && years >= 5 ? 3 : 4);
   if (years !== null && years >= 5) likely.push('Tell me about a team you led — how did you train and keep your people?');
   const situational = [
@@ -86,6 +85,7 @@ function feedback(answer: string): string {
 }
 
 export function InterviewPrep({ vacancy }: { vacancy: Vacancy }) {
+  const { draft } = useCandidate();
   const [open, setOpen] = React.useState(false);
   const [questions, setQuestions] = React.useState<string[]>([]);
   const [i, setI] = React.useState(0);
@@ -113,7 +113,7 @@ export function InterviewPrep({ vacancy }: { vacancy: Vacancy }) {
       }
     }
     setPrep(null);
-    setQuestions(questionsFor(vacancy));
+    setQuestions(questionsFor(vacancy, draft?.years ?? null));
   };
 
   if (!open) {

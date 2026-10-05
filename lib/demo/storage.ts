@@ -16,6 +16,7 @@ import type { Answers } from '@/lib/professions';
 
 const DRAFT_KEY = 'hp_demo_profile';
 const BASKET_KEY = 'hp_demo_basket';
+const scoped = (key: string, accountId?: number) => accountId ? `${key}:${accountId}` : key;
 
 export interface ProfileDraft {
   professionId: string | null;
@@ -49,17 +50,17 @@ function write(key: string, value: unknown) {
 
 /** Черновик анкеты. Станет GET/PUT /api/resumes/my/<id>/profession-profile/. */
 export const profileDraft = {
-  load(): ProfileDraft {
-    const d = read<ProfileDraft>(DRAFT_KEY, EMPTY);
+  load(accountId?: number): ProfileDraft {
+    const d = read<ProfileDraft>(scoped(DRAFT_KEY, accountId), EMPTY);
     return { professionId: d.professionId ?? null, answers: d.answers ?? {}, updatedAt: d.updatedAt ?? '' };
   },
-  save(professionId: string | null, answers: Answers): ProfileDraft {
+  save(professionId: string | null, answers: Answers, accountId?: number): ProfileDraft {
     const next: ProfileDraft = { professionId, answers, updatedAt: new Date().toISOString() };
-    write(DRAFT_KEY, next);
+    write(scoped(DRAFT_KEY, accountId), next);
     return next;
   },
-  clear() {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(DRAFT_KEY);
+  clear(accountId?: number) {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(scoped(DRAFT_KEY, accountId));
   },
 };
 
@@ -107,14 +108,14 @@ export interface CvConsent {
 export const EMPTY_CONSENT: CvConsent = { agreed: false, signer: '', signature: null, signedAt: null };
 
 export const cvConsent = {
-  load(): CvConsent {
-    return { ...EMPTY_CONSENT, ...read<Partial<CvConsent>>(CONSENT_KEY, {}) };
+  load(accountId?: number): CvConsent {
+    return { ...EMPTY_CONSENT, ...read<Partial<CvConsent>>(scoped(CONSENT_KEY, accountId), {}) };
   },
-  save(value: CvConsent) {
-    write(CONSENT_KEY, value);
+  save(value: CvConsent, accountId?: number) {
+    write(scoped(CONSENT_KEY, accountId), value);
   },
-  clear() {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(CONSENT_KEY);
+  clear(accountId?: number) {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(scoped(CONSENT_KEY, accountId));
   },
 };
 

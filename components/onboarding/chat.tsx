@@ -24,13 +24,14 @@ import { cn } from "@/lib/utils";
  */
 
 interface Props {
+  accountId?: number;
   profession: Profession;
   onDone: (state: OnboardingState) => void;
 }
 
-export function OnboardingChat({ profession, onDone }: Props) {
+export function OnboardingChat({ profession, onDone, accountId }: Props) {
   const [state, setState] = React.useState<OnboardingState>(() =>
-    start(profession),
+    start(profession, profileDraft.load(accountId).professionId === profession.id ? profileDraft.load(accountId).answers : {}),
   );
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -75,8 +76,8 @@ export function OnboardingChat({ profession, onDone }: Props) {
 
   // Черновик переживает перезагрузку: анкета длинная, терять её нельзя.
   React.useEffect(() => {
-    profileDraft.save(profession.id, state.answers);
-  }, [profession.id, state.answers]);
+    profileDraft.save(profession.id, state.answers, accountId);
+  }, [profession.id, state.answers, accountId]);
 
   React.useEffect(() => {
     if (state.current === null && !doneRef.current) {
