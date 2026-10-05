@@ -1,147 +1,83 @@
 'use client';
 
 import * as React from 'react';
-import { Spinner } from '@/components/ui/primitives';
+import { useRouter } from 'next/navigation';
+import { Button, Spinner } from '@/components/ui/primitives';
 import { WizardHeader, type ServerSync } from '@/components/ui/wizard-header';
-import {
-  BasedStep,
-  CheckStep,
-  ConsentStep,
-  CountriesStep,
-  DoneStep,
-  MaterialsStep,
-  QualificationStep,
-  UpgradeStep,
-  VideoStep,
-  type CProps,
-} from '@/components/candidate/steps';
+import { BasedStep, CheckStep, ConsentStep, CountriesStep, DoneStep, MaterialsStep, QualificationStep, UpgradeStep, VideoStep, type CProps } from '@/components/candidate/steps';
 import { useAuth } from '@/lib/auth/context';
-import {
-  C_STEP_INDEX,
-  C_STEP_TITLE,
-  C_STEP_TOTAL,
-  candidateDraft,
-  emptyCandidate,
-  type CStep,
-  type CandidateDraft,
-} from '@/lib/demo/candidate';
+import { useCandidate } from '@/lib/candidate/context';
+import { hydrateCandidate } from '@/lib/candidate/state';
+import { C_STEP_INDEX, C_STEP_TITLE, C_STEP_TOTAL, type CStep } from '@/lib/demo/candidate';
 import { canSyncToServer, syncCandidate, uploadCandidateFile, type CandidateFile } from '@/lib/demo/candidate-sync';
 import { syncError } from '@/lib/demo/employer-sync';
 import { cn } from '@/lib/utils';
 
-/**
- * Онбординг кандидата по брифу кандидата (см. lib/demo/candidate.ts).
- * Черновик сохраняется в браузере после каждого изменения и открывается на том
- * же шаге. При настоящем входе профиль и резюме уходят на сервер при переходе
- * между шагами, файлы — сразу при выборе (lib/demo/candidate-sync.ts).
- */
-
-/** После каких шагов отправляем профиль и резюме на сервер. */
 const SYNC_AFTER: CStep[] = ['based', 'countries', 'check', 'consent', 'qualification'];
-
-const BACK: Partial<Record<CStep, CStep>> = {
-  materials: 'based',
-  countries: 'materials',
-  check: 'countries',
-  upgrade: 'check',
-  consent: 'upgrade',
-  qualification: 'consent',
-  video: 'qualification',
-};
+const BACK: Partial<Record<CStep, CStep>> = { based: 'materials', countries: 'based', check: 'countries', upgrade: 'check', consent: 'upgrade', qualification: 'consent', video: 'qualification' };
 
 export default function CandidateOnboardingPage() {
   const { user } = useAuth();
-  const [draft, setDraft] = React.useState<CandidateDraft | null>(null);
-  const [saved, setSaved] = React.useState(true);
-  const touched = React.useRef(false);
-
-  // ?step=… — переход из «My Profile» сразу к нужному шагу (бриф, пункт 12:
-  // каждый пункт профиля кликабелен и ведёт в редактирование).
+  const router = useRouter();
+  const { draft, resume, loading, error, server, saved, status, update, saveNow, reload, refreshResume } = useCandidate();
+  const [fileServer, setFileServer] = React.useState<ServerSync>();
+  const [leaving, setLeaving] = React.useState(false);
+  const navigated = React.useRef(false);
   React.useEffect(() => {
-    const d = candidateDraft.load();
-    const s = new URLSearchParams(window.location.search).get('step');
-    setDraft(s && s in C_STEP_INDEX ? { ...d, step: s as CStep } : d);
-  }, []);
-  React.useEffect(() => {
-    if (draft && touched.current) setSaved(candidateDraft.save(draft));
-  }, [draft]);
-
-  const update = React.useCallback((fn: (d: CandidateDraft) => CandidateDraft) => {
-    touched.current = true;
-    setDraft((prev) => (prev ? fn(prev) : prev));
-  }, []);
-
-  const [server, setServer] = React.useState<ServerSync | undefined>(undefined);
-  const draftRef = React.useRef<CandidateDraft | null>(null);
-  draftRef.current = draft;
-  const nameRef = React.useRef({ first: '', last: '' });
-  nameRef.current = { first: user?.first_name ?? '', last: user?.last_name ?? '' };
+    if (loading || !draft || navigated.current) return;
+    navigated.current = true;
+    const step = new URLSearchParams(window.location.search).get('step');
+    if (step && step in C_STEP_INDEX) update((d) => ({ ...d, step: step as CStep }));
+    else if (status === 'completed' || (status === 'not_started' && resume?.aboutMe && user?.nationality && user?.current_location)) router.replace('/jobs');
+  }, [loading, draft, status, resume, user, update, router]);
 
   const run = React.useCallback(async (job: () => Promise<unknown>) => {
     if (!canSyncToServer()) return;
-    setServer('saving');
-    try {
-      await job();
-      setServer('saved');
-    } catch (e) {
-      setServer({ error: syncError(e), retry: () => void run(job) });
-    }
+    setFileServer('saving');
+    try { await job(); setFileServer('saved'); }
+    catch (e) { setFileServer({ error: syncError(e), retry: () => { void run(job).catch(() => undefined); } }); throw e; }
   }, []);
 
-  const go = React.useCallback(
-    (step: CStep) => {
-      const from = draftRef.current?.step;
-      update((d) => ({ ...d, step }));
-      window.scrollTo({ top: 0 });
-      if (from && SYNC_AFTER.includes(from) && draftRef.current) {
-        const d = draftRef.current;
-        void run(() => syncCandidate(d, nameRef.current));
-      }
-    },
-    [update, run],
-  );
-
-  const upload = React.useCallback(
-    (kind: CandidateFile, file: File) => void run(() => uploadCandidateFile(kind, file)),
-    [run],
-  );
-
-  if (!draft) {
-    return (
-      <div className="grid place-items-center py-24">
-        <Spinner />
-      </div>
-    );
-  }
+  const go = (step: CStep) => {
+    const snapshot = draft;
+    update((d) => ({ ...d, step }));
+    window.scrollTo({ top: 0 });
+    void run(async () => {
+      if (snapshot && SYNC_AFTER.includes(snapshot.step)) await syncCandidate(snapshot, { first: user?.first_name ?? '', last: user?.last_name ?? '' }, user?.id);
+      await saveNow();
+    }).catch(() => undefined);
+  };
+  const defer = async () => {
+    setLeaving(true);
+    try { await saveNow('deferred'); router.push('/jobs'); }
+    catch { setLeaving(false); }
+  };
+  if (loading) return <div className="grid place-items-center py-24"><Spinner /></div>;
+  if (!draft) return <div className="mx-auto max-w-xl space-y-4 px-5 py-12"><p role="alert" className="text-danger">{error}</p><Button onClick={() => void reload()}>Retry loading your profile</Button></div>;
 
   const props: CProps = {
-    draft,
-    update,
-    go,
+    draft, update, go,
+    accountId: user?.id,
     name: { first: user?.first_name ?? '', last: user?.last_name ?? '' },
-    upload,
+    resumeId: resume?.id ?? null,
+    onBuilt: refreshResume,
+    upload: (kind: CandidateFile, file: File) => run(() => uploadCandidateFile(kind, file)),
   };
   const n = C_STEP_INDEX[draft.step];
   const back = BACK[draft.step];
-
+  const sync = server && typeof server === 'object' ? server : fileServer ?? server;
   return (
     <div className={cn('flex flex-col', draft.step === 'check' && 'h-[calc(100dvh-5rem)] md:h-[100dvh]')}>
-      <WizardHeader
-        step={n}
-        total={C_STEP_TOTAL}
-        title={C_STEP_TITLE[n]}
-        saved={saved}
-        onBack={back ? () => go(back) : undefined}
-        server={server}
-        onRestart={() => {
-          candidateDraft.clear();
-          setDraft(emptyCandidate());
-        }}
-      />
-
+      <WizardHeader step={n} total={C_STEP_TOTAL} title={C_STEP_TITLE[n]} saved={saved} server={sync} onBack={back ? () => go(back) : undefined}
+        onRestart={() => { if (user) update(() => hydrateCandidate(null, user, resume)); }} />
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 pt-4 md:px-8">
+        <p className="text-sm text-text-secondary">You can pause and continue later.</p>
+        <Button variant="ghost" size="sm" disabled={leaving} onClick={() => void defer()}>{leaving ? 'Saving…' : 'Do later'}</Button>
+      </div>
+      {error && <div role="alert" className="mx-auto w-full max-w-6xl px-5 pt-4 text-sm text-danger md:px-8">{error} <button onClick={() => void reload()} className="font-semibold underline">Reload account copy</button></div>}
       <div key={draft.step} className="page-enter flex min-h-0 flex-1 flex-col">
-        {draft.step === 'based' && <BasedStep {...props} />}
         {draft.step === 'materials' && <MaterialsStep {...props} />}
+        {draft.step === 'based' && <BasedStep {...props} />}
         {draft.step === 'countries' && <CountriesStep {...props} />}
         {draft.step === 'check' && <CheckStep {...props} />}
         {draft.step === 'upgrade' && <UpgradeStep {...props} />}

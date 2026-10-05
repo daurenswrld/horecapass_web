@@ -22,6 +22,7 @@ import { notificationsApi } from '@/lib/api/notifications';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
+import { CandidateProvider } from '@/lib/candidate/context';
 import { cn } from '@/lib/utils';
 
 /**
@@ -214,7 +215,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="min-w-0 flex-1 pb-20 md:pb-0">
         <DemoBanner />
-        {children}
+        {user.role === 'APPLICANT' ? <CandidateProvider key={user.id}>{children}</CandidateProvider> : children}
       </main>
     </div>
     </ToastProvider>

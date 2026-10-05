@@ -43,6 +43,7 @@ import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { candidateApi } from '@/lib/api/candidate';
 import { CvBuilder } from './cv-builder';
 import { cn } from '@/lib/utils';
+import { afterMaterials } from '@/lib/candidate/state';
 
 export interface CProps {
   draft: CandidateDraft;
@@ -50,7 +51,10 @@ export interface CProps {
   go: (step: CStep) => void;
   name: { first: string; last: string };
   /** Файл — сразу на сервер (при настоящем входе). Статус показывает шапка. */
-  upload?: (kind: 'cv' | 'certificate' | 'video', file: File) => void;
+  upload?: (kind: 'cv' | 'certificate' | 'video', file: File) => Promise<void>;
+  resumeId?: number | null;
+  onBuilt?: () => Promise<void>;
+  accountId?: number;
 }
 
 function Continue({ children = 'Continue', className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -160,7 +164,7 @@ export function BasedStep({ draft, update, go }: CProps) {
           placeholder="City, country — e.g. Pokhara, Nepal"
         />
 
-        <Continue disabled={!draft.nationality || draft.location.trim().length < 2} onClick={() => go('materials')} />
+        <Continue disabled={!draft.nationality || draft.location.trim().length < 2} onClick={() => go('countries')} />
       </div>
 
       <Image
@@ -245,27 +249,39 @@ function FilePick({
  * без «Skip» — профиль не может остаться пустым. Нужно хотя бы резюме:
  * загруженное или собранное в конструкторе.
  */
-export function MaterialsStep({ draft, update, go, upload }: CProps) {
+export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, accountId }: CProps) {
   const [builtCv, setBuiltCv] = React.useState(false);
   const [letterOpen, setLetterOpen] = React.useState(false);
-  React.useEffect(() => setBuiltCv(!!profileDraft.load().professionId), []);
+  React.useEffect(() => { if (!canSyncToServer()) setBuiltCv(!!profileDraft.load(accountId).professionId); }, [accountId]);
   const set = (patch: Partial<CandidateDraft>) => update((d) => ({ ...d, ...patch }));
   // Настоящий вход — Smart CV builder с серверным ИИ; в демо — прежний конструктор.
   const live = canSyncToServer();
   const [builder, setBuilder] = React.useState<{ file: File | null } | null>(null);
   const [cvRaw, setCvRaw] = React.useState<File | null>(null);
   const hasCv = !!draft.cvFile || builtCv || !!draft.cvBuilt;
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const addCv = async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      await upload?.('cv', file);
+      set({ cvFile: file.name });
+      setCvRaw(file);
+      if (live) setBuilder({ file });
+    } catch { setUploadError('Your CV was not uploaded. Please choose the file again to retry.'); }
+    finally { setUploading(false); }
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-      <Title title="Create your CV or upload it" lead="Add what you have. Everything here is shown to employers only after you sign your consent." />
+      <Title title="Start with your CV" lead="Upload an existing CV or create one from scratch. Smart will help you fill in the missing details." />
+      <Image src="/landing/kitchen.webp" alt="A hospitality team working together" width={720} height={320} unoptimized className="h-24 w-full rounded-lg object-cover object-center sm:h-32" />
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Tile Icon={Upload} title="Upload CV" note={draft.cvFile ?? 'PDF, DOC or DOCX'} done={!!draft.cvFile}>
-          <FilePick label={draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.doc,.docx" onFiles={(n, f) => {
-              set({ cvFile: n[0] ?? null });
-              if (f[0]) upload?.('cv', f[0]);
-              setCvRaw(f[0] ?? null);
+        <Tile Icon={Upload} title="Upload existing CV" note={draft.cvFile ?? 'PDF or DOCX'} done={!!draft.cvFile}>
+          <FilePick label={uploading ? 'Uploading…' : draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.docx,.txt,image/*" onFiles={(n, f) => {
+              if (f[0] && !uploading) void addCv(f[0]);
             }}
           />
           {/* Созвон 29.09: загрузил резюме → ИИ задаёт вопросы и адаптирует под GCC. */}
@@ -283,7 +299,7 @@ export function MaterialsStep({ draft, update, go, upload }: CProps) {
 
         <Tile
           Icon={PenLine}
-          title="Create a CV"
+          title="Create from scratch"
           note={draft.cvBuilt ? 'Built with Smart and saved' : builtCv ? 'Started in the CV builder' : 'Build it in a short conversation'}
           done={builtCv || !!draft.cvBuilt}
         >
@@ -340,7 +356,7 @@ export function MaterialsStep({ draft, update, go, upload }: CProps) {
             multiple
             onFiles={(n, f) => {
               set({ certificates: [...draft.certificates, ...n.map((name) => ({ name, type: 'Other' as const }))] });
-              f.forEach((file) => upload?.('certificate', file));
+              f.forEach((file) => { void upload?.('certificate', file).catch(() => setUploadError('A certificate could not be uploaded. Keep the original file.')); });
             }}
           />
           {draft.certificates.length > 0 && (
@@ -379,20 +395,23 @@ export function MaterialsStep({ draft, update, go, upload }: CProps) {
       <DemoNotice
         what={
           canSyncToServer()
-            ? 'Your CV file and certificates are saved to your account. The certificate type, the cover letter file and the portfolio stay in this browser for now.'
+            ? 'Your CV file is saved to your account. Keep the original cover letter and portfolio files: file names alone do not upload these materials.'
             : 'Only file names are kept, in this browser: nothing is uploaded yet.'
         }
         endpoint="Certificate type on /api/resumes/my/certificates/, POST /api/resumes/my/<id>/portfolio/, cover letter file"
       />
 
-      <Continue disabled={!hasCv} onClick={() => go('countries')} />
+      {uploadError && <p role="alert" className="text-sm text-danger">{uploadError}</p>}
+      <Continue disabled={!hasCv || uploading} onClick={() => go(afterMaterials(draft))} />
       {!hasCv && <p className="text-sm text-text-secondary">Upload your CV or start the CV builder to continue.</p>}
       {builder && (
         <CvBuilder
           initialFile={builder.file}
+          initialResumeId={resumeId}
+          initialBuilt={!!draft.cvBuilt}
           onClose={(built) => {
             setBuilder(null);
-            if (built) set({ cvBuilt: true });
+            if (built) { set({ cvBuilt: true }); void onBuilt?.().catch(() => setUploadError('Your CV is saved, but could not be reloaded. Refresh to load the latest details.')); }
           }}
         />
       )}
@@ -603,9 +622,9 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
 
 /* 5. Согласие ---------------------------------------------------------------------------------- */
 
-export function ConsentStep({ go, name }: CProps) {
+export function ConsentStep({ go, name, accountId }: CProps) {
   const [signed, setSigned] = React.useState(false);
-  React.useEffect(() => setSigned(!!cvConsent.load().signedAt), []);
+  React.useEffect(() => setSigned(!!cvConsent.load(accountId).signedAt), [accountId]);
   const full = [name.first, name.last].filter(Boolean).join(' ');
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
@@ -712,7 +731,7 @@ export function VideoStep({ draft, update, go, upload }: CProps) {
               const f = e.target.files?.[0];
               if (!f) return;
               update((d) => ({ ...d, video: 'added', videoFile: f.name }));
-              upload?.('video', f);
+              void upload?.('video', f).catch(() => update((d) => ({ ...d, video: null, videoFile: null })));
             }}
           />
         </label>

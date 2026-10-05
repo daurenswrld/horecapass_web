@@ -7,6 +7,7 @@ import { SignaturePad } from '@/components/employer/signature-pad';
 import { Button, Card, Field } from '@/components/ui/primitives';
 import { cvConsent, type CvConsent } from '@/lib/demo/storage';
 import { PRIVACY_URL } from '@/lib/legal';
+import { useAuth } from '@/lib/auth/context';
 
 /**
  * Публикация резюме — только после согласия, подписанного от руки.
@@ -22,19 +23,20 @@ const CONSENT_LINES = [
   'I understand I can withdraw this consent at any time in Settings.',
 ];
 export function PublishConsent({ defaultName, onSigned }: { defaultName: string; onSigned?: () => void }) {
+  const { user } = useAuth();
   const [c, setC] = React.useState<CvConsent | null>(null);
 
   React.useEffect(() => {
-    const loaded = cvConsent.load();
+    const loaded = cvConsent.load(user?.id);
     setC({ ...loaded, signer: loaded.signer || defaultName });
-  }, [defaultName]);
+  }, [defaultName, user?.id]);
 
   if (!c) return null;
 
   const set = (patch: Partial<CvConsent>) => {
     const next = { ...c, ...patch };
     setC(next);
-    cvConsent.save(next);
+    cvConsent.save(next, user?.id);
   };
 
   if (c.signedAt) {

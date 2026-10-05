@@ -41,12 +41,12 @@ export default function ProfilePage() {
   // Черновик читаем только в браузере, иначе серверный рендер разойдётся
   // с клиентским.
   React.useEffect(() => {
-    const d = profileDraft.load();
+    const d = profileDraft.load(user?.id);
     setProfessionId(d.professionId);
     setAnswers(d.answers);
     setMode(d.professionId ? 'cv' : 'pick');
     setLoaded(true);
-  }, []);
+  }, [user?.id]);
 
   const profession = getProfession(professionId);
   const candidateName =
@@ -67,9 +67,10 @@ export default function ProfilePage() {
       <div className="flex h-[calc(100dvh-5rem)] flex-col md:h-[100dvh]">
         <OnboardingChat
           profession={profession}
+          accountId={user?.id}
           onDone={(state) => {
             setAnswers(state.answers);
-            profileDraft.save(profession.id, state.answers);
+            profileDraft.save(profession.id, state.answers, user?.id);
             setMode('cv');
           }}
         />
@@ -108,7 +109,7 @@ export default function ProfilePage() {
                     onClick={() => {
                       setProfessionId(p.id);
                       setAnswers({});
-                      profileDraft.save(p.id, {});
+                      profileDraft.save(p.id, {}, user?.id);
                       setMode('chat');
                     }}
                     className="rounded-lg focus-ring"
@@ -152,9 +153,9 @@ export default function ProfilePage() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                profileDraft.clear();
+                profileDraft.clear(user?.id);
                 // Согласие подписано под прежнее резюме — новое подписывается заново.
-                cvConsent.clear();
+                cvConsent.clear(user?.id);
                 setProfessionId(null);
                 setAnswers({});
                 setMode('pick');

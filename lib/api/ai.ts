@@ -1,5 +1,5 @@
 import { API } from './endpoints';
-import { BASE_URL, refreshTokens, tokens } from './client';
+import { BASE_URL, http, refreshTokens, tokens } from './client';
 
 /**
  * Серверный ИИ со стримингом ответа (SSE). Тот же, что в мобилке.
@@ -91,6 +91,10 @@ async function stream(
 }
 
 export const aiApi = {
+  cvHistory: () => http.get<{ history: AiMessage[]; resume_id: number | null }>('/api/ai/cv-builder/history/'),
+  saveCvHistory: (history: AiMessage[], resumeId: number | null) => http.post('/api/ai/cv-builder/history/', {
+    history: history.slice(-30).map(({ role, text }) => ({ role, text })), resume_id: resumeId,
+  }),
   /** Конструктор вакансии: вопросы, варианты ответа, черновик. */
   vacancyBuilder(messages: AiMessage[], onDelta: (text: string) => void, signal?: AbortSignal) {
     return stream(API.ai.vacancyBuilderStream, { messages }, onDelta, signal);

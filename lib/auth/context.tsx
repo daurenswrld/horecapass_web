@@ -80,5 +80,5 @@ export function useAuth(): AuthState {
 export function homeFor(user: CurrentUser | null): string {
   if (!user) return '/';
   if (user.role === 'ADMIN') return '/admin';
-  return isCompany(user.role) ? '/company/vacancies' : '/jobs';
+  return isCompany(user.role) ? '/company/vacancies' : '/onboarding';
 }

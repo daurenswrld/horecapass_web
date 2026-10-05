@@ -23,6 +23,7 @@ export interface ServerResume {
   position: string;
   languages: string[];
   aboutMe: string;
+  hasContent?: boolean;
 }
 
 const RESUME_MINE = '/api/resumes/my/';
@@ -36,6 +37,7 @@ function parseResume(j: Json): ServerResume {
     position: String(j.position ?? j.title ?? ''),
     languages: Array.isArray(j.languages) ? j.languages.map(String) : [],
     aboutMe: String(j.about_me ?? ''),
+    hasContent: !!String(j.about_me ?? '').trim() || ['skills', 'experiences', 'educations'].some((key) => Array.isArray(j[key]) && j[key].length > 0),
   };
 }
 
@@ -76,6 +78,11 @@ export const candidateApi = {
       if (e instanceof ApiError && e.status === 404) return null;
       throw e;
     }
+  },
+
+  async resume(id: number): Promise<ServerResume> {
+    if (!Number.isSafeInteger(id) || id <= 0) throw new ApiError(502, id, 'Invalid resume id');
+    return parseResume(await http.get<Json>(`${RESUME_MINE}${id}/`));
   },
 
   /** Создаёт резюме или обновляет существующее. Опыт и образование не трогает. */

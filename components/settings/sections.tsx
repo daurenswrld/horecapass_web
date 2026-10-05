@@ -88,9 +88,10 @@ export function VoiceSection() {
  * а не просто строка в тексте согласия».
  */
 export function ConsentSection() {
+  const { user } = useAuth();
   const [c, setC] = React.useState<CvConsent | null>(null);
   const [confirm, setConfirm] = React.useState(false);
-  React.useEffect(() => setC(cvConsent.load()), []);
+  React.useEffect(() => setC(cvConsent.load(user?.id)), [user?.id]);
   if (!c) return null;
 
   return (
@@ -110,8 +111,8 @@ export function ConsentSection() {
                 <Button
                   variant="danger"
                   onClick={() => {
-                    cvConsent.clear();
-                    setC(cvConsent.load());
+                    cvConsent.clear(user?.id);
+                    setC(cvConsent.load(user?.id));
                     setConfirm(false);
                   }}
                 >
