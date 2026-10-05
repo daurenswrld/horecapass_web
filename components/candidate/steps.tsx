@@ -2,6 +2,7 @@
 
 import { SuccessMark } from '@/components/ui/motion';
 import * as React from 'react';
+import { StripeTestCheckout } from '@/components/billing/test-checkout';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -538,7 +539,7 @@ export function buildCv(d: CandidateDraft, name: { first: string; last: string }
  */
 const CV_DOWNLOAD_PRICE = '$8';
 
-export function UpgradeStep({ draft, update, go, name }: CProps) {
+export function UpgradeStep({ draft, update, go, name, resumeId }: CProps) {
   const choose = (upgrade: 'yes' | 'no') => {
     update((d) => ({ ...d, upgrade }));
     go('consent');
@@ -597,6 +598,7 @@ export function UpgradeStep({ draft, update, go, name }: CProps) {
         what={`The preview is assembled from your answers in the browser; Smart would rewrite the full CV. Downloading the PDF costs ${CV_DOWNLOAD_PRICE}, but no payment is taken yet: payment needs the server.`}
         endpoint="Stripe checkout for the CV download + GET /api/resumes/my/<id>/pdf/ after payment"
       />
+      {live && <StripeTestCheckout plan="cv_download" resourceId={resumeId} />}
 
       <div className="flex flex-wrap gap-2">
         {live ? (

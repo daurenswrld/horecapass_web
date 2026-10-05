@@ -33,6 +33,7 @@ import { useAssistant } from '@/lib/demo/assistant';
 import { CompanyAvatar, CompanyProfileCard, PhotoHeader, VacancyCard } from './cards';
 import { Composer, MessageBubble, Thread, Typing } from './chat';
 import { SignaturePad } from './signature-pad';
+import { StripeTestCheckout } from '@/components/billing/test-checkout';
 import {
   COMPANY_SIZES,
   HIRING_STAGES,
@@ -1275,6 +1276,15 @@ export function PaymentStep({ draft, update, go, server }: StepProps) {
   const picked = draft.plan ?? 'bundle';
   const [publishing, setPublishing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const testDraft = React.useRef<Promise<number> | null>(null);
+  const prepareTestDraft = () => {
+    if (draft.serverVacancyId) return Promise.resolve(draft.serverVacancyId);
+    testDraft.current ??= saveVacancyDraft(draft).then((id) => {
+      update((d) => ({ ...d, serverVacancyId: id }));
+      return id;
+    }).catch((e) => { testDraft.current = null; throw e; });
+    return testDraft.current;
+  };
 
   // Настоящий вход (вариант «б», 30.09): платёжки ещё нет — на запуске
   // публикуем бесплатно и по-настоящему, тарифы показываем как будущие.
@@ -1326,6 +1336,8 @@ export function PaymentStep({ draft, update, go, server }: StepProps) {
           ))}
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
+        <StripeTestCheckout plan="single" prepareResource={prepareTestDraft} />
+        <StripeTestCheckout plan="bundle" prepareResource={prepareTestDraft} />
         <Continue onClick={publishFree} disabled={publishing}>
           {publishing ? 'Publishing…' : 'Publish for free'}
         </Continue>
