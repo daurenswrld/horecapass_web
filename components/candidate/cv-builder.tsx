@@ -8,6 +8,7 @@ import { aiApi, fileToBase64, plainAiText, type AiMessage } from '@/lib/api/ai';
 import type { ChatMessage } from '@/lib/demo/employer';
 import { extractCvText } from '@/lib/cv-text';
 import { candidateApi } from '@/lib/api/candidate';
+import { candidateRoleContext } from '@/lib/candidate/roles';
 
 /**
  * Smart CV builder — разговор с серверным ИИ (/api/ai/cv-builder/stream/),
@@ -33,7 +34,7 @@ interface Turn extends ChatMessage {
   attached?: string;
 }
 
-export function CvBuilder({ initialFile, initialResumeId = null, initialBuilt = false, onClose }: { initialFile?: File | null; initialResumeId?: number | null; initialBuilt?: boolean; onClose: (built: boolean) => void }) {
+export function CvBuilder({ initialFile, initialResumeId = null, initialBuilt = false, targetRoles = [], onClose }: { initialFile?: File | null; initialResumeId?: number | null; initialBuilt?: boolean; targetRoles?: string[]; onClose: (built: boolean) => void }) {
   const [messages, setMessages] = React.useState<Turn[]>([{ id: id(), from: 'assistant', text: GREETING }]);
   const [typing, setTyping] = React.useState(false);
   const [options, setOptions] = React.useState<string[]>([]);
@@ -67,14 +68,21 @@ export function CvBuilder({ initialFile, initialResumeId = null, initialBuilt = 
       setOptions([]);
       // Картинку отдаём как есть; из PDF/DOCX достаём текст сами — сервер
       // на проде вложения пока не читает (см. lib/cv-text.ts).
-      const attached = raw ? await extractCvText(raw) : null;
-      if (raw && !attached && !raw.type.startsWith('image/')) {
+      const readableDocument = !!raw && (raw.type === 'application/pdf' || raw.name.toLowerCase().endsWith('.pdf') || /\.(png|jpe?g|webp|gif)$/i.test(raw.name));
+      if (readableDocument && raw.size > 1_000_000) {
+        setError('Please use a PDF or image under 1 MB for Smart. Your original CV remains saved to your account.');
+        return;
+      }
+      let attached: string | null = null;
+      try { attached = raw && !readableDocument ? await extractCvText(raw) : null; }
+      catch (e) { setError(e instanceof Error ? e.message : 'Could not read this CV.'); return; }
+      if (raw && !attached && !readableDocument) {
         setError('We could not read this CV. Try a DOCX, a PDF with selectable text, or a clear image. Your uploaded file is still saved to your account.');
         return;
       }
       let images: string[] | undefined;
-      try { images = raw && raw.type.startsWith('image/') ? [await fileToBase64(raw)] : undefined; }
-      catch { setError('Could not read this image. Please attach it again.'); return; }
+      try { images = raw && readableDocument ? [await fileToBase64(raw)] : undefined; }
+      catch { setError('Could not read this document. Please attach it again.'); return; }
       const mine: Turn = { id: id(), from: 'user', text, file: fileName, images, attached: attached ?? undefined };
       const all = retry ? history.current : [...history.current, mine];
       history.current = all;
@@ -104,9 +112,11 @@ My current CV (${m.file ?? 'file'}):
 ${m.attached}`.slice(0, 7900) : m.text,
             ...(m.images ? { images: m.images } : {}),
           })).slice(-30);
+        const context = candidateRoleContext(targetRoles);
+        const withContext: AiMessage[] = context ? [{ role: 'user', text: context }, ...payload.slice(-29)] : payload;
         await aiApi.saveCvHistory(payload, resumeId);
         const res = await aiApi.cvBuilder(
-          payload,
+          withContext,
           (t) => {
             show(t);
           },
@@ -128,7 +138,7 @@ ${m.attached}`.slice(0, 7900) : m.text,
         setTyping(false);
       }
     },
-    [resumeId],
+    [resumeId, targetRoles],
   );
 
   // Пришли с загруженным файлом — сразу отдаём его ИИ.

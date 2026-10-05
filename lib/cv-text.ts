@@ -22,18 +22,23 @@ export async function extractCvText(file: File, limit = LIMIT): Promise<string |
     else if (file.type.startsWith('text/') || name.endsWith('.txt')) text = await file.text();
     if (!text) return null;
     const clean = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-    return clean ? clean.slice(0, limit) : null;
-  } catch {
+    if (clean.length > limit) throw new CvReadLimitError('This CV has more text than the current conversation can accept. Upload a shorter version or a PDF of up to 1 MB; the original file remains saved.');
+    return clean || null;
+  } catch (error) {
+    if (error instanceof CvReadLimitError) throw error;
     return null;
   }
 }
+
+export class CvReadLimitError extends Error {}
 
 async function fromPdf(file: File): Promise<string> {
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const pages: string[] = [];
-  for (let i = 1; i <= Math.min(doc.numPages, 10); i++) {
+  if (doc.numPages > 100) throw new CvReadLimitError('This CV has more than 100 pages. Please use a shorter document for the conversation.');
+  for (let i = 1; i <= doc.numPages; i++) {
     const content = await (await doc.getPage(i)).getTextContent();
     let line = '';
     const lines: string[] = [];

@@ -59,6 +59,8 @@ export interface CandidateDraft {
   checkDone: string[];
   upgrade: 'yes' | 'no' | null;
   role: string | null;
+  /** Desired positions, including a candidate's own job title. */
+  targetRoles: string[];
   years: number | null;
   /** Кандидат запросил квалификацию — вопросы генерирует сервер. */
   qualRequested: boolean;
@@ -85,6 +87,7 @@ export function emptyCandidate(): CandidateDraft {
     checkDone: [],
     upgrade: null,
     role: null,
+    targetRoles: [],
     years: null,
     qualRequested: false,
     video: null,
@@ -107,6 +110,7 @@ export const candidateDraft = {
       return {
         ...base,
         ...d,
+        targetRoles: Array.isArray(d.targetRoles) ? d.targetRoles.filter((r): r is string => typeof r === 'string' && !!r.trim()).slice(0, 10) : [],
         certificates: Array.isArray(d.certificates) ? d.certificates : [],
         portfolio: Array.isArray(d.portfolio) ? d.portfolio : [],
         countries: Array.isArray(d.countries) ? d.countries : [],

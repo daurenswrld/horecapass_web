@@ -43,6 +43,7 @@ import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { candidateApi } from '@/lib/api/candidate';
 import { CvBuilder } from './cv-builder';
+import { CandidateRolePicker } from './role-picker';
 import { cn } from '@/lib/utils';
 import { afterMaterials } from '@/lib/candidate/state';
 
@@ -216,11 +217,13 @@ function FilePick({
   label,
   accept,
   multiple,
+  disabled,
   onFiles,
 }: {
   label: string;
   accept: string;
   multiple?: boolean;
+  disabled?: boolean;
   onFiles: (names: string[], files: File[]) => void;
 }) {
   return (
@@ -231,6 +234,7 @@ function FilePick({
         type="file"
         accept={accept}
         multiple={multiple}
+        disabled={disabled}
         className="sr-only"
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
@@ -260,6 +264,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
   const [builder, setBuilder] = React.useState<{ file: File | null } | null>(null);
   const [cvRaw, setCvRaw] = React.useState<File | null>(null);
   const hasCv = !!draft.cvFile || builtCv || !!draft.cvBuilt;
+  const targetRoles = draft.targetRoles?.length ? draft.targetRoles : draft.role ? [draft.role] : [];
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const addCv = async (file: File) => {
@@ -277,12 +282,13 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
       <Title title="Start with your CV" lead="Upload an existing CV or create one from scratch. Smart will help you fill in the missing details." />
+      <CandidateRolePicker value={targetRoles} onChange={(roles) => set({ targetRoles: roles, role: roles[0] ?? null })} />
       <Image src="/landing/kitchen.webp" alt="A hospitality team working together" width={720} height={320} unoptimized className="h-24 w-full rounded-lg object-cover object-center sm:h-32" />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Tile Icon={Upload} title="Upload existing CV" note={draft.cvFile ?? 'PDF or DOCX'} done={!!draft.cvFile}>
-          <FilePick label={uploading ? 'Uploading…' : draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.docx,.txt,image/*" onFiles={(n, f) => {
-              if (f[0] && !uploading) void addCv(f[0]);
+          <FilePick disabled={uploading || !targetRoles.length} label={uploading ? 'Uploading…' : draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.docx,.txt,image/*" onFiles={(n, f) => {
+              if (f[0] && !uploading && targetRoles.length) void addCv(f[0]);
             }}
           />
           {/* Созвон 29.09: загрузил резюме → ИИ задаёт вопросы и адаптирует под GCC. */}
@@ -308,6 +314,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
             <button
               type="button"
               onClick={() => setBuilder({ file: null })}
+              disabled={!targetRoles.length}
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring"
             >
               {draft.cvBuilt ? 'Open the Smart CV builder' : 'Build it with Smart'}
@@ -403,13 +410,14 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
       />
 
       {uploadError && <p role="alert" className="text-sm text-danger">{uploadError}</p>}
-      <Continue disabled={!hasCv || uploading} onClick={() => go(afterMaterials(draft))} />
+      <Continue disabled={!hasCv || uploading || !targetRoles.length} onClick={() => go(afterMaterials(draft))} />
       {!hasCv && <p className="text-sm text-text-secondary">Upload your CV or start the CV builder to continue.</p>}
       {builder && (
         <CvBuilder
           initialFile={builder.file}
           initialResumeId={resumeId}
           initialBuilt={!!draft.cvBuilt}
+          targetRoles={targetRoles}
           onClose={(built) => {
             setBuilder(null);
             if (built) { set({ cvBuilt: true }); void onBuilt?.().catch(() => setUploadError('Your CV is saved, but could not be reloaded. Refresh to load the latest details.')); }
