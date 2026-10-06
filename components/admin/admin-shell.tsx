@@ -54,6 +54,7 @@ const NAV: NavItem[] = [
   { href: '/admin/feed', label: 'Daily feed', Icon: ClipboardList },
   { href: '/admin/vacancies', label: 'Vacancies', Icon: Briefcase },
   { href: '/admin/people', label: 'People', Icon: Users },
+  { href: '/admin/qualifications', label: 'Qualifications', Icon: ClipboardList },
   { href: '/admin/knowledge', label: 'Assistant', Icon: Bot },
   { href: '/admin/tickets', label: 'Support', Icon: LifeBuoy },
   { href: '/admin/managers', label: 'Managers', Icon: UserCog, needs: 'manage_staff' },

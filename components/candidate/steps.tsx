@@ -44,6 +44,7 @@ import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { candidateApi } from '@/lib/api/candidate';
 import { CvBuilder } from './cv-builder';
 import { CandidateRolePicker } from './role-picker';
+export { QualificationStep } from './qualification';
 import { cn } from '@/lib/utils';
 import { afterMaterials } from '@/lib/candidate/state';
 
@@ -281,14 +282,14 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-      <Title title="Start with your CV" lead="Upload an existing CV or create one from scratch. Smart will help you fill in the missing details." />
-      <CandidateRolePicker value={targetRoles} onChange={(roles) => set({ targetRoles: roles, role: roles[0] ?? null })} />
+      <Title title="Create your candidate profile" lead="Upload an existing CV or build your profile in a short conversation. Smart will help fill in missing details. You will confirm your next positions after creating your profile." />
+      <details className="rounded-lg border border-line p-4"><summary className="cursor-pointer font-semibold text-heading">Already know your desired positions? (optional)</summary><div className="mt-4"><CandidateRolePicker value={targetRoles} onChange={(roles) => set({ targetRoles: roles })} /></div></details>
       <Image src="/landing/kitchen.webp" alt="A hospitality team working together" width={720} height={320} unoptimized className="h-24 w-full rounded-lg object-cover object-center sm:h-32" />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Tile Icon={Upload} title="Upload existing CV" note={draft.cvFile ?? 'PDF or DOCX'} done={!!draft.cvFile}>
-          <FilePick disabled={uploading || !targetRoles.length} label={uploading ? 'Uploading…' : draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.docx,.txt,image/*" onFiles={(n, f) => {
-              if (f[0] && !uploading && targetRoles.length) void addCv(f[0]);
+          <FilePick disabled={uploading} label={uploading ? 'Uploading…' : draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.docx,.txt,image/*" onFiles={(n, f) => {
+              if (f[0] && !uploading) void addCv(f[0]);
             }}
           />
           {/* Созвон 29.09: загрузил резюме → ИИ задаёт вопросы и адаптирует под GCC. */}
@@ -314,7 +315,6 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
             <button
               type="button"
               onClick={() => setBuilder({ file: null })}
-              disabled={!targetRoles.length}
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring"
             >
               {draft.cvBuilt ? 'Open the Smart CV builder' : 'Build it with Smart'}
@@ -410,7 +410,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
       />
 
       {uploadError && <p role="alert" className="text-sm text-danger">{uploadError}</p>}
-      <Continue disabled={!hasCv || uploading || !targetRoles.length} onClick={() => go(afterMaterials(draft))} />
+      <Continue disabled={!hasCv || uploading} onClick={() => go(afterMaterials(draft))} />
       {!hasCv && <p className="text-sm text-text-secondary">Upload your CV or start the CV builder to continue.</p>}
       {builder && (
         <CvBuilder
@@ -645,85 +645,6 @@ export function ConsentStep({ go, name, accountId }: CProps) {
 }
 
 /* 6. Квалификация --------------------------------------------------------------------------------- */
-
-/**
- * Квалификация. Кандидат выбирает роль и стаж; 8 вопросов под них по брифу
- * (пункт 8) генерирует Smart на сервере — каждый раз новые, чтобы их нельзя
- * было выучить. Поэтому вопросов в коде сайта нет: без сервера этот шаг
- * честно говорит, что вопросы придут, когда он будет подключён.
- */
-export function QualificationStep({ draft, update, go }: CProps) {
-  if (draft.qualRequested && !isKitchen(draft.role)) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-        <Title
-          title="Your 8 questions are on their way"
-          lead={`Smart prepares them for a ${draft.role?.toLowerCase() ?? 'hospitality'} role with ${draft.years ?? 0}+ years of experience — different for every candidate. Answer by typing or by voice.`}
-        />
-        <DemoNotice
-          what="Qualification questions are generated on the server and it isn't connected yet, so there are no questions to show in this preview."
-          endpoint="POST /api/qualification/generate/ (role, level → 8 questions) and POST /api/qualification/answers/"
-        />
-        <div className="flex flex-wrap gap-2">
-          <Continue onClick={() => go('video')}>Continue to the video intro</Continue>
-          <Button variant="secondary" size="lg" onClick={() => update((d) => ({ ...d, qualRequested: false }))}>
-            Change role
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const kitchen = isKitchen(draft.role);
-  return (
-    <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-      <Title title="Get Verified" lead="8 quick questions about your work — a Verified star stands out to every employer." />
-      <div>
-        <p className="text-sm font-medium text-text-secondary">Your role</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {[...QUALIFIED_ROLES, ...KITCHEN_ROLES].map((r) => (
-            <ChoiceChip key={r} selected={draft.role === r} onClick={() => update((d) => ({ ...d, role: r }))}>
-              {r}
-            </ChoiceChip>
-          ))}
-        </div>
-      </div>
-      <div className="max-w-xs">
-        <Field
-          label="Years in this role"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          value={draft.years ?? ''}
-          onChange={(e) => update((d) => ({ ...d, years: e.target.value === '' ? null : Number(e.target.value) }))}
-        />
-      </div>
-
-      {kitchen ? (
-        <>
-          {/* Бриф кандидата, пункт 8: кухня квалификацию не проходит — её
-              закрывают портфолио и опыт в конкретных заведениях. */}
-          <div className="relative pt-6">
-            <Bubble>
-              <span className="flex items-start gap-2">
-                <ChefHat size={18} aria-hidden className="mt-0.5 shrink-0 text-accent-text" />
-                Kitchen roles skip the questions — your dish photos and where you&apos;ve cooked say more than a quiz.
-              </span>
-            </Bubble>
-          </div>
-          <Continue onClick={() => go('video')} />
-        </>
-      ) : (
-        <Continue
-          disabled={!draft.role || draft.years === null}
-          onClick={() => update((d) => ({ ...d, qualRequested: true }))}
-        >
-          Get my 8 questions
-        </Continue>
-      )}
-    </div>
-  );
-}
 
 export function VideoStep({ draft, update, go, upload }: CProps) {
   return (
