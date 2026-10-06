@@ -17,7 +17,7 @@ export function hydrateCandidate(saved: Partial<CandidateDraft> | null, user: Cu
     countries: d.countries.length ? d.countries : text(user.target_country).split(',').map((c) => c.trim()).filter(Boolean),
     cvFile: d.cvFile || fileName || null,
     cvBuilt: d.cvBuilt || !!resume?.hasContent || !!resume?.aboutMe.trim(),
-    role: d.role || (resume?.title !== 'Hospitality professional' ? resume?.position : null) || null,
+    role: (resume?.hasContent && resume.title !== 'Hospitality professional' ? resume.position : null) || d.role || (resume?.title !== 'Hospitality professional' ? resume?.position : null) || null,
     check: {
       ...d.check,
       ...(!d.check.languages && resume?.languages.length ? { languages: resume.languages.join(', ') } : {}),

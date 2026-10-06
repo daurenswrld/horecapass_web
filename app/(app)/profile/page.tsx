@@ -15,6 +15,8 @@ import { activeQuestions, getProfession, PROFESSIONS, type Answers } from '@/lib
 import { cvConsent, profileDraft } from '@/lib/demo/storage';
 import { useAuth } from '@/lib/auth/context';
 import { plural } from '@/lib/utils';
+import { canSyncToServer } from '@/lib/demo/candidate-sync';
+import { SavedProfile } from '@/components/candidate/saved-profile';
 
 /**
  * Profile кандидата — раздел, который заказчица просила переделать.
@@ -59,6 +61,8 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  if (canSyncToServer()) return <SavedProfile />;
 
   if (mode === 'chat' && profession) {
     return (

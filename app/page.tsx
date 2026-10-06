@@ -301,7 +301,7 @@ function ForEmployers() {
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-24">
         <Reveal className="lg:order-2">
           <Portrait
-            src="/landing/kitchen.webp"
+            src="/landing/kitchen-documentary.webp"
             alt="A restaurant team at work in the kitchen"
             line="Got it — let's set you up to start receiving matched candidates."
           />
@@ -422,7 +422,7 @@ function Trust() {
   // приглушённые чёрно-белые фотографии команды, особенно там, где продажи».
   return (
     <section className="relative overflow-hidden bg-ink">
-      <Image src="/landing/restaurant.webp" alt="" fill unoptimized className="object-cover grayscale" />
+      <Image src="/landing/kitchen-documentary.webp" alt="" fill unoptimized className="object-cover object-[center_65%] grayscale" />
       <div aria-hidden className="absolute inset-0 bg-ink opacity-75" />
       <div className="relative mx-auto max-w-4xl px-6 py-24 text-center lg:px-10 lg:py-32">
         <p className="text-3xl font-bold leading-tight tracking-tight text-white lg:text-5xl">

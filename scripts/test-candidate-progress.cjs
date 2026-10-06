@@ -82,3 +82,16 @@ test('progress API sends the version and scoped workflow state, including a defe
   assert.equal(calls[1][2].status, 'deferred');
   assert.equal(calls[1][2].draft.step, 'check');
 });
+
+test('starting qualification does not count as completing its answers', () => {
+  const d = { ...emptyCandidate(), role: 'Waiter', qualRequested: true };
+  assert.equal(profileProgress(d, false).items.find((i) => i.key === 'qualification').done, false);
+  assert.equal(profileProgress(d, false, true).items.find((i) => i.key === 'qualification').done, true);
+  const chefSeekingFOH = { ...d, role: 'Chef', targetRoles: ['Chef', 'Waiter'] };
+  assert.equal(profileProgress(chefSeekingFOH, false).items.find((i) => i.key === 'qualification').done, false);
+});
+
+test('profile check asks only for missing facts', () => {
+  const gaps = draftModule.profileGaps({ ...emptyCandidate(), years: 4, check: { languages: 'English', achievement: 'Trained three team members', certs: 'HACCP' } });
+  assert.equal(gaps.length, 0);
+});

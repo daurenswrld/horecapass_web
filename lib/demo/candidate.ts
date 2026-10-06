@@ -190,7 +190,7 @@ export interface Gap {
  */
 export function profileGaps(d: CandidateDraft): Gap[] {
   const gaps: Gap[] = [];
-  if (!d.certificates.length)
+  if (!d.certificates.length && !d.check.certs)
     gaps.push({ key: 'certs', question: 'What certifications do you have, if any?', suggestion: 'HACCP Level 2 and a barista course.' });
   if (d.years === null)
     gaps.push({
@@ -198,12 +198,12 @@ export function profileGaps(d: CandidateDraft): Gap[] {
       question: "Can you tell me roughly how many years you've worked in this role?",
       suggestion: 'About 4 years.',
     });
-  gaps.push({
+  if (!d.check.languages) gaps.push({
     key: 'languages',
     question: 'Which languages do you speak, and how well?',
     suggestion: 'English fluent, Arabic conversational, Hindi native.',
   });
-  gaps.push({
+  if (!d.check.achievement) gaps.push({
     key: 'achievement',
     question: "What's one result from work you're proud of? A number helps — covers per shift, a rating, a team you trained.",
     suggestion: 'I served up to 120 covers a shift and trained 3 new waiters.',
@@ -273,7 +273,7 @@ export interface ProgressItem {
  * Прогресс готовности профиля — тот же расчёт в ленте вакансий и в профиле
  * (бриф кандидата, пункты 9 и 12), с конкретным следующим действием.
  */
-export function profileProgress(d: CandidateDraft, consentSigned: boolean): { pct: number; next: ProgressItem | null; items: ProgressItem[] } {
+export function profileProgress(d: CandidateDraft, consentSigned: boolean, qualificationComplete = false): { pct: number; next: ProgressItem | null; items: ProgressItem[] } {
   const items: ProgressItem[] = [
     { key: 'cv', label: 'Resume / CV', done: !!d.cvFile || !!d.cvBuilt, weight: 20, action: 'Upload or create your CV' },
     { key: 'based', label: 'Nationality and location', done: !!d.nationality && !!d.location, weight: 10, action: 'Tell us where you are based' },
@@ -282,11 +282,11 @@ export function profileProgress(d: CandidateDraft, consentSigned: boolean): { pc
     {
       key: 'qualification',
       label: 'Qualification',
-      done: isKitchen(d.role) || d.qualRequested,
+      done: isKitchen(d.role) && !(d.targetRoles ?? []).some((r) => !isKitchen(r)) || qualificationComplete,
       weight: 20,
-      action: 'Answer 8 quick questions to get Verified',
+      action: 'Complete your qualification answers',
     },
-    { key: 'video', label: 'Video intro', done: d.video === 'added', weight: 10, action: 'Finish your video intro to get the Verified star' },
+    { key: 'video', label: 'Video intro', done: d.video === 'added', weight: 10, action: 'Add your video introduction' },
     { key: 'certificates', label: 'Certificates', done: d.certificates.length > 0, weight: 5, action: 'Add your certificates' },
     { key: 'portfolio', label: 'Portfolio', done: d.portfolio.length > 0, weight: 5, action: 'Add photos of your work' },
     { key: 'references', label: 'References', done: d.references.length > 0, weight: 5, action: 'Add a reference from a past job' },

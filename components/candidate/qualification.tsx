@@ -6,12 +6,15 @@ import { CandidateRolePicker } from './role-picker';
 import { VoiceButton } from '@/components/onboarding/answer-input';
 import { speechRecognitionAvailable } from '@/lib/demo/storage';
 import { qualificationApi, type QualificationSession } from '@/lib/api/qualification';
+import { ApiError } from '@/lib/api/client';
 import { candidateApi } from '@/lib/api/candidate';
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { isKitchen, KITCHEN_ROLES } from '@/lib/demo/candidate';
 import type { CProps } from './steps';
+import { useCandidate } from '@/lib/candidate/context';
 
 export function QualificationStep({ draft, update, go }: CProps) {
+  const { refreshQualification } = useCandidate();
   const [roles, setRoles] = React.useState<string[]>([]);
   const [recommendation, setRecommendation] = React.useState<string | null>(null);
   const [session, setSession] = React.useState<QualificationSession | null>(null);
@@ -58,13 +61,13 @@ export function QualificationStep({ draft, update, go }: CProps) {
 
   const act = async (job: () => Promise<QualificationSession>) => {
     setBusy(true); setError(null);
-    try { setSession(await job()); }
-    catch { setError('Could not finish this request. Your saved answers are kept. Retry, or reload your account copy.'); }
+    try { setSession(await job()); await refreshQualification(); }
+    catch (e) { const detail = e instanceof ApiError && e.payload && typeof e.payload === 'object' ? (e.payload as { detail?: unknown }).detail : null; setError(typeof detail === 'string' ? detail : 'Could not finish this request. Your saved answers are kept. Retry, or reload your account copy.'); }
     finally { setBusy(false); }
   };
   const start = () => void act(async () => {
     const saved = await qualificationApi.start(role, level);
-    update((d) => ({ ...d, role, qualRequested: true }));
+    update((d) => ({ ...d, qualRequested: true }));
     return saved;
   });
   const submit = () => {
@@ -79,19 +82,19 @@ export function QualificationStep({ draft, update, go }: CProps) {
   };
 
   return <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-    <div><h1 className="text-3xl font-bold text-heading">Your next role</h1><p className="mt-2 text-text-secondary">Your experience and your next position can be different. Confirm the positions you want, then qualify for one of them.</p></div>
+    <div><h1 className="text-3xl font-bold text-heading">{session ? 'Your qualification' : 'Your next role'}</h1><p className="mt-2 text-text-secondary">{session ? 'Eight practical questions for your chosen position. Your answers are saved as you continue.' : 'Your experience and your next position can be different. Confirm the positions you want, then qualify for one of them.'}</p></div>
     {error && <div role="alert" className="space-y-2 rounded-lg border border-line p-4"><p className="text-danger">{error}</p><Button variant="secondary" disabled={busy} onClick={() => void load()}>Reload saved session</Button></div>}
     {loading ? <p role="status">Loading your saved progress…</p> : !canSyncToServer() ? <p>Sign in to save your qualification answers to your account.</p> : session ? <>
       <p className="text-sm text-text-secondary">Qualifying for: <strong>{session.role}</strong> · Level {session.level}</p>
       {question ? <>
         <div className="flex items-center justify-between gap-3 text-sm"><span>Question {session.answers.length + 1} of {session.questions.length}</span><span aria-label="Elapsed answer time">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</span></div>
-        <progress className="h-2 w-full accent-[rgb(var(--accent-strong))]" value={session.answers.length} max={8} aria-label="Qualification progress" />
+        <div className="h-2 overflow-hidden rounded-full bg-surface-alt" role="progressbar" aria-valuenow={session.answers.length} aria-valuemin={0} aria-valuemax={8} aria-label="Qualification progress"><div className="h-full rounded-full bg-accent-strong dark:bg-accent" style={{ width: `${session.answers.length / 8 * 100}%` }} /></div>
         <h2 className="text-xl font-semibold text-heading">{question.text}</h2>
         <p className="text-sm text-text-secondary">Answer by text or dictate your answer. Please use your own words and do not use AI-generated answers.</p>
         <label className="block"><span className="sr-only">Your answer</span><textarea rows={6} maxLength={4000} value={text} disabled={busy} onChange={(e) => setText(e.target.value)} onPaste={() => { telemetry.current.paste = true; }} className="w-full rounded-lg border border-line-strong bg-surface p-4 text-text-primary focus-ring" /></label>
-        {voiceSupported && <VoiceButton key={question.id} disabled={busy} onText={(value) => { setText(value); setMode('voice_transcript'); }} />}
+        {voiceSupported && <VoiceButton key={question.id} disabled={busy} onText={(value) => { setText(value.slice(0, 4000)); setMode('voice_transcript'); }} />}
         <p className="text-xs text-text-secondary">Voice dictation creates editable text; the audio recording is not stored. We record time, pasted-text events and time away from this tab to help review answers. These signals do not determine your result.</p>
-        <Button disabled={busy || !text.trim()} onClick={submit}>{busy ? 'Saving…' : 'Save answer and continue'}</Button>
+        <Button className="w-full sm:w-auto" disabled={busy || !text.trim()} onClick={submit}>{busy ? 'Saving…' : 'Save answer and continue'}</Button>
       </> : <>
         <h2 className="text-xl font-semibold text-heading">Your eight answers are saved</h2>
         <p className="text-text-secondary">{session.result ? 'Your qualification is awaiting review. You can add your video introduction while it is checked.' : 'Ask Smart to review your answers. Your profile stays available while the result is checked.'}</p>
@@ -103,7 +106,7 @@ export function QualificationStep({ draft, update, go }: CProps) {
       {recommendation && <div className="rounded-lg border border-line bg-surface p-4"><p className="text-sm text-text-secondary">Position from your saved CV</p><p className="font-semibold text-heading">{recommendation}</p><p className="mt-1 text-sm text-text-secondary">Keep this direction or choose a different next role. It does not limit your choices.</p><Button variant="secondary" onClick={() => update((d) => ({ ...d, targetRoles: [...new Set([...d.targetRoles, recommendation])].slice(0, 10) }))}>Add to my desired positions</Button></div>}
       <CandidateRolePicker choices={[...roles, ...KITCHEN_ROLES]} value={selected} onChange={(values) => { update((d) => ({ ...d, targetRoles: values })); if (!values.includes(role)) setRole(''); }} />
       <div><p className="mb-2 font-semibold text-heading">Which position would you like to qualify for now?</p><div className="flex flex-wrap gap-2">{selected.map((value) => <ChoiceChip key={value} selected={value === role} onClick={() => setRole(value)}>{value}</ChoiceChip>)}</div></div>
-      {role && isKitchen(role) ? <><p>Kitchen roles use your experience and portfolio. There is no approved kitchen question bank yet.</p><Button onClick={() => { update((d) => ({ ...d, role })); go('video'); }}>Continue to video introduction</Button></> : <>
+      {role && isKitchen(role) ? <><p>Kitchen roles use your experience and portfolio. There is no approved kitchen question bank yet.</p><Button onClick={() => go('video')}>Continue to video introduction</Button></> : <>
         {role && !roles.includes(role) && <p className="text-text-secondary">The question bank has no questions for “{role}” yet. Keep your desired position, or select a listed FOH role for this qualification.</p>}
         <label className="block space-y-2"><span className="font-semibold text-heading">Level for this position</span><select value={level} onChange={(e) => setLevel(Number(e.target.value))} className="w-full rounded border border-line-strong bg-surface p-3 text-text-primary"><option value={0}>Choose a level</option><option value={1}>Entry — 0–1 years</option><option value={2}>Experienced — 2–4 years</option><option value={3}>Senior / team lead</option></select></label>
         <Button disabled={busy || !level || !roles.includes(role) || !selected.includes(role)} onClick={start}>{busy ? 'Preparing…' : 'Start my eight questions'}</Button>

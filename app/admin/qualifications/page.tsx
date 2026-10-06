@@ -21,7 +21,7 @@ export default function QualificationReviews() {
       {data.error && <ErrorNote message={data.error} onRetry={data.reload} />}
       {data.loading && <p role="status">Loading reviews…</p>}
       {data.data?.results.length === 0 && <p>No completed qualifications awaiting review.</p>}
-      {data.data?.results.map((row) => <article key={row.id} className="space-y-4 rounded-lg border border-line bg-surface p-5">
+      {data.data?.results.map((row) => <article key={row.id} className="min-w-0 space-y-4 break-words rounded-lg border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold text-heading">{row.name} · {row.role} · Level {row.level}</h2>
         <p className="text-sm text-text-secondary">{row.evaluation.overall_verdict ? `Assessment: ${row.evaluation.overall_verdict} · Framework ${row.evaluation.framework_version} · ${row.evaluation.criteria_source}` : 'Answers saved; Smart assessment not available yet.'}</p>
         {row.evaluation.employer_summary && <p>{row.evaluation.employer_summary}</p>}

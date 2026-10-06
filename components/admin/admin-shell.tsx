@@ -167,6 +167,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </aside>
 
           <main className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 md:hidden">
+              <Link href="/admin" aria-label="HorecaPass admin home" className="min-w-0 rounded focus-ring"><Wordmark height={20} /></Link>
+              <ThemeToggle />
+            </div>
             {/* На узком экране — полоса разделов сверху: боковой колонке там нет места. */}
             <nav
               aria-label="Admin sections"
