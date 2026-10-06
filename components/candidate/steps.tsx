@@ -43,8 +43,13 @@ import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { candidateApi } from '@/lib/api/candidate';
 import { CvBuilder } from './cv-builder';
+import { CandidateRolePicker } from './role-picker';
+import { SavedMaterials } from './saved-materials';
+import { SavedCv } from './saved-cv';
+export { QualificationStep } from './qualification';
 import { cn } from '@/lib/utils';
 import { afterMaterials } from '@/lib/candidate/state';
+import { useCandidate } from '@/lib/candidate/context';
 
 export interface CProps {
   draft: CandidateDraft;
@@ -169,7 +174,7 @@ export function BasedStep({ draft, update, go }: CProps) {
       </div>
 
       <Image
-        src="/landing/kitchen.webp"
+        src="/landing/kitchen-documentary.webp"
         alt="A restaurant team at work"
         width={720}
         height={1209}
@@ -216,21 +221,24 @@ function FilePick({
   label,
   accept,
   multiple,
+  disabled,
   onFiles,
 }: {
   label: string;
   accept: string;
   multiple?: boolean;
+  disabled?: boolean;
   onFiles: (names: string[], files: File[]) => void;
 }) {
   return (
-    <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent focus-within:ring-2 focus-within:ring-[rgb(var(--accent-focus))]">
+    <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent focus-within:ring-2 focus-within:ring-[rgb(var(--accent-focus))]">
       <Upload size={15} aria-hidden />
       {label}
       <input
         type="file"
         accept={accept}
         multiple={multiple}
+        disabled={disabled}
         className="sr-only"
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
@@ -260,6 +268,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
   const [builder, setBuilder] = React.useState<{ file: File | null } | null>(null);
   const [cvRaw, setCvRaw] = React.useState<File | null>(null);
   const hasCv = !!draft.cvFile || builtCv || !!draft.cvBuilt;
+  const targetRoles = draft.targetRoles?.length ? draft.targetRoles : draft.role ? [draft.role] : [];
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const addCv = async (file: File) => {
@@ -276,12 +285,13 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-      <Title title="Start with your CV" lead="Upload an existing CV or create one from scratch. Smart will help you fill in the missing details." />
-      <Image src="/landing/kitchen.webp" alt="A hospitality team working together" width={720} height={320} unoptimized className="h-24 w-full rounded-lg object-cover object-center sm:h-32" />
+      <Title title="Create your candidate profile" lead="Upload an existing CV or build your profile in a short conversation. Smart will help fill in missing details. You will confirm your next positions after creating your profile." />
+      <details className="rounded-lg border border-line p-4"><summary className="cursor-pointer font-semibold text-heading">Already know your desired positions? (optional)</summary><div className="mt-4"><CandidateRolePicker value={targetRoles} onChange={(roles) => set({ targetRoles: roles })} /></div></details>
+      <Image src="/landing/kitchen-documentary.webp" alt="Chefs working together in a restaurant kitchen" width={720} height={1080} unoptimized className="h-24 w-full rounded-lg object-cover object-[center_65%] sm:h-32" />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Tile Icon={Upload} title="Upload existing CV" note={draft.cvFile ?? 'PDF or DOCX'} done={!!draft.cvFile}>
-          <FilePick label={uploading ? 'Uploading…' : draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.docx,.txt,image/*" onFiles={(n, f) => {
+          <FilePick disabled={uploading} label={uploading ? 'Uploading…' : draft.cvFile ? 'Replace' : 'Choose a file'} accept=".pdf,.docx,.txt,image/*" onFiles={(n, f) => {
               if (f[0] && !uploading) void addCv(f[0]);
             }}
           />
@@ -328,7 +338,6 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
           done={!!draft.coverLetterFile || draft.coverLetterText.trim().length > 20}
         >
           <div className="flex flex-wrap gap-2">
-            <FilePick label="Upload" accept=".pdf,.doc,.docx,.txt" onFiles={(n) => set({ coverLetterFile: n[0] ?? null })} />
             <button
               type="button"
               onClick={() => setLetterOpen((v) => !v)}
@@ -338,6 +347,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
               Write
             </button>
           </div>
+          <div className="mt-3"><SavedMaterials kind="cover_letter" update={update} /></div>
           {letterOpen && (
             <textarea
               rows={5}
@@ -355,9 +365,16 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
             label="Add files"
             accept=".pdf,image/*"
             multiple
-            onFiles={(n, f) => {
-              set({ certificates: [...draft.certificates, ...n.map((name) => ({ name, type: 'Other' as const }))] });
-              f.forEach((file) => { void upload?.('certificate', file).catch(() => setUploadError('A certificate could not be uploaded. Keep the original file.')); });
+            disabled={uploading}
+            onFiles={(_, files) => {
+              void (async () => {
+                setUploading(true); setUploadError(null);
+                try { for (const file of files) {
+                  await upload?.('certificate', file);
+                  update((d) => ({ ...d, certificates: [...d.certificates, { name: file.name, type: 'Other' }] }));
+                } } catch { setUploadError('A certificate was not saved. Files already uploaded are kept; choose the remaining files to retry.'); }
+                finally { setUploading(false); }
+              })();
             }}
           />
           {draft.certificates.length > 0 && (
@@ -379,7 +396,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
                       <option key={t}>{t}</option>
                     ))}
                   </select>
-                  <button type="button" aria-label="Remove" onClick={() => set({ certificates: draft.certificates.filter((_, j) => j !== i) })} className="rounded p-1 text-text-secondary hover:text-danger focus-ring">
+                  <button type="button" aria-label={`Remove ${c.name} from this checklist`} title="Removes from this checklist; the uploaded account file is retained" onClick={() => update((d) => ({ ...d, certificates: d.certificates.filter((_, j) => j !== i) }))} className="grid h-11 w-11 shrink-0 place-items-center rounded text-text-secondary hover:text-danger focus-ring">
                     <X size={15} />
                   </button>
                 </li>
@@ -389,18 +406,12 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
         </Tile>
 
         <Tile Icon={Images} title="Portfolio" note={draft.portfolio.length ? `${draft.portfolio.length} files` : 'Photos or videos of your work'} done={draft.portfolio.length > 0}>
-          <FilePick label="Add photos or videos" accept="image/*,video/*" multiple onFiles={(n) => set({ portfolio: [...draft.portfolio, ...n] })} />
+          <p className="mb-3 text-sm text-text-secondary">Optional: dishes for kitchen roles, drinks for bar roles, or work examples and achievements for service and management roles. If you want several positions, you can include examples for each.</p>
+          <SavedMaterials kind="portfolio" update={update} />
         </Tile>
       </div>
 
-      <DemoNotice
-        what={
-          canSyncToServer()
-            ? 'Your CV file is saved to your account. Keep the original cover letter and portfolio files: file names alone do not upload these materials.'
-            : 'Only file names are kept, in this browser: nothing is uploaded yet.'
-        }
-        endpoint="Certificate type on /api/resumes/my/certificates/, POST /api/resumes/my/<id>/portfolio/, cover letter file"
-      />
+      {!live && <DemoNotice what="Sign in to upload your materials to your account." />}
 
       {uploadError && <p role="alert" className="text-sm text-danger">{uploadError}</p>}
       <Continue disabled={!hasCv || uploading} onClick={() => go(afterMaterials(draft))} />
@@ -410,6 +421,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
           initialFile={builder.file}
           initialResumeId={resumeId}
           initialBuilt={!!draft.cvBuilt}
+          targetRoles={targetRoles}
           onClose={(built) => {
             setBuilder(null);
             if (built) { set({ cvBuilt: true }); void onBuilt?.().catch(() => setUploadError('Your CV is saved, but could not be reloaded. Refresh to load the latest details.')); }
@@ -454,7 +466,7 @@ export function CountriesStep({ draft, update, go }: CProps) {
 /* 4. Smart-проверка профиля ------------------------------------------------------------------ */
 
 export function CheckStep({ draft, update, go }: CProps) {
-  const gaps = profileGaps({ ...draft, years: draft.checkDone.includes('years') ? draft.years : null });
+  const gaps = profileGaps(draft);
   const current = gaps.find((g) => !draft.checkDone.includes(g.key));
 
   const answer = (key: string, text: string | null) =>
@@ -540,6 +552,7 @@ export function buildCv(d: CandidateDraft, name: { first: string; last: string }
 const CV_DOWNLOAD_PRICE = '$8';
 
 export function UpgradeStep({ draft, update, go, name, resumeId }: CProps) {
+  const { resume, refreshResume } = useCandidate();
   const choose = (upgrade: 'yes' | 'no') => {
     update((d) => ({ ...d, upgrade }));
     go('consent');
@@ -570,13 +583,13 @@ export function UpgradeStep({ draft, update, go, name, resumeId }: CProps) {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
       <Title
-        title="Your CV is ready for GCC employers"
-        lead="Smart turned your answers into a polished resume in the format employers here expect. It stays on your profile for free, and employers see it when you apply."
+        title="Review your profile"
+        lead="Check the details saved to your profile before continuing. Downloading a CV is optional and does not block your qualification."
       />
 
       <div className="grid gap-5 lg:grid-cols-[0.7fr_1.3fr]">
         <div className="rounded-lg border border-line bg-surface p-5">
-          <p className="text-sm font-semibold uppercase tracking-wide text-text-secondary">Before</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-text-secondary">Your source</p>
           <ul className="mt-3 space-y-1.5 text-sm text-text-primary">
             <li>{draft.cvFile ?? 'CV from the builder'}</li>
             {Object.entries(draft.check).map(([k, v]) => (
@@ -587,17 +600,14 @@ export function UpgradeStep({ draft, update, go, name, resumeId }: CProps) {
           </ul>
         </div>
         <div>
-          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-accent-text">After</p>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-accent-text">{live ? 'Saved profile' : 'Browser preview'}</p>
           <div className="overflow-hidden rounded-lg border border-line shadow-lift">
-            <CvTemplate data={buildCv(draft, name)} />
+            {live ? resume ? <SavedCv resume={resume} draft={draft} name={name} /> : <div className="space-y-3 p-5"><p>Your saved profile is not loaded yet.</p><Button variant="secondary" onClick={() => void refreshResume().catch(() => setDlError('Could not reload your profile. Please retry.'))}>Reload profile</Button></div> : <CvTemplate data={buildCv(draft, name)} />}
           </div>
         </div>
       </div>
 
-      <DemoNotice
-        what={`The preview is assembled from your answers in the browser; Smart would rewrite the full CV. Downloading the PDF costs ${CV_DOWNLOAD_PRICE}, but no payment is taken yet: payment needs the server.`}
-        endpoint="Stripe checkout for the CV download + GET /api/resumes/my/<id>/pdf/ after payment"
-      />
+      {!live && <DemoNotice what="This preview uses your browser answers. Sign in to build and download your saved CV." />}
       {live && <StripeTestCheckout plan="cv_download" resourceId={resumeId} />}
 
       <div className="flex flex-wrap gap-2">
@@ -638,86 +648,9 @@ export function ConsentStep({ go, name, accountId }: CProps) {
 
 /* 6. Квалификация --------------------------------------------------------------------------------- */
 
-/**
- * Квалификация. Кандидат выбирает роль и стаж; 8 вопросов под них по брифу
- * (пункт 8) генерирует Smart на сервере — каждый раз новые, чтобы их нельзя
- * было выучить. Поэтому вопросов в коде сайта нет: без сервера этот шаг
- * честно говорит, что вопросы придут, когда он будет подключён.
- */
-export function QualificationStep({ draft, update, go }: CProps) {
-  if (draft.qualRequested && !isKitchen(draft.role)) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-        <Title
-          title="Your 8 questions are on their way"
-          lead={`Smart prepares them for a ${draft.role?.toLowerCase() ?? 'hospitality'} role with ${draft.years ?? 0}+ years of experience — different for every candidate. Answer by typing or by voice.`}
-        />
-        <DemoNotice
-          what="Qualification questions are generated on the server and it isn't connected yet, so there are no questions to show in this preview."
-          endpoint="POST /api/qualification/generate/ (role, level → 8 questions) and POST /api/qualification/answers/"
-        />
-        <div className="flex flex-wrap gap-2">
-          <Continue onClick={() => go('video')}>Continue to the video intro</Continue>
-          <Button variant="secondary" size="lg" onClick={() => update((d) => ({ ...d, qualRequested: false }))}>
-            Change role
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const kitchen = isKitchen(draft.role);
-  return (
-    <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
-      <Title title="Get Verified" lead="8 quick questions about your work — a Verified star stands out to every employer." />
-      <div>
-        <p className="text-sm font-medium text-text-secondary">Your role</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {[...QUALIFIED_ROLES, ...KITCHEN_ROLES].map((r) => (
-            <ChoiceChip key={r} selected={draft.role === r} onClick={() => update((d) => ({ ...d, role: r }))}>
-              {r}
-            </ChoiceChip>
-          ))}
-        </div>
-      </div>
-      <div className="max-w-xs">
-        <Field
-          label="Years in this role"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          value={draft.years ?? ''}
-          onChange={(e) => update((d) => ({ ...d, years: e.target.value === '' ? null : Number(e.target.value) }))}
-        />
-      </div>
-
-      {kitchen ? (
-        <>
-          {/* Бриф кандидата, пункт 8: кухня квалификацию не проходит — её
-              закрывают портфолио и опыт в конкретных заведениях. */}
-          <div className="relative pt-6">
-            <Bubble>
-              <span className="flex items-start gap-2">
-                <ChefHat size={18} aria-hidden className="mt-0.5 shrink-0 text-accent-text" />
-                Kitchen roles skip the questions — your dish photos and where you&apos;ve cooked say more than a quiz.
-              </span>
-            </Bubble>
-          </div>
-          <Continue onClick={() => go('video')} />
-        </>
-      ) : (
-        <Continue
-          disabled={!draft.role || draft.years === null}
-          onClick={() => update((d) => ({ ...d, qualRequested: true }))}
-        >
-          Get my 8 questions
-        </Continue>
-      )}
-    </div>
-  );
-}
-
 export function VideoStep({ draft, update, go, upload }: CProps) {
+  const [uploading, setUploading] = React.useState(false);
+  const [error, setError] = React.useState('');
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 md:px-8 lg:py-12">
       <Title title="Add a short video intro" lead="Optional. 30–60 seconds: who you are and what you do. Not speaking on camera won't count against you." />
@@ -729,11 +662,16 @@ export function VideoStep({ draft, update, go, upload }: CProps) {
             type="file"
             accept="video/*"
             className="sr-only"
-            onChange={(e) => {
+            disabled={uploading}
+            onChange={async (e) => {
               const f = e.target.files?.[0];
+              e.target.value = '';
               if (!f) return;
-              update((d) => ({ ...d, video: 'added', videoFile: f.name }));
-              void upload?.('video', f).catch(() => update((d) => ({ ...d, video: null, videoFile: null })));
+              if (f.size > 4 * 1024 * 1024) { setError('Choose a video up to 4 MB. Compress longer recordings before uploading.'); return; }
+              setUploading(true); setError('');
+              try { await upload?.('video', f); update((d) => ({ ...d, video: 'added', videoFile: f.name })); }
+              catch { setError('Your video was not saved. Your previous video is kept; choose the file again to retry.'); }
+              finally { setUploading(false); }
             }}
           />
         </label>
@@ -744,14 +682,18 @@ export function VideoStep({ draft, update, go, upload }: CProps) {
           </span>
         )}
       </div>
+      {uploading && <p role="status" className="text-sm text-text-secondary">Saving your video…</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <p className="text-sm text-text-secondary">Video files up to 4 MB.</p>
       <p className="text-sm text-text-secondary">You can also record it in the HorecaPass app — it syncs to the same account.</p>
       <div className="flex flex-wrap gap-2">
-        <Continue disabled={!draft.videoFile} onClick={() => go('done')}>
+        <Continue disabled={!draft.videoFile || uploading} onClick={() => go('done')}>
           Finish
         </Continue>
         <Button
           variant="secondary"
           size="lg"
+          disabled={uploading}
           onClick={() => {
             update((d) => ({ ...d, video: d.videoFile ? 'added' : 'later' }));
             go('done');
@@ -765,16 +707,11 @@ export function VideoStep({ draft, update, go, upload }: CProps) {
 }
 
 export function DoneStep({ draft }: CProps) {
-  const kitchen = isKitchen(draft.role);
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-5 py-12 text-center md:px-8 lg:py-20">
       <SuccessMark />
       <h1 className="text-3xl font-bold tracking-tight text-heading lg:text-4xl">Your profile is ready</h1>
-      <p className="text-lg leading-relaxed text-text-secondary">
-        {draft.video === 'added' || kitchen
-          ? 'Once your qualification and video intro are reviewed, the Verified star appears on your profile.'
-          : 'Add your video intro any time to complete the Verified star.'}
-      </p>
+      <p className="text-lg leading-relaxed text-text-secondary">Your saved profile is ready to use. You can return to your qualification and video introduction at any time. A Verified badge requires a separate review.</p>
       {/* При настоящем входе профиль уже на сервере — плашка только для демо. */}
       {!canSyncToServer() && (
         <DemoNotice className="text-left" what="Nothing was sent to the server: this walkthrough keeps everything in the browser." />

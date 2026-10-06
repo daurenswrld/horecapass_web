@@ -24,6 +24,9 @@ export interface ServerResume {
   languages: string[];
   aboutMe: string;
   hasContent?: boolean;
+  skills?: string[];
+  experiences?: { company_name: string; position: string; start_date: string; end_date: string | null; description: string | null }[];
+  educations?: { institution: string; degree: string; field_of_study: string | null; start_date: string; end_date: string | null }[];
 }
 
 const RESUME_MINE = '/api/resumes/my/';
@@ -37,6 +40,9 @@ function parseResume(j: Json): ServerResume {
     position: String(j.position ?? j.title ?? ''),
     languages: Array.isArray(j.languages) ? j.languages.map(String) : [],
     aboutMe: String(j.about_me ?? ''),
+    skills: Array.isArray(j.skills) ? j.skills.flatMap((s) => s && typeof s === 'object' && typeof s.name === 'string' ? [s.name] : typeof s === 'string' ? [s] : []) : [],
+    experiences: Array.isArray(j.experiences) ? j.experiences.filter((e) => e && typeof e === 'object').map((e) => ({ company_name: String(e.company_name ?? ''), position: String(e.position ?? ''), start_date: String(e.start_date ?? ''), end_date: e.end_date ? String(e.end_date) : null, description: e.description ? String(e.description) : null })) : [],
+    educations: Array.isArray(j.educations) ? j.educations.filter((e) => e && typeof e === 'object').map((e) => ({ institution: String(e.institution ?? ''), degree: String(e.degree ?? ''), field_of_study: e.field_of_study ? String(e.field_of_study) : null, start_date: String(e.start_date ?? ''), end_date: e.end_date ? String(e.end_date) : null })) : [],
     hasContent: !!String(j.about_me ?? '').trim() || ['skills', 'experiences', 'educations'].some((key) => Array.isArray(j[key]) && j[key].length > 0),
   };
 }

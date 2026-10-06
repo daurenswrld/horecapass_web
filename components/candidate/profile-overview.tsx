@@ -14,8 +14,8 @@ import { useCandidate } from '@/lib/candidate/context';
 /** Прогресс профиля — один компонент для ленты вакансий и профиля (бриф, пункты 9 и 12). */
 export function ProfileProgress({ className }: { className?: string }) {
   const { user } = useAuth();
-  const { draft } = useCandidate();
-  const state = draft ? profileProgress(draft, !!cvConsent.load(user?.id).signedAt) : null;
+  const { draft, qualification } = useCandidate();
+  const state = draft ? profileProgress(draft, !!cvConsent.load(user?.id).signedAt, !!qualification && qualification.answers.length === qualification.questions.length) : null;
   if (!state) return null;
 
   return (
@@ -60,7 +60,7 @@ function hrefFor(key: string): string {
  */
 export function ProfileOverview() {
   const { user } = useAuth();
-  const { draft: d, update, error, reload } = useCandidate();
+  const { draft: d, update, error, reload, qualification, qualificationError } = useCandidate();
   const [signed, setSigned] = React.useState(false);
   const [refDraft, setRefDraft] = React.useState('');
   React.useEffect(() => {
@@ -76,12 +76,12 @@ export function ProfileOverview() {
   const rows: { label: string; status: string; add?: boolean; href: string }[] = [
     {
       label: 'Qualification',
-      status: qual === 'pending' ? 'Waiting for questions' : qual === 'not-needed' ? 'Not needed for kitchen roles' : 'Add',
+      status: qualificationError ? 'Status unavailable — retry' : qualification ? qualification.result ? 'Awaiting review' : qualification.answers.length === qualification.questions.length ? 'Answers saved — request review' : `${qualification.answers.length} of ${qualification.questions.length} answers saved` : qual === 'not-needed' ? 'Not needed for kitchen roles' : 'Start qualification',
       add: qual === 'not-started',
       href: '/onboarding?step=qualification',
     },
     { label: 'Video Intro', status: d.video === 'added' ? 'Added' : 'Add', add: d.video !== 'added', href: '/onboarding?step=video' },
-    { label: 'Resume / CV', status: d.cvFile ?? 'Built below', href: '#cv' },
+    { label: 'Resume / CV', status: d.cvFile ?? (d.cvBuilt ? 'Saved profile' : 'Add'), add: !d.cvBuilt && !d.cvFile, href: d.cvBuilt ? '#cv' : '/onboarding?step=materials' },
     {
       label: 'Cover Letter',
       status: d.coverLetterFile ?? (d.coverLetterText ? 'Written' : 'Add'),
@@ -170,7 +170,7 @@ export function ProfileOverview() {
               onChange={(e) => setRefDraft(e.target.value)}
               placeholder="e.g. Maria Lopez, F&B Manager at Rixos — +971 50 …"
               aria-label="Add a reference"
-              className="h-10 flex-1 rounded border border-line-strong bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus-ring"
+              className="h-11 min-w-0 flex-1 rounded border border-line-strong bg-surface px-3 text-sm text-text-primary placeholder:text-text-tertiary focus-ring"
             />
             <button type="submit" disabled={!refDraft.trim()} className="rounded-full border border-line-strong px-4 text-sm font-semibold text-text-primary hover:border-accent focus-ring disabled:opacity-40">
               Add

@@ -55,3 +55,11 @@ test('malformed ids cannot issue a write to a NaN endpoint', async () => {
     assert.equal(calls.length, 1);
   }
 });
+
+test('CV preview preserves actual skills, work and education from the saved resume', async () => {
+  const { api } = client({ id: 12, title: 'Waiter', skills: [{ name: 'Table service' }], experiences: [{ company_name: 'Restaurant', position: 'Waiter', start_date: '2022-01-01', description: 'Trained colleagues' }], educations: [{ institution: 'College', degree: 'Diploma', start_date: '2020-01-01' }] });
+  const r = await api.myResume();
+  assert.equal(r.skills[0], 'Table service');
+  assert.equal(r.experiences[0].description, 'Trained colleagues');
+  assert.equal(r.educations[0].degree, 'Diploma');
+});

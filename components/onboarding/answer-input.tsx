@@ -59,6 +59,7 @@ export function VoiceButton({
   disabled?: boolean;
 }) {
   const [listening, setListening] = React.useState(false);
+  const [voiceError, setVoiceError] = React.useState('');
   const recRef = React.useRef<SpeechRecognitionLike | null>(null);
   const lang = useVoiceLang();
 
@@ -69,6 +70,7 @@ export function VoiceButton({
       recRef.current?.stop();
     };
   }, []);
+  React.useEffect(() => { if (disabled) { recRef.current?.stop(); setListening(false); } }, [disabled]);
 
   const toggle = () => {
     if (listening) {
@@ -76,8 +78,9 @@ export function VoiceButton({
       setListening(false);
       return;
     }
+    setVoiceError('');
     const rec = createRecognition(lang);
-    if (!rec) return;
+    if (!rec) { setVoiceError('Voice dictation is unavailable in this browser. Please type your answer.'); return; }
     recRef.current = rec;
     rec.onresult = (e) => {
       let text = "";
@@ -85,14 +88,14 @@ export function VoiceButton({
         text += e.results[i][0].transcript;
       onText(text);
     };
-    rec.onerror = () => setListening(false);
+    rec.onerror = () => { setListening(false); setVoiceError('Dictation could not continue. Check microphone access, or type your answer.'); };
     rec.onend = () => setListening(false);
-    rec.start();
-    setListening(true);
+    try { rec.start(); setListening(true); }
+    catch { setListening(false); setVoiceError('Dictation could not start. Please type your answer.'); }
   };
 
   return (
-    <span className="inline-flex shrink-0 items-center gap-1">
+    <span className="inline-flex min-w-0 flex-wrap items-center gap-1">
       {/* Язык распознавания. Во время записи не меняется — браузер
           применяет его только при старте. */}
       <select
@@ -122,6 +125,7 @@ export function VoiceButton({
         {listening ? <MicOff size={18} /> : <Mic size={18} />}
         <span className="hidden sm:inline">{listening ? "Stop" : "Voice"}</span>
       </Button>
+      {voiceError && <span role="alert" className="w-full text-sm text-danger">{voiceError}</span>}
     </span>
   );
 }

@@ -8,6 +8,7 @@ import { candidateProgressApi, type ProgressStatus } from '@/lib/api/candidate-p
 import { candidateDraft, type CandidateDraft } from '@/lib/demo/candidate';
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { hydrateCandidate } from './state';
+import { qualificationApi, type QualificationSession } from '@/lib/api/qualification';
 import type { ServerSync } from '@/components/ui/wizard-header';
 
 type Status = Exclude<ProgressStatus, 'not_started'>;
@@ -23,6 +24,9 @@ interface CandidateState {
   saveNow: (status?: Status) => Promise<void>;
   reload: () => Promise<void>;
   refreshResume: () => Promise<void>;
+  qualification: QualificationSession | null;
+  qualificationError: boolean;
+  refreshQualification: () => Promise<void>;
 }
 const Context = React.createContext<CandidateState | null>(null);
 const metaKey = (id: number) => `hp_candidate_progress_meta:${id}`;
@@ -34,6 +38,8 @@ export function CandidateProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [draft, setDraft] = React.useState<CandidateDraft | null>(null);
   const [resume, setResume] = React.useState<ServerResume | null>(null);
+  const [qualification, setQualification] = React.useState<QualificationSession | null>(null);
+  const [qualificationError, setQualificationError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [server, setServer] = React.useState<ServerSync>();
@@ -47,6 +53,20 @@ export function CandidateProvider({ children }: { children: React.ReactNode }) {
   const queue = React.useRef(Promise.resolve());
   const alive = React.useRef(true);
   const requests = React.useRef(new AbortController());
+  const loadSequence = React.useRef(0);
+  const qualificationSequence = React.useRef(0);
+  const refreshQualification = React.useCallback(async () => {
+    const sequence = ++qualificationSequence.current;
+    if (!user || !canSyncToServer()) { setQualification(null); setQualificationError(false); return; }
+    try { const data = await qualificationApi.load(); if (alive.current && sequence === qualificationSequence.current) { setQualification(data.session); setQualificationError(false); } }
+    catch { if (alive.current && sequence === qualificationSequence.current) setQualificationError(true); }
+  }, [user]);
+  React.useEffect(() => {
+    void refreshQualification();
+    const refresh = () => { void refreshQualification(); };
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [refreshQualification]);
   React.useEffect(() => {
     alive.current = true;
     if (requests.current.signal.aborted) requests.current = new AbortController();
@@ -62,6 +82,8 @@ export function CandidateProvider({ children }: { children: React.ReactNode }) {
 
   const load = React.useCallback(async (discardLocal = false) => {
     if (!user) return;
+    const sequence = ++loadSequence.current;
+    const signal = requests.current.signal;
     setLoading(true);
     setError(null);
     try {
@@ -75,8 +97,8 @@ export function CandidateProvider({ children }: { children: React.ReactNode }) {
         setStatus(statusRef.current);
         return;
       }
-      const [progress, latestResume] = await Promise.all([candidateProgressApi.load(requests.current.signal), candidateApi.myResume()]);
-      if (!alive.current) return;
+      const [progress, latestResume] = await Promise.all([candidateProgressApi.load(signal), candidateApi.myResume()]);
+      if (!alive.current || signal.aborted || sequence !== loadSequence.current) return;
       const pending = !discardLocal && meta.dirty;
       if (pending && meta.version !== progress.version) {
         current.current = local;
@@ -97,13 +119,13 @@ export function CandidateProvider({ children }: { children: React.ReactNode }) {
       }
       setResume(latestResume);
     } catch {
-      setError('Could not load your saved profile. Retry before editing so existing answers are not overwritten.');
-    } finally { if (alive.current) setLoading(false); }
+      if (alive.current && !signal.aborted && sequence === loadSequence.current) setError('Could not load your saved profile. Retry before editing so existing answers are not overwritten.');
+    } finally { if (alive.current && !signal.aborted && sequence === loadSequence.current) setLoading(false); }
   }, [user, cache]);
   React.useEffect(() => { void load(); }, [load]);
 
   const update = React.useCallback((fn: (d: CandidateDraft) => CandidateDraft) => {
-    if (!current.current) return;
+    if (!alive.current || !current.current) return;
     const next = { ...fn(current.current), updatedAt: new Date().toISOString() };
     current.current = next;
     dirty.current = true;
@@ -153,7 +175,7 @@ export function CandidateProvider({ children }: { children: React.ReactNode }) {
     setResume(latest);
     if (latest) update((d) => ({ ...d, cvBuilt: !!latest.hasContent, role: latest.position || d.role, check: { ...d.check, ...(latest.languages.length ? { languages: latest.languages.join(', ') } : {}), ...(latest.aboutMe ? { achievement: latest.aboutMe } : {}) } }));
   }, [update]);
-  const value = { draft, resume, loading, error, server, status, saved, update, saveNow, reload: () => load(true), refreshResume };
+  const value = { draft, resume, loading, error, server, status, saved, update, saveNow, reload: () => load(true), refreshResume, qualification, qualificationError, refreshQualification };
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

@@ -44,18 +44,15 @@ export function CvTemplate({ data, className }: { data: CvData; className?: stri
 
   return (
     <article
-      className={`bg-cv-paper px-8 py-9 font-sans text-[13.5px] leading-relaxed text-cv-ink sm:px-12 ${className ?? ''}`}
+      className={`break-words bg-cv-paper px-5 py-6 font-sans text-[13.5px] leading-relaxed text-cv-ink sm:px-12 sm:py-9 ${className ?? ''}`}
       style={{ colorScheme: 'light' }}
     >
-      <header className="flex items-start gap-6 border-b border-[rgb(var(--cv-ink)/0.15)] pb-6">
-        <div className="grid h-28 w-24 shrink-0 place-items-center border border-[rgb(var(--cv-ink)/0.4)] text-center text-[10px] uppercase tracking-wide text-[rgb(var(--cv-ink)/0.6)]">
-          Photo
-        </div>
+      <header className="flex items-start gap-4 border-b border-[rgb(var(--cv-ink)/0.15)] pb-6">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--cv-ink)/0.7)]">
             HorecaPass · horecapass.com
           </p>
-          <h2 className="mt-2 text-3xl font-bold leading-tight">
+          <h2 className="mt-2 break-words text-2xl font-bold leading-tight sm:text-3xl">
             {data.firstName} <span className="text-cv-accent">{data.lastName}</span>
           </h2>
           {line.length > 0 && <p className="mt-1 text-[rgb(var(--cv-ink)/0.8)]">{line.join(' · ')}</p>}

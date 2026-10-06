@@ -8,6 +8,7 @@ import { aiApi, fileToBase64, plainAiText, type AiMessage } from '@/lib/api/ai';
 import type { ChatMessage } from '@/lib/demo/employer';
 import { extractCvText } from '@/lib/cv-text';
 import { candidateApi } from '@/lib/api/candidate';
+import { candidateRoleContext } from '@/lib/candidate/roles';
 
 /**
  * Smart CV builder — разговор с серверным ИИ (/api/ai/cv-builder/stream/),
@@ -20,8 +21,8 @@ import { candidateApi } from '@/lib/api/candidate';
  */
 
 const GREETING =
-  "Hi! I'll put together a CV that GCC employers expect. Attach your current CV, or tell me the role you're going for and I'll ask the rest.";
-const FROM_UPLOAD = "Here's my current CV. Please adapt it for employers in the GCC.";
+  "Hi! I can build your profile in two ways. Attach your current CV, or tell me about your experience. I'll ask only for the details that are missing.";
+const FROM_UPLOAD = "Here's my current CV. Read its facts and build my profile for GCC employers. Ask only for missing or uncertain details; do not invent experience or skills.";
 const PAID_EXPORT = /export|pdf|download|скача|экспорт/i;
 
 let seq = 0;
@@ -33,7 +34,7 @@ interface Turn extends ChatMessage {
   attached?: string;
 }
 
-export function CvBuilder({ initialFile, initialResumeId = null, initialBuilt = false, onClose }: { initialFile?: File | null; initialResumeId?: number | null; initialBuilt?: boolean; onClose: (built: boolean) => void }) {
+export function CvBuilder({ initialFile, initialResumeId = null, initialBuilt = false, targetRoles = [], onClose }: { initialFile?: File | null; initialResumeId?: number | null; initialBuilt?: boolean; targetRoles?: string[]; onClose: (built: boolean) => void }) {
   const [messages, setMessages] = React.useState<Turn[]>([{ id: id(), from: 'assistant', text: GREETING }]);
   const [typing, setTyping] = React.useState(false);
   const [options, setOptions] = React.useState<string[]>([]);
@@ -65,16 +66,22 @@ export function CvBuilder({ initialFile, initialResumeId = null, initialBuilt = 
     async (text: string, fileName?: string, raw?: File, retry = false) => {
       setError(null);
       setOptions([]);
-      // Картинку отдаём как есть; из PDF/DOCX достаём текст сами — сервер
-      // на проде вложения пока не читает (см. lib/cv-text.ts).
-      const attached = raw ? await extractCvText(raw) : null;
-      if (raw && !attached && !raw.type.startsWith('image/')) {
+      // PDF/images go to the multimodal server; DOCX/TXT are extracted locally.
+      const readableDocument = !!raw && (raw.type === 'application/pdf' || raw.name.toLowerCase().endsWith('.pdf') || /\.(png|jpe?g|webp|gif)$/i.test(raw.name));
+      if (readableDocument && raw.size > 1_000_000) {
+        setError('Please use a PDF or image under 1 MB for Smart. Your original CV remains saved to your account.');
+        return;
+      }
+      let attached: string | null = null;
+      try { attached = raw && !readableDocument ? await extractCvText(raw) : null; }
+      catch (e) { setError(e instanceof Error ? e.message : 'Could not read this CV.'); return; }
+      if (raw && !attached && !readableDocument) {
         setError('We could not read this CV. Try a DOCX, a PDF with selectable text, or a clear image. Your uploaded file is still saved to your account.');
         return;
       }
       let images: string[] | undefined;
-      try { images = raw && raw.type.startsWith('image/') ? [await fileToBase64(raw)] : undefined; }
-      catch { setError('Could not read this image. Please attach it again.'); return; }
+      try { images = raw && readableDocument ? [await fileToBase64(raw)] : undefined; }
+      catch { setError('Could not read this document. Please attach it again.'); return; }
       const mine: Turn = { id: id(), from: 'user', text, file: fileName, images, attached: attached ?? undefined };
       const all = retry ? history.current : [...history.current, mine];
       history.current = all;
@@ -104,9 +111,11 @@ My current CV (${m.file ?? 'file'}):
 ${m.attached}`.slice(0, 7900) : m.text,
             ...(m.images ? { images: m.images } : {}),
           })).slice(-30);
+        const context = candidateRoleContext(targetRoles) || 'Build my candidate profile from facts I provide or that are present in my CV. Ask only for missing or uncertain details, one short question at a time. Do not invent skills, employment, achievements, dates or personal details. Do not infer languages or location from nationality. I will confirm my desired next positions after my profile is created.';
+        const withContext: AiMessage[] = context ? [{ role: 'user', text: context }, ...payload.slice(-29)] : payload;
         await aiApi.saveCvHistory(payload, resumeId);
         const res = await aiApi.cvBuilder(
-          payload,
+          withContext,
           (t) => {
             show(t);
           },
@@ -128,7 +137,7 @@ ${m.attached}`.slice(0, 7900) : m.text,
         setTyping(false);
       }
     },
-    [resumeId],
+    [resumeId, targetRoles],
   );
 
   // Пришли с загруженным файлом — сразу отдаём его ИИ.
@@ -147,10 +156,10 @@ ${m.attached}`.slice(0, 7900) : m.text,
       <header className="flex items-center gap-3 border-b border-line px-5 py-3 md:px-8">
         <div className="min-w-0 flex-1">
           <h2 id="cv-builder-title" className="text-lg font-bold text-heading">
-            Smart CV builder
+            Build your profile with Smart
           </h2>
           <p className="text-xs text-text-secondary">
-            {built ? 'Your CV is saved to your profile — employers see it when you apply.' : 'Your CV for GCC employers, built in one conversation'}
+            {built ? 'Your profile is saved — you can now confirm your next positions.' : 'Smart reads your CV and asks for missing profile details.'}
           </p>
         </div>
         {built && (
@@ -169,6 +178,7 @@ ${m.attached}`.slice(0, 7900) : m.text,
       </header>
 
       <Thread deps={`${messages.length}-${last?.text.length ?? 0}-${typing}`}>
+        <p role="status" className="text-sm text-text-secondary">{built ? 'Profile saved' : typing ? 'Smart is reviewing your details…' : `Profile conversation · ${messages.filter((m) => m.from === 'user').length} answers in this conversation`}</p>
         {messages.map((m) => (
           <MessageBubble key={m.id} m={m} />
         ))}

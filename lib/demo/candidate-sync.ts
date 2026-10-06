@@ -49,7 +49,8 @@ export async function syncCandidate(d: CandidateDraft, name: { first: string; la
     first_name: name.first ? null : first,
     last_name: name.last ? null : rest.join(' '),
   });
-  if (d.role || d.check.languages || d.check.achievement) {
+  // A desired next role must never overwrite the factual, fully built CV.
+  if (!d.cvBuilt && (d.role || d.check.languages || d.check.achievement)) {
     await candidateApi.saveResume({
       title: d.role ?? undefined,
       position: d.role ?? undefined,
