@@ -271,7 +271,7 @@ function ForCandidates() {
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 py-16 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-24">
         <Reveal>
           <Portrait
-            src="/landing/recruiter.webp"
+            src="/landing/recruiter-woman.svg"
             alt="A HorecaPass recruiter"
             line="Perfect — let's build your profile so employers come to you, not the other way around."
           />

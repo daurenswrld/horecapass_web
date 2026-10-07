@@ -16,18 +16,22 @@ export type AssistantKind = 'woman' | 'man';
 const KEY = 'hp_assistant';
 const EVENT = 'hp-assistant-change';
 
+// Иллюстрации, не фото — голосовое 05.10 20:58: «видно что ИИ сгенерировано»
+// про прежние фото-аватары. Три согласованных ракурса одного человека
+// (фото/жест/круглый аватар) живыми стоковыми фото не набрать, поэтому
+// вместо фото — нарисованный персонаж (один стиль на оба масштаба).
 export const ASSISTANTS: Record<AssistantKind, { label: string; photo: string; talk: string; avatar: string }> = {
   woman: {
     label: 'Woman',
-    photo: '/landing/recruiter.webp',
-    talk: '/landing/recruiter-talk.webp',
-    avatar: '/landing/recruiter-avatar.webp',
+    photo: '/landing/recruiter-woman.svg',
+    talk: '/landing/recruiter-woman.svg',
+    avatar: '/landing/recruiter-woman-avatar.svg',
   },
   man: {
     label: 'Man',
-    photo: '/landing/recruiter-man.webp',
-    talk: '/landing/recruiter-man.webp',
-    avatar: '/landing/recruiter-man-avatar.webp',
+    photo: '/landing/recruiter-man.svg',
+    talk: '/landing/recruiter-man.svg',
+    avatar: '/landing/recruiter-man-avatar.svg',
   },
 };
 
