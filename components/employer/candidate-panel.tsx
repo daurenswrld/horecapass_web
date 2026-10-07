@@ -3,7 +3,7 @@
 import { useToast } from '@/components/ui/toast';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, MessageSquare, Phone, Sparkles, Video, X } from 'lucide-react';
+import { Download, FileText, Image as ImageIcon, Mail, MessageSquare, Phone, Sparkles, Video, X } from 'lucide-react';
 import { Button, Chip, Spinner } from '@/components/ui/primitives';
 import { ApiError } from '@/lib/api/client';
 import {
@@ -16,6 +16,7 @@ import {
   type CandidateSummary,
   type CompanyApplication,
 } from '@/lib/api/applications';
+import type { CandidateMaterial } from '@/lib/api/materials';
 import { chatsApi } from '@/lib/api/chats';
 import { isSample } from '@/lib/demo/samples';
 import { cn } from '@/lib/utils';
@@ -86,6 +87,9 @@ export function CandidatePanel({
   const [chatError, setChatError] = React.useState<string | null>(null);
   const [summary, setSummary] = React.useState<CandidateSummary | null>(null);
   const [summaryState, setSummaryState] = React.useState<'idle' | 'loading' | { error: string }>('idle');
+  const [materials, setMaterials] = React.useState<CandidateMaterial[]>([]);
+  const [materialsState, setMaterialsState] = React.useState<'idle' | 'loading' | { error: string }>('idle');
+  const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
 
   // Esc закрывает, фокус — на кнопку закрытия, страница под панелью не прокручивается.
   React.useEffect(() => {
@@ -106,7 +110,40 @@ export function CandidatePanel({
     setSummaryState('idle');
     setStageError(null);
     setChatError(null);
+    setMaterials([]);
+    if (sample) {
+      setMaterialsState('idle');
+      return;
+    }
+    setMaterialsState('loading');
+    let cancelled = false;
+    companyApplicationsApi
+      .materials(app.id)
+      .then((items) => {
+        if (!cancelled) {
+          setMaterials(items);
+          setMaterialsState('idle');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMaterialsState({ error: 'Could not load the candidate’s attachments.' });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.id]);
+
+  const downloadMaterial = async (item: CandidateMaterial) => {
+    setDownloadingId(item.id);
+    try {
+      await companyApplicationsApi.downloadMaterial(app.id, item);
+    } catch {
+      toast.error('Could not download the file. Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const move = async (status: ApplicationStatus) => {
     if (status === app.status || saving) return;
@@ -417,6 +454,40 @@ export function CandidatePanel({
                 <Video size={15} />
                 Watch the video intro
               </a>
+            )}
+          </Section>
+        )}
+
+        {(materials.length > 0 || materialsState === 'loading' || typeof materialsState === 'object') && (
+          <Section title="Attachments">
+            {materialsState === 'loading' && (
+              <p className="flex items-center gap-2 text-sm text-text-secondary">
+                <Spinner className="h-4 w-4" /> Loading attachments…
+              </p>
+            )}
+            {typeof materialsState === 'object' && <p className="text-sm text-danger">{materialsState.error}</p>}
+            {materialsState === 'idle' && materials.length > 0 && (
+              <ul className="space-y-2">
+                {materials.map((item) => (
+                  <li key={item.id} className="flex items-center gap-3">
+                    {item.kind === 'portfolio' ? (
+                      <ImageIcon size={16} className="shrink-0 text-text-secondary" />
+                    ) : (
+                      <FileText size={16} className="shrink-0 text-text-secondary" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{item.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => downloadMaterial(item)}
+                      disabled={downloadingId === item.id}
+                      className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-accent-text underline-offset-2 hover:underline focus-ring disabled:opacity-60"
+                    >
+                      {downloadingId === item.id ? <Spinner className="h-3.5 w-3.5" /> : <Download size={14} />}
+                      Download
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </Section>
         )}

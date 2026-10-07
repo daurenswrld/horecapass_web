@@ -82,6 +82,10 @@ export const API = {
     companyDetail: (id: string | number) => `/api/applications/company/${id}/`,
     aiSummary: (id: string | number) =>
       `/api/applications/company/${id}/ai-summary/`,
+    materials: (id: string | number) =>
+      `/api/applications/company/${id}/materials/`,
+    materialDownload: (id: string | number, materialId: string | number) =>
+      `/api/applications/company/${id}/materials/${materialId}/`,
     status: (id: string | number) => `/api/applications/${id}/status/`,
     interview: (id: string | number) => `/api/applications/${id}/interview/`,
     interviewAnswers: (id: string | number) =>
