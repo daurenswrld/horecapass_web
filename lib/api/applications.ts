@@ -1,5 +1,6 @@
 import { API } from './endpoints';
-import { http } from './client';
+import { ApiError, BASE_URL, http, refreshTokens, tokens } from './client';
+import type { CandidateMaterial } from './materials';
 
 /**
  * Отклики соискателя.
@@ -360,5 +361,27 @@ export const companyApplicationsApi = {
       gaps: strs(d.gaps),
       interviewQuestions: strs(d.interview_questions),
     };
+  },
+
+  /** Портфолио/сопроводительное письмо, которые кандидат прикрепил к профилю. */
+  materials(applicationId: number) {
+    return http.get<CandidateMaterial[]>(API.applications.materials(applicationId));
+  },
+
+  /** Скачивание одного файла — тот же паттерн, что и materialsApi.download для кандидата. */
+  async downloadMaterial(applicationId: number, item: CandidateMaterial) {
+    const url = `${BASE_URL}${API.applications.materialDownload(applicationId, item.id)}`;
+    const send = () => fetch(url, { headers: { Authorization: `Bearer ${tokens.access ?? ''}` } });
+    let response = await send();
+    if (response.status === 401 && (await refreshTokens())) response = await send();
+    if (!response.ok) throw new ApiError(response.status, null);
+    const blobUrl = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = item.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
   },
 };
