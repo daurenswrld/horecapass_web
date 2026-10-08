@@ -18,6 +18,9 @@ export const API = {
   },
 
   /** Админ-панель (только сотрудники). Серверная часть: приложение adminpanel. */
+  /** Ответы приветственного квиза: открыт без входа. */
+  quiz: "/api/quiz/",
+
   admin: {
     me: "/api/admin/me/",
     overview: "/api/admin/overview/",
@@ -38,6 +41,7 @@ export const API = {
     tickets: "/api/admin/tickets/",
     ticket: (id: number) => `/api/admin/tickets/${id}/`,
     auditLog: "/api/admin/audit-log/",
+    quiz: "/api/admin/quiz/",
   },
 
   auth: {
