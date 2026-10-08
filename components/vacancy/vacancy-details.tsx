@@ -6,8 +6,7 @@ import { Button, Chip, Spinner } from '@/components/ui/primitives';
 import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { InterviewPrep } from './interview-prep';
 import { useToast } from '@/components/ui/toast';
-import { ApiError } from '@/lib/api/client';
-import { useCandidate } from '@/lib/candidate/context';
+import { useApply } from './use-apply';
 
 /**
  * Карточка вакансии целиком — то же содержимое, что на экране
@@ -44,40 +43,16 @@ export function VacancyDetails({
   vacancy: Vacancy;
   onChanged?: (v: Vacancy) => void;
 }) {
-  const [applying, setApplying] = React.useState(false);
-  const { draft } = useCandidate();
   const toast = useToast();
-  const [error, setError] = React.useState<string | null>(null);
-  const [applied, setApplied] = React.useState(vacancy.isApplied);
+  const { apply, applying, applied, error } = useApply(vacancy, onChanged);
   const [saved, setSaved] = React.useState(vacancy.isSaved);
 
-  // Открыли другую вакансию — состояние кнопок должно соответствовать ей.
+  // Открыли другую вакансию — закладка должна соответствовать ей.
   React.useEffect(() => {
-    setApplied(vacancy.isApplied);
     setSaved(vacancy.isSaved);
-    setError(null);
-  }, [vacancy.id, vacancy.isApplied, vacancy.isSaved]);
+  }, [vacancy.id, vacancy.isSaved]);
 
   const salary = formatSalary(vacancy);
-
-  const apply = async () => {
-    setError(null);
-    setApplying(true);
-    try {
-      await vacanciesApi.apply(vacancy.id, draft?.coverLetterText ?? '');
-      setApplied(true);
-      toast.success('Application sent');
-      onChanged?.({ ...vacancy, isApplied: true });
-    } catch (e) {
-      setError(
-        e instanceof ApiError && e.status === 400
-          ? 'Application not sent: you may have already applied, or your profile is incomplete.'
-          : 'Could not send the application. Please try again.',
-      );
-    } finally {
-      setApplying(false);
-    }
-  };
 
   const toggleSave = async () => {
     // Переключаем сразу: ждать ответа ради закладки — заметная задержка.

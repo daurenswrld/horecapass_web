@@ -50,6 +50,16 @@ export interface Vacancy {
   matchScore: number | null;
   /** Что компания рассказывает о себе (кто мы, что предлагаем, как нанимаем). */
   companyBrand?: CompanyBrand;
+  /** Когда опубликована: от этого зависит метка «New» на карточке. */
+  createdAt: string | null;
+}
+
+const NEW_FOR_DAYS = 7;
+
+/** Свежая вакансия — опубликована не больше недели назад. Без даты метки нет. */
+export function isNewVacancy(v: Pick<Vacancy, 'createdAt'>, now: number = Date.now()): boolean {
+  const at = v.createdAt ? Date.parse(v.createdAt) : NaN;
+  return Number.isFinite(at) && at <= now + 60_000 && now - at < NEW_FOR_DAYS * 86_400_000;
 }
 
 type Json = Record<string, unknown>;
@@ -101,6 +111,7 @@ export function parseVacancy(json: Json): Vacancy {
     responsibilities: stringList(json.responsibilities),
     matchScore: json.match_score == null ? null : Number(json.match_score),
     companyBrand: parseBrand(json.company_brand),
+    createdAt: nonEmpty(json.created_at),
   };
 }
 
