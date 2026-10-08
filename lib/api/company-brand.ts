@@ -54,13 +54,21 @@ export function brandIsEmpty(b: CompanyBrand): boolean {
   );
 }
 
+/**
+ * Сервер без поддержки `brand` не ругается, а молча пропускает неизвестное поле. Тогда ответ
+ * приходит без `brand`, и «Saved» было бы враньём (веб на Vercel может выйти раньше бэкенда).
+ */
+export class BrandNotSupportedError extends Error {}
+
 export const companyBrandApi = {
   async load(): Promise<CompanyBrand> {
     const d = await http.get<Json>(API.company.mine);
+    if (!('brand' in d)) throw new BrandNotSupportedError();
     return parseBrand(d.brand);
   },
   async save(b: CompanyBrand): Promise<CompanyBrand> {
     const d = await http.patch<Json>(API.company.mine, { brand: brandToServer(b) });
+    if (!('brand' in d)) throw new BrandNotSupportedError();
     return parseBrand(d.brand);
   },
 };

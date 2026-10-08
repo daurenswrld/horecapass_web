@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Chip, Field, Spinner } from '@/components/ui/primitives';
 import { DemoNotice } from '@/components/demo-notice';
 import { companyBrand, type CompanyBrand } from '@/lib/demo/storage';
-import { brandIsEmpty, companyBrandApi } from '@/lib/api/company-brand';
+import { BrandNotSupportedError, brandIsEmpty, companyBrandApi } from '@/lib/api/company-brand';
 import { canSyncToServer } from '@/lib/demo/employer-sync';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
@@ -114,7 +114,16 @@ export default function CompanyProfilePage() {
         setBrand(server);
         setEditing(brandIsEmpty(server));
       })
-      .catch(() => alive && setLoadError(true));
+      .catch((e) => {
+        if (!alive) return;
+        if (e instanceof BrandNotSupportedError) {
+          // Сервер ещё не умеет хранить профиль: работаем как в демо, в браузере, и говорим об этом.
+          const loaded = companyBrand.load();
+          setLive(false);
+          setBrand(loaded);
+          setEditing(!loaded.whoWeAre && !loaded.about);
+        } else setLoadError(true);
+      });
     return () => {
       alive = false;
       document.removeEventListener('visibilitychange', onHide);
