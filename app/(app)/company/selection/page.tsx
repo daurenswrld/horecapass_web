@@ -81,6 +81,14 @@ export default function SelectionPage() {
     [],
   );
   const close = React.useCallback(() => setOpenId(null), []);
+  // ?application=<id> — переход из чата сразу к карточке кандидата, один раз.
+  const deepLinked = React.useRef(false);
+  React.useEffect(() => {
+    if (deepLinked.current || !items.length) return;
+    const wanted = Number(new URLSearchParams(window.location.search).get('application'));
+    deepLinked.current = true;
+    if (wanted && items.some((a) => a.id === wanted)) setOpenId(wanted);
+  }, [items]);
 
   React.useEffect(() => setSelected(basketStore.load()), []);
   React.useEffect(() => basketStore.save(selected), [selected]);
