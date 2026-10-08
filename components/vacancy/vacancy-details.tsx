@@ -104,6 +104,19 @@ export function VacancyDetails({
     ['Pay type', vacancy.salaryType],
   ].filter((r): r is [string, string] => !!r[1]);
 
+  // Что компания говорит о себе. Свои бенефиты и этапы у вакансии важнее; нет их — берём общие у компании.
+  const brand = vacancy.companyBrand;
+  const about = ([
+    ['Who we are', brand?.whoWeAre],
+    ['Why work with us', brand?.whyUs],
+    ['About the company', brand?.about],
+    ['Our projects', brand?.projects],
+    ['Achievements', brand?.achievements],
+    ['Culture', brand?.culture],
+  ] as [string, string | undefined][]).filter((r): r is [string, string] => !!r[1]?.trim());
+  const offer = vacancy.benefits.length ? vacancy.benefits : (brand?.offer ?? []);
+  const steps = vacancy.hiringSteps.length ? vacancy.hiringSteps : (brand?.hiringSteps ?? []);
+
   // Бриф кандидата, пункт 10: в шапке — фото заведения, а не иконка;
   // своих фото нет — стоковое фото зала.
   const photo = vacancy.companyImages[0] ?? '/landing/restaurant.webp';
@@ -199,16 +212,29 @@ export function VacancyDetails({
         </Section>
       )}
 
-      {vacancy.benefits.length > 0 && (
-        <Section title="What they offer">
-          <Bullets items={vacancy.benefits} />
+      {about.length > 0 && (
+        <Section title={`About ${vacancy.companyName}`}>
+          <div className="space-y-3">
+            {about.map(([label, body]) => (
+              <div key={label}>
+                <p className="text-sm font-semibold text-text-primary">{label}</p>
+                <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-text-primary">{body}</p>
+              </div>
+            ))}
+          </div>
         </Section>
       )}
 
-      {vacancy.hiringSteps.length > 0 && (
+      {offer.length > 0 && (
+        <Section title="What they offer">
+          <Bullets items={offer} />
+        </Section>
+      )}
+
+      {steps.length > 0 && (
         <Section title="Hiring process">
           <ol className="space-y-2">
-            {vacancy.hiringSteps.map((step, i) => (
+            {steps.map((step, i) => (
               <li key={step} className="flex gap-3 text-sm text-text-primary">
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-muted text-xs font-semibold text-text-primary">
                   {i + 1}

@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Chip, Field, Spinner } from '@/components/ui/primitives';
 import { DemoNotice } from '@/components/demo-notice';
 import { companyBrand, type CompanyBrand } from '@/lib/demo/storage';
+import { brandIsEmpty, companyBrandApi } from '@/lib/api/company-brand';
+import { canSyncToServer } from '@/lib/demo/employer-sync';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
 
@@ -57,13 +59,80 @@ export default function CompanyProfilePage() {
   const [brand, setBrand] = React.useState<CompanyBrand | null>(null);
   const [editing, setEditing] = React.useState(false);
   const [stepDraft, setStepDraft] = React.useState('');
+  // Настоящий вход: профиль хранится у компании на сервере и виден кандидатам. Демо: в браузере.
+  const [live, setLive] = React.useState(false);
+  const [sync, setSync] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [loadError, setLoadError] = React.useState(false);
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = React.useRef<CompanyBrand | null>(null);
+
+  const flush = React.useCallback(async () => {
+    const next = pending.current;
+    if (!next) return;
+    try {
+      await companyBrandApi.save(next);
+      if (pending.current === next) pending.current = null;
+      setSync('saved');
+    } catch {
+      setSync('error');
+    }
+  }, []);
+
+  const queueSave = React.useCallback(
+    (next: CompanyBrand) => {
+      pending.current = next;
+      setSync('saving');
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => void flush(), 700);
+    },
+    [flush],
+  );
 
   React.useEffect(() => {
-    const loaded = companyBrand.load();
-    setBrand(loaded);
-    // Пустой профиль сразу открываем на редактирование: смотреть нечего.
-    setEditing(!loaded.whoWeAre && !loaded.about);
-  }, []);
+    const isLive = canSyncToServer();
+    setLive(isLive);
+    if (!isLive) {
+      const loaded = companyBrand.load();
+      setBrand(loaded);
+      // Пустой профиль сразу открываем на редактирование: смотреть нечего.
+      setEditing(!loaded.whoWeAre && !loaded.about);
+      return;
+    }
+    let alive = true;
+    // Вкладку закрывают или переключают: отправляем сразу, не ждём паузы.
+    const onHide = () => {
+      if (document.visibilityState === 'hidden' && pending.current) {
+        if (timer.current) clearTimeout(timer.current);
+        void flush();
+      }
+    };
+    document.addEventListener('visibilitychange', onHide);
+    companyBrandApi
+      .load()
+      .then((server) => {
+        if (!alive) return;
+        setBrand(server);
+        setEditing(brandIsEmpty(server));
+      })
+      .catch(() => alive && setLoadError(true));
+    return () => {
+      alive = false;
+      document.removeEventListener('visibilitychange', onHide);
+      // Ушли со страницы раньше, чем сработала отложенная отправка: не теряем последний ввод.
+      if (timer.current) clearTimeout(timer.current);
+      if (pending.current) void companyBrandApi.save(pending.current).catch(() => undefined);
+    };
+  }, [flush]);
+
+  if (loadError) {
+    return (
+      <div className="px-5 py-10 md:px-8">
+        <p role="alert" className="text-sm text-danger">
+          Could not load your company profile. Please refresh the page.
+        </p>
+      </div>
+    );
+  }
 
   if (!brand) {
     return (
@@ -76,7 +145,8 @@ export default function CompanyProfilePage() {
   const set = <K extends keyof CompanyBrand>(key: K, value: CompanyBrand[K]) => {
     const next = { ...brand, [key]: value };
     setBrand(next);
-    companyBrand.save(next);
+    if (live) queueSave(next);
+    else companyBrand.save(next);
   };
 
   const toggleOffer = (item: string) =>
@@ -103,10 +173,11 @@ export default function CompanyProfilePage() {
       />
 
       <div className="space-y-4 px-5 py-6 md:px-8">
-        <DemoNotice
-          what="The employer page as an HR brand: what a candidate sees before applying. There are no fields for this in the company serializer yet, so the text is kept in the browser."
-          endpoint="PATCH /users/api/users/me/company/ with fields who_we_are, why_us, projects, achievements, offer, culture, hiring_steps"
-        />
+        {!live && (
+          <DemoNotice
+            what="The employer page as an HR brand: what a candidate sees before applying. In demo mode the text is kept in this browser; with a real account it is saved to your company and shown to candidates on your vacancies."
+          />
+        )}
 
         {editing ? (
           <Card className="grid gap-5 p-6 xl:grid-cols-2 xl:items-start xl:gap-x-10">
@@ -115,7 +186,20 @@ export default function CompanyProfilePage() {
                 <span className="font-semibold text-heading">
                   {filled} of {sections} sections filled
                 </span>
-                <span className="text-text-secondary">Saved in this browser as you type</span>
+                <span className={cn('text-text-secondary', sync === 'error' && 'text-danger')} aria-live="polite">
+                  {!live && 'Saved in this browser as you type'}
+                  {live && sync === 'idle' && 'Saved to your account as you type'}
+                  {live && sync === 'saving' && 'Saving…'}
+                  {live && sync === 'saved' && 'Saved. Candidates see it on your vacancies'}
+                  {live && sync === 'error' && (
+                    <>
+                      Not saved.{' '}
+                      <button type="button" onClick={() => void flush()} className="font-semibold underline underline-offset-2 focus-ring">
+                        Retry
+                      </button>
+                    </>
+                  )}
+                </span>
               </div>
               <div
                 role="progressbar"
