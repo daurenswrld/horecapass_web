@@ -58,7 +58,7 @@ export function CvTemplate({ data, className }: { data: CvData; className?: stri
                 {data.firstName} <span className="text-cv-accent">{data.lastName}</span>
               </>
             ) : (
-              <span className="text-[rgb(var(--cv-ink)/0.45)]">Your name</span>
+              <span className="text-[rgb(var(--cv-ink)/0.65)]">Your name</span>
             )}
           </h2>
           {line.length > 0 && <p className="mt-1 text-[rgb(var(--cv-ink)/0.8)]">{line.join(' · ')}</p>}
