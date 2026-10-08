@@ -58,12 +58,39 @@ function Funnel({ status }: { status: ApplicationStatus }) {
 
   const current = FUNNEL.indexOf(funnelStage(status));
   if (current < 0) return null;
+  return <FunnelTrack current={current} />;
+}
 
+function FunnelTrack({ current }: { current: number }) {
+  const ref = React.useRef<HTMLOListElement>(null);
+  const [fade, setFade] = React.useState(false);
+  const measure = React.useCallback(() => {
+    const el = ref.current;
+    if (el) setFade(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+  }, []);
+  React.useEffect(() => {
+    const el = ref.current;
+    const step = el?.children[current] as HTMLElement | undefined;
+    if (el && step) {
+      // Текущий этап показываем в видимой части, а не за краем узкой карточки.
+      const s = step.getBoundingClientRect();
+      const o = el.getBoundingClientRect();
+      el.scrollLeft += s.left - o.left - (o.width - s.width) / 2;
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [current, measure]);
+
+  const mask = 'linear-gradient(to right, black calc(100% - 28px), transparent)';
   return (
     // Названия этапов длиннее, чем шестая часть узкой карточки. Позволяем
     // цепочке прокручиваться внутри себя — иначе она распирает страницу
     // и появляется горизонтальная прокрутка на телефоне.
     <ol
+      ref={ref}
+      onScroll={measure}
+      style={fade ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
       className="scroll-slim -mx-1 mt-4 flex items-start gap-0 overflow-x-auto px-1 pb-1"
       aria-label="Application stages"
     >

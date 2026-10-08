@@ -228,6 +228,7 @@ export default function EmployerOnboardingPage() {
           )}
 
           <div className="min-w-0 flex-1">
+            <h1 className="sr-only">Set up your company: {STEP_TITLE[n]}</h1>
             {/* Полосочки сверху — «для тревожных людей», и «Step X of Y» рядом:
                 неопределённая длина пугает сильнее, чем реальное число шагов. */}
             <div className="flex gap-1.5" aria-hidden>
@@ -244,7 +245,7 @@ export default function EmployerOnboardingPage() {
             <p className="mt-1.5 text-xs text-text-secondary">
               Step {n} of {STEP_TOTAL} · {STEP_TITLE[n]}
               <span className="ml-2 text-text-secondary">{saved ? '· Saved in this browser' : '· Could not save'}</span>
-              {server && serverState === 'saving' && <span className="ml-2 text-text-tertiary">· Saving to your account…</span>}
+              {server && serverState === 'saving' && <span className="ml-2 text-text-secondary">· Saving to your account…</span>}
               {server && serverState === 'saved' && <span className="ml-2 text-success">· Saved to your account</span>}
               {server && typeof serverState === 'object' && (
                 <span className="ml-2 text-danger">

@@ -244,7 +244,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      <main className="min-w-0 flex-1 pb-20 md:pb-0">
+      <main className="min-w-0 flex-1 pb-20 md:pb-20">
         <DemoBanner />
         {user.role === 'APPLICANT' ? <CandidateProvider key={user.id}>{children}</CandidateProvider> : children}
       </main>

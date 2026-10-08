@@ -53,7 +53,13 @@ export function CvTemplate({ data, className }: { data: CvData; className?: stri
             HorecaPass · horecapass.com
           </p>
           <h2 className="mt-2 break-words text-2xl font-bold leading-tight sm:text-3xl">
-            {data.firstName} <span className="text-cv-accent">{data.lastName}</span>
+            {data.firstName.trim() || data.lastName.trim() ? (
+              <>
+                {data.firstName} <span className="text-cv-accent">{data.lastName}</span>
+              </>
+            ) : (
+              <span className="text-[rgb(var(--cv-ink)/0.45)]">Your name</span>
+            )}
           </h2>
           {line.length > 0 && <p className="mt-1 text-[rgb(var(--cv-ink)/0.8)]">{line.join(' · ')}</p>}
         </div>
