@@ -203,6 +203,10 @@ export interface ApplicantExperience {
   company: string;
   period: string;
   description: string;
+  /** Тип заведения, его уровень и кухня — то, что работодатель из Залива иначе не узнает. */
+  venueType: string;
+  venueLevel: string;
+  cuisine: string;
 }
 
 /** Карточка кандидата из `applicant_profile` — только то, что прислал сервер. */
@@ -295,6 +299,9 @@ export function parseApplicantProfile(p: Record<string, unknown>): ApplicantProf
         company: String(x.company ?? x.company_name ?? '').trim(),
         period,
         description: String(x.description ?? '').trim(),
+        venueType: String(x.venue_type ?? '').trim(),
+        venueLevel: String(x.venue_level ?? '').trim(),
+        cuisine: String(x.cuisine ?? '').trim(),
       };
     }),
     educations: list(p.educations),

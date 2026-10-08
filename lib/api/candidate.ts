@@ -17,6 +17,17 @@ import { ApiError, http } from './client';
 
 type Json = Record<string, unknown>;
 
+export interface ServerExperience {
+  company_name: string;
+  position: string;
+  start_date: string;
+  end_date: string | null;
+  description: string | null;
+  venue_type: string | null;
+  venue_level: string | null;
+  cuisine: string | null;
+}
+
 export interface ServerResume {
   id: number;
   title: string;
@@ -25,7 +36,7 @@ export interface ServerResume {
   aboutMe: string;
   hasContent?: boolean;
   skills?: string[];
-  experiences?: { company_name: string; position: string; start_date: string; end_date: string | null; description: string | null }[];
+  experiences?: ServerExperience[];
   educations?: { institution: string; degree: string; field_of_study: string | null; start_date: string; end_date: string | null }[];
 }
 
@@ -41,7 +52,7 @@ function parseResume(j: Json): ServerResume {
     languages: Array.isArray(j.languages) ? j.languages.map(String) : [],
     aboutMe: String(j.about_me ?? ''),
     skills: Array.isArray(j.skills) ? j.skills.flatMap((s) => s && typeof s === 'object' && typeof s.name === 'string' ? [s.name] : typeof s === 'string' ? [s] : []) : [],
-    experiences: Array.isArray(j.experiences) ? j.experiences.filter((e) => e && typeof e === 'object').map((e) => ({ company_name: String(e.company_name ?? ''), position: String(e.position ?? ''), start_date: String(e.start_date ?? ''), end_date: e.end_date ? String(e.end_date) : null, description: e.description ? String(e.description) : null })) : [],
+    experiences: Array.isArray(j.experiences) ? j.experiences.filter((e) => e && typeof e === 'object').map((e) => ({ company_name: String(e.company_name ?? ''), position: String(e.position ?? ''), start_date: String(e.start_date ?? ''), end_date: e.end_date ? String(e.end_date) : null, description: e.description ? String(e.description) : null, venue_type: e.venue_type ? String(e.venue_type) : null, venue_level: e.venue_level ? String(e.venue_level) : null, cuisine: e.cuisine ? String(e.cuisine) : null })) : [],
     educations: Array.isArray(j.educations) ? j.educations.filter((e) => e && typeof e === 'object').map((e) => ({ institution: String(e.institution ?? ''), degree: String(e.degree ?? ''), field_of_study: e.field_of_study ? String(e.field_of_study) : null, start_date: String(e.start_date ?? ''), end_date: e.end_date ? String(e.end_date) : null })) : [],
     hasContent: !!String(j.about_me ?? '').trim() || ['skills', 'experiences', 'educations'].some((key) => Array.isArray(j[key]) && j[key].length > 0),
   };
@@ -101,6 +112,21 @@ export const candidateApi = {
     const current = await candidateApi.myResume();
     if (current) return parseResume(await http.patch<Json>(`${RESUME_MINE}${current.id}/`, body));
     return parseResume(await http.post<Json>(RESUME_MINE, { title: 'Hospitality professional', ...body }));
+  },
+
+  /**
+   * Места работы из резюме вместе с типом заведения, уровнем и кухней.
+   * Название, «о себе» и языки ставим, только если в резюме их ещё нет.
+   * Опыт заменяется целиком, поэтому вызывающий присылает уже слитый список.
+   */
+  async saveCvDetails(input: { title?: string | null; aboutMe?: string | null; languages?: string[]; experiences: Json[] }): Promise<ServerResume> {
+    const current = await candidateApi.myResume();
+    const body: Json = { experiences: input.experiences };
+    if (input.title && !current?.title.trim()) body.title = input.title;
+    if (input.aboutMe && !current?.aboutMe.trim()) body.about_me = input.aboutMe;
+    if (input.languages?.length && !current?.languages.length) body.languages = input.languages;
+    if (current) return parseResume(await http.patch<Json>(`${RESUME_MINE}${current.id}/`, body));
+    return parseResume(await http.post<Json>(RESUME_MINE, { title: input.title || 'Hospitality professional', ...body }));
   },
 
   async uploadVideo(file: File) {
