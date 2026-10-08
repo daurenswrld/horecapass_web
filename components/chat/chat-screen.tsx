@@ -1,14 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, MessageSquare, Mic, RefreshCw, Send } from 'lucide-react';
-import { PageHeader } from '@/components/shell/app-shell';
+import Link from 'next/link';
+import { ChevronLeft, MessageSquare, Mic, RefreshCw, Send, UserSearch } from 'lucide-react';
+import { PageHeader, useUnread } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { DemoNotice } from '@/components/demo-notice';
 import {
+  BUILT_IN_REPLIES,
   chatsApi,
   openRoomSocket,
   parseSocketEvent,
+  renderBuiltIn,
   renderTemplate,
   sendSocketMessage,
   type ChatMessage,
@@ -269,7 +272,11 @@ function Conversation({
   const company = isCompany(user?.role);
   React.useEffect(() => {
     if (!company) return;
-    chatsApi.quickReplies().then(setTemplates).catch(() => setTemplates([]));
+    // Серверных заготовок пока нет: тогда даём встроенные, чтобы кнопки быстрого ответа были всегда.
+    chatsApi
+      .quickReplies()
+      .then((list) => setTemplates(list.length ? list : BUILT_IN_REPLIES))
+      .catch(() => setTemplates(BUILT_IN_REPLIES));
   }, [company]);
 
   const submit = async () => {
@@ -325,6 +332,15 @@ function Conversation({
             <p className="truncate text-xs text-text-secondary">{roomSubtitle(room)}</p>
           )}
         </div>
+        {company && room.applicationSummary?.applicationId && (
+          <Link
+            href={`/company/selection?application=${room.applicationSummary.applicationId}`}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line-strong px-3 py-1.5 text-xs font-semibold text-text-primary transition-colors hover:border-accent focus-ring"
+          >
+            <UserSearch size={14} aria-hidden />
+            View candidate
+          </Link>
+        )}
         <span
           className={cn('text-xs', live ? 'text-success' : 'text-text-secondary')}
           title={live ? 'New messages arrive instantly' : 'No live connection, messages are sent as regular requests'}
@@ -370,7 +386,7 @@ function Conversation({
               type="button"
               onClick={() =>
                 setText(
-                  renderTemplate(t, {
+                  (t.id < 0 ? renderBuiltIn : renderTemplate)(t, {
                     name: room.peer?.firstName,
                     vacancy: room.applicationSummary?.vacancyTitle,
                   }),
@@ -470,6 +486,13 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
   }, []);
 
   const totalUnread = rooms.reduce((sum, r) => sum + r.unreadCount, 0);
+  const { user: me } = useAuth();
+  const meIsCompany = isCompany(me?.role);
+  // Бейдж «Chats» в меню следует за тем, что видно на этом экране.
+  const { setChatUnread } = useUnread();
+  React.useEffect(() => {
+    if (!loading && !sample) setChatUnread(totalUnread);
+  }, [totalUnread, loading, sample, setChatUnread]);
 
   return (
     <>
@@ -512,7 +535,9 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
               <MessageSquare size={22} className="mx-auto text-text-secondary" />
               <p className="mt-3 font-medium text-text-primary">No chats yet</p>
               <p className="mt-1 text-sm text-text-secondary">
-                Chats appear once you apply to a job.
+                {meIsCompany
+                  ? 'Open a candidate in Candidates and press Message to start a conversation.'
+                  : 'Chats appear once you apply to a job.'}
               </p>
             </Card>
           )}
