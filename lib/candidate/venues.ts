@@ -30,6 +30,11 @@ export interface JobDraft {
   venueType: string;
   venueLevel: string;
   cuisine: string;
+  /** Город, абзац «About <работодатель>» и два списка: то, что показывает шаблон резюме. */
+  location: string;
+  about: string;
+  responsibilities: string[];
+  achievements: string[];
   /** Описание, которое уже есть в сохранённом резюме: при сохранении его не теряем. */
   description: string;
 }
@@ -39,7 +44,7 @@ const ym = (date: string | null | undefined) => (date && /^\d{4}-\d{2}/.test(dat
 
 /** «Fine dining · top-3 in Almaty · Italian cuisine» — одна строка для карточек и резюме. */
 export function venueLine(v: { venueType?: string | null; venueLevel?: string | null; cuisine?: string | null }): string {
-  return [v.venueType, v.venueLevel, v.cuisine ? `${v.cuisine} cuisine` : ''].map((x) => (x ?? '').trim()).filter(Boolean).join(' · ');
+  return [v.venueType, v.venueLevel, v.cuisine ? (/cuisine/i.test(v.cuisine) ? v.cuisine : `${v.cuisine} cuisine`) : ''].map((x) => (x ?? '').trim()).filter(Boolean).join(' · ');
 }
 
 /**
@@ -65,6 +70,10 @@ export function mergeJobs(saved: ServerExperience[], found: CvExperience[]): Job
       venueType: old?.venue_type || f.venue_type || '',
       venueLevel: old?.venue_level || f.venue_level || '',
       cuisine: old?.cuisine || f.cuisine || '',
+      location: old?.location || f.location || '',
+      about: old?.about ?? '',
+      responsibilities: old?.responsibilities?.length ? old.responsibilities : (f.responsibilities ?? []),
+      achievements: old?.achievements?.length ? old.achievements : (f.achievements ?? []),
       description: old?.description ?? '',
     });
   });
@@ -79,6 +88,10 @@ export function mergeJobs(saved: ServerExperience[], found: CvExperience[]): Job
       venueType: s.venue_type ?? '',
       venueLevel: s.venue_level ?? '',
       cuisine: s.cuisine ?? '',
+      location: s.location ?? '',
+      about: s.about ?? '',
+      responsibilities: s.responsibilities ?? [],
+      achievements: s.achievements ?? [],
       description: s.description ?? '',
     });
   });
@@ -100,6 +113,10 @@ export function toServerExperiences(jobs: JobDraft[]) {
     venue_type: j.venueType || null,
     venue_level: j.venueLevel.trim() || null,
     cuisine: j.cuisine.trim() || null,
+    location: j.location.trim() || null,
+    about: j.about.trim() || null,
+    responsibilities: j.responsibilities,
+    achievements: j.achievements,
   }));
 }
 
