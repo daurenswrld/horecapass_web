@@ -42,6 +42,8 @@ import {
 import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/storage';
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { candidateApi } from '@/lib/api/candidate';
+import { AutofillError, autofillApi, readDocument } from '@/lib/api/autofill';
+import { applyCvFields } from '@/lib/candidate/autofill';
 import { CvBuilder } from './cv-builder';
 import { CandidateRolePicker } from './role-picker';
 import { SavedMaterials } from './saved-materials';
@@ -271,6 +273,29 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
   const targetRoles = draft.targetRoles?.length ? draft.targetRoles : draft.role ? [draft.role] : [];
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [reading, setReading] = React.useState(false);
+  const [found, setFound] = React.useState<{ label: string; value: string }[] | null>(null);
+  const [autofillError, setAutofillError] = React.useState<string | null>(null);
+  // Резюме загружено: ИИ молча читает его и заполняет анкету, человек проверяет.
+  const autofillFrom = async (file: File) => {
+    setReading(true);
+    setFound(null);
+    setAutofillError(null);
+    try {
+      const fields = await autofillApi.cv(await readDocument(file));
+      let applied: { label: string; value: string }[] = [];
+      update((d) => {
+        const res = applyCvFields(d, fields);
+        applied = res.applied;
+        return res.draft;
+      });
+      setFound(applied);
+    } catch (e) {
+      setAutofillError(e instanceof AutofillError ? e.message : 'We could not read this CV automatically.');
+    } finally {
+      setReading(false);
+    }
+  };
   const addCv = async (file: File) => {
     setUploading(true);
     setUploadError(null);
@@ -278,7 +303,7 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
       await upload?.('cv', file);
       set({ cvFile: file.name });
       setCvRaw(file);
-      if (live) setBuilder({ file });
+      if (live) void autofillFrom(file);
     } catch { setUploadError('Your CV was not uploaded. Please choose the file again to retry.'); }
     finally { setUploading(false); }
   };
@@ -295,6 +320,27 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
               if (f[0] && !uploading) void addCv(f[0]);
             }}
           />
+          {live && reading && (
+            <p role="status" className="mt-3 text-sm text-text-secondary">Reading your CV and filling in your profile…</p>
+          )}
+          {live && found && (
+            <div role="status" className="mt-3 rounded-md bg-accent-muted p-3 text-sm">
+              {found.length ? (
+                <>
+                  <p className="font-semibold text-heading">Found in your CV</p>
+                  <ul className="mt-1 space-y-0.5 text-text-secondary">
+                    {found.map((x) => (
+                      <li key={x.label}><span className="font-medium text-text-primary">{x.label}:</span> {x.value}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-text-secondary">We filled these in for you. Check them on the next steps.</p>
+                </>
+              ) : (
+                <p className="text-text-secondary">Your CV is saved. We did not find anything new to fill in; you will add the details on the next steps.</p>
+              )}
+            </div>
+          )}
+          {live && autofillError && <p role="alert" className="mt-3 text-sm text-danger">{autofillError}</p>}
           {/* Созвон 29.09: загрузил резюме → ИИ задаёт вопросы и адаптирует под GCC. */}
           {live && cvRaw && (
             <button

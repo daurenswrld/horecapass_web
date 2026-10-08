@@ -10,6 +10,8 @@ import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Chip, Field, Spinner } from '@/components/ui/primitives';
 import { ListSkeleton, riseStyle } from '@/components/ui/motion';
 import { useToast } from '@/components/ui/toast';
+import { AutofillBox } from '@/components/ui/autofill-box';
+import { autofillApi, type VacancyFields } from '@/lib/api/autofill';
 import { formatSalary, vacanciesApi, type Vacancy } from '@/lib/api/vacancies';
 import { ApiError } from '@/lib/api/client';
 
@@ -146,6 +148,34 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  /** Поля из описания вакансии → форма. Обязанности и бонусы дописываем в описание: отдельных полей тут нет. */
+  const applyFields = (f: VacancyFields): string => {
+    let filled = 0;
+    const take = (value: string | number | null | undefined, set: (v: string) => void) => {
+      if (value === null || value === undefined || value === '') return;
+      set(String(value));
+      filled += 1;
+    };
+    take(f.title, setTitle);
+    take(f.city ?? f.address, setCity);
+    take(f.salary_min, setSalaryMin);
+    take(f.salary_max, setSalaryMax);
+    if (f.currency && (CURRENCIES as readonly string[]).includes(f.currency)) {
+      setCurrency(f.currency as (typeof CURRENCIES)[number]);
+      filled += 1;
+    }
+    const bullets = (head: string, list: string[]) =>
+      list.length ? `${head}\n${list.map((x) => `- ${x}`).join('\n')}` : '';
+    const desc = [f.description ?? '', bullets('Responsibilities:', f.responsibilities), bullets('We offer:', f.benefits)]
+      .filter(Boolean)
+      .join('\n\n');
+    take(desc, setDescription);
+    take(f.requirements, setRequirements);
+    return filled
+      ? `Filled ${filled} field${filled === 1 ? '' : 's'} from the document. Please check them before publishing.`
+      : 'We could not find job details in this document. You can fill the form by hand.';
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Сервер требует название и описание (VacancySerializer).
@@ -189,6 +219,16 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
       <p className="mt-1 text-sm text-text-secondary">
         The position and a short description are required, the rest can be added later.
       </p>
+
+      <div className="mt-5">
+        <AutofillBox
+          title="Autofill from a job description"
+          hint="Upload a PDF, DOCX or a photo, or paste the text. We fill the form, you check it."
+          allowPaste
+          pastePlaceholder="Paste the job description here"
+          onRead={async (input) => applyFields(await autofillApi.vacancy(input))}
+        />
+      </div>
 
       <form onSubmit={submit} className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Field
