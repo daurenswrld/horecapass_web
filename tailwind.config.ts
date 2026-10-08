@@ -26,7 +26,7 @@ const config: Config = {
         heading: rgb('--heading'),
         peach: { from: rgb('--peach-from'), to: rgb('--peach-to') },
         ink: rgb('--ink'),
-        cv: { paper: rgb('--cv-paper'), ink: rgb('--cv-ink'), accent: rgb('--cv-accent') },
+        cv: { paper: rgb('--cv-paper'), ink: rgb('--cv-ink'), accent: rgb('--cv-accent'), 'accent-text': rgb('--cv-accent-text') },
         text: {
           primary: rgb('--text-primary'),
           secondary: rgb('--text-secondary'),

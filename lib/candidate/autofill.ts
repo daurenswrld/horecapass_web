@@ -1,6 +1,7 @@
 import { CERT_TYPES, NATIONALITIES, type CandidateDraft } from '@/lib/demo/candidate';
 import { normalizeTargetRoles } from '@/lib/candidate/roles';
 import type { CvFields } from '@/lib/api/autofill';
+import type { JobDraft } from '@/lib/candidate/venues';
 
 /**
  * Что из резюме попадает в анкету. Правило одно: не перезаписываем то, что
@@ -68,3 +69,28 @@ export function applyCvFields(draft: CandidateDraft, f: CvFields): AutofillResul
 
   return { draft: next, applied };
 }
+
+/**
+ * Результат разбора резюме на шаге «Your CV». Сохранение имени обновляет аккаунт, а провайдер
+ * кандидата при этом перезагружается и пересоздаёт шаг: без этого хранилища карточка
+ * «Found in your CV» и редактор мест работы пропадали бы сразу после появления.
+ */
+export interface AutofillSession {
+  found: { label: string; value: string }[] | null;
+  jobs: JobDraft[] | null;
+  cvFacts: { title: string | null; aboutMe: string | null; languages: string[] };
+  saved: boolean;
+}
+
+const sessions = new Map<string, AutofillSession>();
+const EMPTY: AutofillSession = { found: null, jobs: null, cvFacts: { title: null, aboutMe: null, languages: [] }, saved: false };
+
+export const autofillSession = {
+  get(accountId?: number | null): AutofillSession {
+    return sessions.get(String(accountId ?? '')) ?? EMPTY;
+  },
+  set(accountId: number | null | undefined, patch: Partial<AutofillSession>) {
+    const key = String(accountId ?? '');
+    sessions.set(key, { ...(sessions.get(key) ?? EMPTY), ...patch });
+  },
+};

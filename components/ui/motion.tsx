@@ -103,7 +103,11 @@ export function CountUp({
   }, [value, duration]);
 
   return (
-    <span className={className} aria-label={`${value}${suffix}`}>
+    <span className={className}>
+      <span className="sr-only">
+        {value}
+        {suffix}
+      </span>
       <span aria-hidden>
         {shown}
         {suffix}

@@ -17,7 +17,7 @@ import { canSyncToServer } from '@/lib/demo/employer-sync';
  * Когда мастер пройден, вакансия ещё не опубликована (оплаты нет) — она
  * показывается в «Drafts», как в списке Active / Drafts / Archived из брифа.
  */
-export function SetupInvite() {
+export function SetupInvite({ hasVacancies = false }: { hasVacancies?: boolean } = {}) {
   const [draft, setDraft] = React.useState<EmployerDraft | null>(null);
   const [status, setStatus] = React.useState<'none' | 'started' | 'done' | null>(null);
   React.useEffect(() => {
@@ -44,6 +44,9 @@ export function SetupInvite() {
       </section>
     );
   }
+
+  // Первую вакансию уже опубликовали: приглашение «создайте первую вакансию» неверно и закрывает экран.
+  if (hasVacancies && status !== 'started') return null;
 
   return (
     <div className="flex flex-col gap-4 rounded-lg border-[1.5px] border-accent-strong bg-gradient-to-r from-peach-from to-peach-to p-5 sm:flex-row sm:items-center dark:border-accent">

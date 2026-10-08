@@ -85,7 +85,7 @@ export function CvTemplate({ data, className }: { data: CvData; className?: stri
               <div key={i}>
                 <p className="font-bold">
                   {w.title}
-                  {w.place && <span className="font-semibold text-cv-accent"> · {w.place}</span>}
+                  {w.place && <span className="font-semibold text-cv-accent-text"> · {w.place}</span>}
                 </p>
                 {w.dates && <p className="text-[12px] text-[rgb(var(--cv-ink)/0.6)]">{w.dates}</p>}
                 {w.bullets.length > 0 && (

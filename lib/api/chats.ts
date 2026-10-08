@@ -15,6 +15,7 @@ export interface ChatUser {
   lastName: string;
   role: string;
   avatar: string | null;
+  email?: string | null;
   displayName: string;
 }
 
@@ -71,9 +72,11 @@ function parseUser(json: unknown): ChatUser {
     lastName,
     role: str(j.role),
     avatar: str(j.avatar) || null,
+    email: str(j.email) || null,
     // Имя в профиле могут не заполнить (на проде так у свежих аккаунтов) —
     // тогда хотя бы роль, а не «Unknown user».
-    displayName: full || (/COMPANY/.test(str(j.role)) ? 'Employer' : str(j.role) === 'APPLICANT' ? 'Candidate' : 'Unknown user'),
+    // Без имени кандидата различают по почте (так же его видит работодатель в списке откликов).
+    displayName: full || (/COMPANY/.test(str(j.role)) ? 'Employer' : str(j.role) === 'APPLICANT' ? str(j.email) || 'Candidate' : 'Unknown user'),
   };
 }
 

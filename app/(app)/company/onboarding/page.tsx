@@ -243,7 +243,7 @@ export default function EmployerOnboardingPage() {
             </div>
             <p className="mt-1.5 text-xs text-text-secondary">
               Step {n} of {STEP_TOTAL} · {STEP_TITLE[n]}
-              <span className="ml-2 text-text-tertiary">{saved ? '· Saved in this browser' : '· Could not save'}</span>
+              <span className="ml-2 text-text-secondary">{saved ? '· Saved in this browser' : '· Could not save'}</span>
               {server && serverState === 'saving' && <span className="ml-2 text-text-tertiary">· Saving to your account…</span>}
               {server && serverState === 'saved' && <span className="ml-2 text-success">· Saved to your account</span>}
               {server && typeof serverState === 'object' && (

@@ -30,7 +30,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long
 
 function StatusBadge({ status }: { status: ApplicationStatus }) {
   return (
-    <span className={cn('inline-flex items-center rounded-full px-3 py-1 text-xs font-medium', STATUS_TONE[status])}>
+    <span className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium', STATUS_TONE[status])}>
       {STATUS_LABEL[status]}
     </span>
   );
@@ -112,7 +112,7 @@ function ApplicationCard({ a, index = 0 }: { a: ApplicantApplication; index?: nu
     <Card className="rise min-w-0 p-5" style={riseStyle(index)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="font-semibold text-text-primary">{a.vacancyTitle}</h3>
+          <h2 className="font-semibold text-text-primary">{a.vacancyTitle}</h2>
           <p className="mt-0.5 text-sm text-text-secondary">{a.companyName}</p>
         </div>
         <StatusBadge status={a.status} />
@@ -276,7 +276,7 @@ export default function ResponsesPage() {
         )}
 
         {!loading && !error && shown.length > 0 && (
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             {shown.map((a, i) => (
               <ApplicationCard key={a.id} a={a} index={i} />
             ))}

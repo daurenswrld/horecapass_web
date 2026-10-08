@@ -34,7 +34,7 @@ export function JobDetails({
   return (
     <section aria-labelledby="job-details-title" className="mt-3 space-y-4 rounded-lg border border-line bg-surface p-4">
       <div>
-        <h3 id="job-details-title" className="font-semibold text-heading">Make your jobs easy to read for Gulf employers</h3>
+        <h2 id="job-details-title" className="font-semibold text-heading">Make your jobs easy to read for Gulf employers</h2>
         <p className="mt-1 text-sm text-text-secondary">
           An employer in Dubai or Doha may not know how strong your previous workplace was. Say what kind of place it was and how well known it is.
           {missing > 0 ? ` ${missing} of ${jobs.length} still need the venue type.` : ''}
