@@ -108,6 +108,8 @@ export const API = {
     cvBuilderStream: "/api/ai/cv-builder/stream/",
     cvBuilderHistory: "/api/ai/cv-builder/history/",
     vacancyBuilderStream: "/api/ai/vacancy-builder/stream/",
+    autofillCv: "/api/ai/autofill/cv/",
+    autofillVacancy: "/api/ai/autofill/vacancy/",
   },
 
   chats: {
