@@ -238,7 +238,7 @@ export default function SelectionPage() {
               Select all in the list
             </label>
 
-            <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
               {shown.map((a, i) => {
                 const picked = selected.includes(a.id);
                 return (

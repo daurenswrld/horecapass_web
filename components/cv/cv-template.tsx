@@ -53,7 +53,13 @@ export function CvTemplate({ data, className }: { data: CvData; className?: stri
             HorecaPass · horecapass.com
           </p>
           <h2 className="mt-2 break-words text-2xl font-bold leading-tight sm:text-3xl">
-            {data.firstName} <span className="text-cv-accent">{data.lastName}</span>
+            {data.firstName.trim() || data.lastName.trim() ? (
+              <>
+                {data.firstName} <span className="text-cv-accent">{data.lastName}</span>
+              </>
+            ) : (
+              <span className="text-[rgb(var(--cv-ink)/0.65)]">Your name</span>
+            )}
           </h2>
           {line.length > 0 && <p className="mt-1 text-[rgb(var(--cv-ink)/0.8)]">{line.join(' · ')}</p>}
         </div>
@@ -85,7 +91,7 @@ export function CvTemplate({ data, className }: { data: CvData; className?: stri
               <div key={i}>
                 <p className="font-bold">
                   {w.title}
-                  {w.place && <span className="font-semibold text-cv-accent"> · {w.place}</span>}
+                  {w.place && <span className="font-semibold text-cv-accent-text"> · {w.place}</span>}
                 </p>
                 {w.dates && <p className="text-[12px] text-[rgb(var(--cv-ink)/0.6)]">{w.dates}</p>}
                 {w.bullets.length > 0 && (

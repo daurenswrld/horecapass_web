@@ -71,7 +71,7 @@ export default function CompanyVacanciesPage() {
       />
 
       <div className="space-y-6 px-5 py-6 md:px-8">
-        <SetupInvite />
+        <SetupInvite hasVacancies={items.length > 0} />
 
         {creating && (
           <CreateVacancyForm

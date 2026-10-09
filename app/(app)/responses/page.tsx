@@ -30,7 +30,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long
 
 function StatusBadge({ status }: { status: ApplicationStatus }) {
   return (
-    <span className={cn('inline-flex items-center rounded-full px-3 py-1 text-xs font-medium', STATUS_TONE[status])}>
+    <span className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium', STATUS_TONE[status])}>
       {STATUS_LABEL[status]}
     </span>
   );
@@ -58,12 +58,39 @@ function Funnel({ status }: { status: ApplicationStatus }) {
 
   const current = FUNNEL.indexOf(funnelStage(status));
   if (current < 0) return null;
+  return <FunnelTrack current={current} />;
+}
 
+function FunnelTrack({ current }: { current: number }) {
+  const ref = React.useRef<HTMLOListElement>(null);
+  const [fade, setFade] = React.useState(false);
+  const measure = React.useCallback(() => {
+    const el = ref.current;
+    if (el) setFade(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+  }, []);
+  React.useEffect(() => {
+    const el = ref.current;
+    const step = el?.children[current] as HTMLElement | undefined;
+    if (el && step) {
+      // Текущий этап показываем в видимой части, а не за краем узкой карточки.
+      const s = step.getBoundingClientRect();
+      const o = el.getBoundingClientRect();
+      el.scrollLeft += s.left - o.left - (o.width - s.width) / 2;
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [current, measure]);
+
+  const mask = 'linear-gradient(to right, black calc(100% - 28px), transparent)';
   return (
     // Названия этапов длиннее, чем шестая часть узкой карточки. Позволяем
     // цепочке прокручиваться внутри себя — иначе она распирает страницу
     // и появляется горизонтальная прокрутка на телефоне.
     <ol
+      ref={ref}
+      onScroll={measure}
+      style={fade ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
       className="scroll-slim -mx-1 mt-4 flex items-start gap-0 overflow-x-auto px-1 pb-1"
       aria-label="Application stages"
     >
@@ -112,7 +139,7 @@ function ApplicationCard({ a, index = 0 }: { a: ApplicantApplication; index?: nu
     <Card className="rise min-w-0 p-5" style={riseStyle(index)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="font-semibold text-text-primary">{a.vacancyTitle}</h3>
+          <h2 className="font-semibold text-text-primary">{a.vacancyTitle}</h2>
           <p className="mt-0.5 text-sm text-text-secondary">{a.companyName}</p>
         </div>
         <StatusBadge status={a.status} />
@@ -276,7 +303,7 @@ export default function ResponsesPage() {
         )}
 
         {!loading && !error && shown.length > 0 && (
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             {shown.map((a, i) => (
               <ApplicationCard key={a.id} a={a} index={i} />
             ))}

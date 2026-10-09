@@ -83,6 +83,11 @@ export default function CompanyProfilePage() {
     set('offer', brand.offer.includes(item) ? brand.offer.filter((x) => x !== item) : [...brand.offer, item]);
 
   const companyName = user?.company_name || 'Your company';
+  const sections = TEXT_FIELDS.length + 2;
+  const filled =
+    TEXT_FIELDS.filter((f) => String(brand[f.key] ?? '').trim()).length +
+    (brand.offer.length ? 1 : 0) +
+    (brand.hiringSteps.length ? 1 : 0);
 
   return (
     <>
@@ -105,6 +110,34 @@ export default function CompanyProfilePage() {
 
         {editing ? (
           <Card className="grid gap-5 p-6 xl:grid-cols-2 xl:items-start xl:gap-x-10">
+            <div className="xl:col-span-2">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold text-heading">
+                  {filled} of {sections} sections filled
+                </span>
+                <span className="text-text-secondary">Saved in this browser as you type</span>
+              </div>
+              <div
+                role="progressbar"
+                aria-label="Company profile completeness"
+                aria-valuenow={filled}
+                aria-valuemin={0}
+                aria-valuemax={sections}
+                className="mt-2 h-2 overflow-hidden rounded-full bg-surface-alt"
+              >
+                <div
+                  className="h-full rounded-full bg-accent-strong transition-[width] duration-500 dark:bg-accent"
+                  style={{ width: `${(filled / sections) * 100}%` }}
+                />
+              </div>
+              {filled === 0 && (
+                <p className="mt-2 text-sm text-text-secondary">
+                  Start with <span className="font-medium text-text-primary">Who we are</span> and{' '}
+                  <span className="font-medium text-text-primary">Why work with us</span>: candidates read these first.
+                </p>
+              )}
+            </div>
+
             {TEXT_FIELDS.map((f) => (
               <div key={f.key}>
                 <label className="block text-sm font-medium text-text-secondary" htmlFor={f.key}>

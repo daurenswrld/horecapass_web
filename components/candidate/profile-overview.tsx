@@ -2,9 +2,10 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowRight, BadgeCheck, ChevronRight, Plus } from 'lucide-react';
+import { ArrowRight, BadgeCheck, ChevronRight, Plus, User } from 'lucide-react';
 import { CountUp } from '@/components/ui/motion';
-import { Card } from '@/components/ui/primitives';
+import { Button, Card, Field } from '@/components/ui/primitives';
+import { candidateApi } from '@/lib/api/candidate';
 import { useAuth } from '@/lib/auth/context';
 import { profileProgress, qualificationStatus } from '@/lib/demo/candidate';
 import { cvConsent } from '@/lib/demo/storage';
@@ -20,7 +21,7 @@ export function ProfileProgress({ className }: { className?: string }) {
 
   return (
     <div className={cn('rounded-lg border border-line bg-surface p-4', className)}>
-      <div className="flex items-center justify-between gap-3 text-sm">
+      <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <span className="font-semibold text-heading">
           Profile <CountUp value={state.pct} suffix="%" /> ready
         </span>
@@ -59,16 +60,40 @@ function hrefFor(key: string): string {
  * — все материалы кандидата одним кликабельным списком.
  */
 export function ProfileOverview() {
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const { draft: d, update, error, reload, qualification, qualificationError } = useCandidate();
   const [signed, setSigned] = React.useState(false);
+  const [editingName, setEditingName] = React.useState(false);
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
+  const [savingName, setSavingName] = React.useState(false);
+  const [nameError, setNameError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    setFirstName(user?.first_name ?? '');
+    setLastName(user?.last_name ?? '');
+  }, [user?.first_name, user?.last_name]);
   const [refDraft, setRefDraft] = React.useState('');
   React.useEffect(() => {
     setSigned(!!cvConsent.load(user?.id).signedAt);
   }, [user?.id]);
   if (!d) return null;
 
+  const hasName = !!(user?.first_name || user?.last_name);
   const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Your name';
+  const saveName = async () => {
+    if (!firstName.trim() || savingName) return;
+    setSavingName(true);
+    setNameError(null);
+    try {
+      await candidateApi.patchProfile({ first_name: firstName.trim(), last_name: lastName.trim() });
+      await refresh();
+      setEditingName(false);
+    } catch {
+      setNameError('Could not save your name. Please try again.');
+    } finally {
+      setSavingName(false);
+    }
+  };
   // Verified ставит сервер после проверки — в браузере его не выдаём.
   const verified = false;
   const qual = qualificationStatus(d);
@@ -103,15 +128,38 @@ export function ProfileOverview() {
       {error && <p role="alert" className="text-sm text-danger">{error} <button onClick={() => void reload()} className="underline">Reload account copy</button></p>}
       <Card className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
         <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-accent-muted text-2xl font-bold text-accent-text">
-          {name
-            .split(' ')
-            .map((w) => w[0])
-            .slice(0, 2)
-            .join('')}
+          {hasName ? (
+            name
+              .split(' ')
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join('')
+          ) : (
+            <User size={30} aria-hidden />
+          )}
         </span>
         <div className="min-w-0 flex-1">
+          {(!hasName || editingName) ? (
+            <form
+              onSubmit={(e) => { e.preventDefault(); void saveName(); }}
+              className="space-y-2"
+              aria-label="Your name"
+            >
+              {!hasName && <p className="text-sm text-text-secondary">Employers see your name, not your email. Add it so they know who you are.</p>}
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Field label="First name" value={firstName} maxLength={60} autoComplete="given-name" onChange={(e) => setFirstName(e.target.value)} />
+                <Field label="Last name" value={lastName} maxLength={60} autoComplete="family-name" onChange={(e) => setLastName(e.target.value)} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="submit" size="sm" disabled={!firstName.trim() || savingName}>{savingName ? 'Saving…' : 'Save name'}</Button>
+                {hasName && <Button type="button" size="sm" variant="secondary" onClick={() => setEditingName(false)}>Cancel</Button>}
+                {nameError && <span role="alert" className="text-sm text-danger">{nameError}</span>}
+              </div>
+            </form>
+          ) : (
           <h2 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight text-heading">
             {name}
+            <button type="button" onClick={() => setEditingName(true)} className="text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-ring">Edit</button>
             {verified && (
               <span className="inline-flex items-center gap-1 rounded-full bg-info-surface px-2.5 py-0.5 text-sm font-semibold text-on-info-surface">
                 <BadgeCheck size={15} aria-hidden />
@@ -119,6 +167,7 @@ export function ProfileOverview() {
               </span>
             )}
           </h2>
+          )}
           <p className="mt-1 text-text-secondary">
             {[d.role, d.nationality, d.location].filter(Boolean).join(' · ') || (
               <Link href="/onboarding" className="font-semibold text-accent-text underline-offset-4 hover:underline">
@@ -132,7 +181,7 @@ export function ProfileOverview() {
       <ProfileProgress />
 
       <Card className="divide-y divide-line">
-        <h3 className="px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-secondary">My Profile</h3>
+        <h2 className="px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-secondary">My Profile</h2>
         {rows.map((r) => (
           <Link key={r.label} href={r.href} className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-muted focus-ring">
             <span className="flex-1 font-medium text-text-primary">{r.label}</span>
@@ -184,6 +233,21 @@ export function ProfileOverview() {
       </Card>
     </div>
   );
+}
+
+/**
+ * Одна подсказка про профиль на ленте вакансий: пока ничего не сделано, большая
+ * карточка-приглашение, дальше компактный прогресс со следующим шагом. Раньше
+ * показывались обе сразу и на телефоне закрывали весь первый экран до вакансий.
+ */
+export function ProfilePrompt() {
+  const { user } = useAuth();
+  const { draft, qualification, status } = useCandidate();
+  if (!draft) return null;
+  const pct = profileProgress(draft, !!cvConsent.load(user?.id).signedAt, !!qualification && qualification.answers.length === qualification.questions.length).pct;
+  if (status === 'deferred' || pct === 0) return <CandidateSetupInvite />;
+  if (pct >= 100) return null;
+  return <ProfileProgress />;
 }
 
 /** Приглашение в онбординг — на ленте вакансий, пока профиль не собран. */

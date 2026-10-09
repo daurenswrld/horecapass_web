@@ -67,7 +67,7 @@ export function VacancyCard({ vacancy, selected, onSelect, onToggleSave }: Props
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate font-semibold text-text-primary">{vacancy.title}</h3>
+              <h2 className="truncate font-semibold text-text-primary">{vacancy.title}</h2>
               <p className="mt-0.5 flex items-center gap-1 truncate text-sm text-text-secondary">
                 {vacancy.companyName}
                 {vacancy.isVerified && (

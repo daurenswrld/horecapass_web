@@ -43,7 +43,10 @@ import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
 import { candidateApi } from '@/lib/api/candidate';
 import { AutofillError, autofillApi, readDocument } from '@/lib/api/autofill';
-import { applyCvFields } from '@/lib/candidate/autofill';
+import { JobDetails } from './job-details';
+import { useAuth } from '@/lib/auth/context';
+import { mergeJobs, roleNudge, toServerExperiences, type JobDraft } from '@/lib/candidate/venues';
+import { applyCvFields, autofillSession } from '@/lib/candidate/autofill';
 import { CvBuilder } from './cv-builder';
 import { CandidateRolePicker } from './role-picker';
 import { SavedMaterials } from './saved-materials';
@@ -260,7 +263,8 @@ function FilePick({
  * без «Skip» — профиль не может остаться пустым. Нужно хотя бы резюме:
  * загруженное или собранное в конструкторе.
  */
-export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, accountId }: CProps) {
+export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, accountId, name }: CProps) {
+  const { refresh: refreshAccount } = useAuth();
   const [builtCv, setBuiltCv] = React.useState(false);
   const [letterOpen, setLetterOpen] = React.useState(false);
   React.useEffect(() => { if (!canSyncToServer()) setBuiltCv(!!profileDraft.load(accountId).professionId); }, [accountId]);
@@ -274,13 +278,20 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const [reading, setReading] = React.useState(false);
-  const [found, setFound] = React.useState<{ label: string; value: string }[] | null>(null);
+  const stored = autofillSession.get(accountId);
+  const [found, setFound] = React.useState<{ label: string; value: string }[] | null>(stored.found);
   const [autofillError, setAutofillError] = React.useState<string | null>(null);
+  const [jobs, setJobs] = React.useState<JobDraft[] | null>(stored.jobs);
+  const [cvFacts, setCvFacts] = React.useState<{ title: string | null; aboutMe: string | null; languages: string[] }>(stored.cvFacts);
+  const [savingJobs, setSavingJobs] = React.useState(false);
+  const [jobsSaved, setJobsSaved] = React.useState(stored.saved);
+  const [jobsError, setJobsError] = React.useState<string | null>(null);
   // Резюме загружено: ИИ молча читает его и заполняет анкету, человек проверяет.
   const autofillFrom = async (file: File) => {
     setReading(true);
     setFound(null);
     setAutofillError(null);
+    autofillSession.set(accountId, { found: null, jobs: null, saved: false });
     try {
       const fields = await autofillApi.cv(await readDocument(file));
       let applied: { label: string; value: string }[] = [];
@@ -289,11 +300,52 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
         applied = res.applied;
         return res.draft;
       });
+      // Имени у нового аккаунта нет, а работодатель видит почту вместо человека: берём из резюме.
+      const fullName = fields.full_name?.trim();
+      let nameSaved = false;
+      if (fullName && !name.first.trim() && !name.last.trim()) {
+        const [first, ...rest] = fullName.split(/\s+/);
+        try {
+          await candidateApi.patchProfile({ first_name: first, last_name: rest.join(' ') });
+          applied = [{ label: 'Name', value: fullName }, ...applied];
+          nameSaved = true;
+        } catch { /* имя можно ввести на странице профиля */ }
+      }
+      const facts = { title: fields.desired_positions[0] ?? null, aboutMe: fields.summary, languages: fields.languages };
+      let nextJobs: JobDraft[] | null = null;
+      if (fields.experiences.length) {
+        const saved = await candidateApi.myResume().catch(() => null);
+        nextJobs = mergeJobs(saved?.experiences ?? [], fields.experiences);
+      }
+      // Сначала показываем и запоминаем результат, и только потом обновляем аккаунт: после этого
+      // провайдер перезагружается и шаг пересоздаётся, а состояние берётся из хранилища.
+      autofillSession.set(accountId, { found: applied, jobs: nextJobs, cvFacts: facts, saved: false });
       setFound(applied);
+      setCvFacts(facts);
+      setJobsSaved(false);
+      setJobsError(null);
+      setJobs(nextJobs);
+      if (nameSaved) void refreshAccount().catch(() => {});
     } catch (e) {
       setAutofillError(e instanceof AutofillError ? e.message : 'We could not read this CV automatically.');
     } finally {
       setReading(false);
+    }
+  };
+  const saveJobs = async () => {
+    if (!jobs) return;
+    setSavingJobs(true);
+    setJobsError(null);
+    setJobsSaved(false);
+    try {
+      await candidateApi.saveCvDetails({ ...cvFacts, experiences: toServerExperiences(jobs) });
+      setJobsSaved(true);
+      autofillSession.set(accountId, { saved: true });
+      await onBuilt?.();
+    } catch {
+      setJobsError('Could not save your jobs. Please try again.');
+    } finally {
+      setSavingJobs(false);
     }
   };
   const addCv = async (file: File) => {
@@ -456,6 +508,18 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
           <SavedMaterials kind="portfolio" update={update} />
         </Tile>
       </div>
+
+      {live && jobs && jobs.length > 0 && (
+        <JobDetails
+          jobs={jobs}
+          onChange={(next) => { setJobs(next); setJobsSaved(false); autofillSession.set(accountId, { jobs: next, saved: false }); }}
+          onSave={() => void saveJobs()}
+          saving={savingJobs}
+          saved={jobsSaved}
+          error={jobsError}
+          nudge={roleNudge([...targetRoles, cvFacts.title ?? ''])}
+        />
+      )}
 
       {!live && <DemoNotice what="Sign in to upload your materials to your account." />}
 

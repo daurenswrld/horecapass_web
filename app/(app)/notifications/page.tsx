@@ -141,7 +141,7 @@ export default function NotificationsPage() {
                   <span className={cn('text-text-primary', !n.isRead && 'font-semibold')}>{n.title}</span>
                   <span className="shrink-0 text-xs text-text-secondary">{ago(n.createdAt)}</span>
                 </span>
-                <span className="mt-0.5 block text-sm text-text-secondary">{n.message}</span>
+                <span className="mt-0.5 block text-sm text-text-secondary [overflow-wrap:anywhere]">{n.message}</span>
               </span>
               {!n.isRead && <span aria-label="Unread" className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-accent-strong dark:bg-accent" />}
             </button>

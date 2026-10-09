@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, Search, SlidersHorizontal } from 'lucide-react';
-import { CandidateSetupInvite, ProfileProgress } from '@/components/candidate/profile-overview';
+import { ProfilePrompt } from '@/components/candidate/profile-overview';
 import { PageHeader } from '@/components/shell/app-shell';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { ListSkeleton, riseStyle } from '@/components/ui/motion';
@@ -155,8 +155,7 @@ function JobsInner() {
       <div className={cn('space-y-3 px-5 py-4 md:px-8 lg:block', open && 'hidden')}>
         {/* Бриф кандидата, пункт 9: вместо пустой шкалы — прогресс профиля
             с конкретным следующим действием. */}
-        <CandidateSetupInvite />
-        <ProfileProgress />
+        <ProfilePrompt />
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary" />

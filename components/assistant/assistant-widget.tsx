@@ -188,8 +188,9 @@ export function AssistantWidget() {
           aria-expanded={false}
           title="Ask the assistant"
           className={cn(
-            'pop-in fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-accent-strong text-on-accent shadow-lift transition-transform hover:scale-105 active:scale-95 focus-ring dark:bg-accent md:right-6',
-            inApp ? 'bottom-[4.75rem] md:bottom-6' : 'bottom-5 md:bottom-6',
+            'pop-in fixed right-4 z-40 grid h-12 w-12 place-items-center md:h-14 md:w-14 rounded-full bg-accent-strong text-on-accent shadow-lift transition-transform hover:scale-105 active:scale-95 focus-ring dark:bg-accent md:right-6',
+            inApp ? 'bottom-[4.5rem] md:bottom-6' : 'bottom-5 md:bottom-6',
+            /\/chats$/.test(pathname) && 'max-md:hidden',
           )}
         >
           <MessagesSquare size={24} aria-hidden />

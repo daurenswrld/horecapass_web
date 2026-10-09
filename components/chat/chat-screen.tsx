@@ -53,7 +53,9 @@ function roomTitle(room: ChatRoom): string {
 function roomSubtitle(room: ChatRoom): string | null {
   const s = room.applicationSummary;
   if (!s) return null;
-  return [s.vacancyTitle, s.companyName].filter(Boolean).join(' · ') || null;
+  // Название компании уже в заголовке (у кандидата собеседник и есть компания) — не повторяем его.
+  const company = roomTitle(room) === s.companyName ? '' : s.companyName;
+  return [s.vacancyTitle, company].filter(Boolean).join(' · ') || null;
 }
 
 /** logo — вместо фото собеседника логотип компании: вписываем целиком, не обрезая. */
@@ -338,7 +340,7 @@ function Conversation({
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line-strong px-3 py-1.5 text-xs font-semibold text-text-primary transition-colors hover:border-accent focus-ring"
           >
             <UserSearch size={14} aria-hidden />
-            View candidate
+            <span className="max-sm:sr-only">View candidate</span>
           </Link>
         )}
         <span
@@ -516,7 +518,7 @@ export function ChatScreen({ segment }: { segment?: React.ReactNode } = {}) {
         </div>
       )}
 
-      <div className="grid gap-4 px-5 pb-6 pt-4 md:px-8 lg:h-[calc(100dvh-8.5rem)] lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 px-5 pb-6 pt-4 md:px-8 lg:h-[calc(100dvh-8.5rem)] lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
         <div className={cn('space-y-2.5 lg:block lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-slim', open && 'hidden')}>
           {loading && (
             <div className="grid place-items-center py-16">
