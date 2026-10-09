@@ -19,6 +19,7 @@ import { Wordmark } from '@/components/brand';
 import { Spinner } from '@/components/ui/primitives';
 import { ToastProvider } from '@/components/ui/toast';
 import { notificationsApi } from '@/lib/api/notifications';
+import { chatsApi } from '@/lib/api/chats';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { isCompany } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/context';
@@ -47,9 +48,17 @@ interface NavItem {
 }
 
 /** Число непрочитанных уведомлений: страница уведомлений обновляет его сама. */
-const UnreadContext = React.createContext<{ unread: number; setUnread: (n: number) => void }>({
+const UnreadContext = React.createContext<{
+  unread: number;
+  setUnread: (n: number) => void;
+  /** Непрочитанные сообщения в чатах: экран чатов обновляет его сам. */
+  chatUnread: number;
+  setChatUnread: (n: number) => void;
+}>({
   unread: 0,
   setUnread: () => undefined,
+  chatUnread: 0,
+  setChatUnread: () => undefined,
 });
 
 export function useUnread() {
@@ -81,6 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [unread, setUnread] = React.useState(0);
+  const [chatUnread, setChatUnread] = React.useState(0);
 
   // Счётчик непрочитанных: при входе, раз в минуту и когда вкладку снова открыли.
   React.useEffect(() => {
@@ -95,6 +105,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
     load();
     const timer = window.setInterval(load, 60_000);
+    document.addEventListener('visibilitychange', load);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', load);
+    };
+  }, [user]);
+
+  // Непрочитанные сообщения: чаще, чем уведомления, потому что на ответ ждут.
+  React.useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const load = () => {
+      if (document.visibilityState === 'hidden') return;
+      chatsApi
+        .rooms()
+        .then((rooms) => alive && setChatUnread(rooms.reduce((sum, r) => sum + r.unreadCount, 0)))
+        .catch(() => undefined);
+    };
+    load();
+    const timer = window.setInterval(load, 30_000);
     document.addEventListener('visibilitychange', load);
     return () => {
       alive = false;
@@ -124,10 +155,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     user.email ||
     'Account';
 
-  const badge = (href: string) => (href === NOTIFICATIONS_ITEM.href ? unread : 0);
+  const badge = (href: string) => (href === NOTIFICATIONS_ITEM.href ? unread : href.endsWith('/chats') ? chatUnread : 0);
 
   return (
-    <UnreadContext.Provider value={{ unread, setUnread }}>
+    <UnreadContext.Provider value={{ unread, setUnread, chatUnread, setChatUnread }}>
     <ToastProvider>
     <div className="flex min-h-[100dvh]">
       <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">

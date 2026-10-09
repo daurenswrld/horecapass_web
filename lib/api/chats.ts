@@ -1,5 +1,5 @@
 import { API } from './endpoints';
-import { chatSocketUrl, http } from './client';
+import { ApiError, chatSocketUrl, http } from './client';
 
 /**
  * Чаты. Модели повторяют chat_models.dart мобилки, вплоть до того, что
@@ -126,6 +126,8 @@ function unwrapList(data: unknown): Json[] {
   return [];
 }
 
+let templatesMissing = false;
+
 export const chatsApi = {
   async rooms(): Promise<ChatRoom[]> {
     const data = await http.get<unknown>(API.chats.list);
@@ -157,7 +159,18 @@ export const chatsApi = {
   },
 
   async quickReplies(): Promise<QuickReplyTemplate[]> {
-    const data = await http.get<unknown>(API.chats.templates);
+    // Сервер может не знать этой ручки (на проде её нет): после первого 404 больше не спрашиваем.
+    if (templatesMissing) return [];
+    let data: unknown;
+    try {
+      data = await http.get<unknown>(API.chats.templates);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        templatesMissing = true;
+        return [];
+      }
+      throw e;
+    }
     return unwrapList(data).map((j) => {
       const title = str(j.title).trim();
       const text = str(j.text).trim();
@@ -174,6 +187,28 @@ export const chatsApi = {
     return parseRoom(await http.post<Json>(API.chats.startForApplication(applicationId)));
   },
 };
+
+/**
+ * Готовые ответы рекрутёра. Серверных заготовок (/api/chats/templates/) на бэкенде
+ * пока нет, и без них у работодателя не было ни одной кнопки быстрого ответа.
+ * Id отрицательные, чтобы не пересечься с серверными.
+ */
+export const BUILT_IN_REPLIES: QuickReplyTemplate[] = [
+  { id: -1, title: 'Invite to interview', text: 'Hello {name}, thank you for applying for {vacancy}. We would like to invite you to an interview. Which days and times suit you this week?' },
+  { id: -2, title: 'Ask about availability', text: 'Hello {name}, thanks for your interest in {vacancy}. When would you be able to start, and are you currently in the country?' },
+  { id: -3, title: 'Ask for documents', text: 'Hello {name}, to move forward with {vacancy} could you please send your updated CV, copies of your certificates and your visa status?' },
+  { id: -4, title: 'Ask about last role', text: 'Hello {name}, we liked your profile for {vacancy}. Could you tell us a bit more about your last job and the kind of venue it was?' },
+  { id: -5, title: 'Politely decline', text: 'Hello {name}, thank you for your time and interest in {vacancy}. We have decided to continue with other candidates and wish you every success.' },
+].map((t) => ({ ...t, label: t.title }));
+
+/** Как renderTemplate, но для встроенных: без имени пишем просто «Hello,», а не оставляем {name} в поле. */
+export function renderBuiltIn(t: QuickReplyTemplate, vars: { name?: string; vacancy?: string }): string {
+  const name = vars.name?.trim();
+  const vacancy = vars.vacancy?.trim();
+  return t.text
+    .replace(/\s*\{\s*name\s*\}/gi, name ? ` ${name}` : '')
+    .replace(/\{\s*vacancy\s*\}/gi, vacancy ? vacancy : 'the position');
+}
 
 /** Подставляет {name} и {vacancy} в заготовку ответа — как в мобилке.
  *  Пустое значение оставляет плейсхолдер: рекрутёр увидит его в поле
