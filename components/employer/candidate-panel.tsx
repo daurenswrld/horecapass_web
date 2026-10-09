@@ -19,6 +19,7 @@ import {
 import type { CandidateMaterial } from '@/lib/api/materials';
 import { chatsApi } from '@/lib/api/chats';
 import { isSample } from '@/lib/demo/samples';
+import { venueLine } from '@/lib/candidate/venues';
 import { cn } from '@/lib/utils';
 
 /**
@@ -405,6 +406,7 @@ export function CandidatePanel({
                 <li key={i} className="text-sm">
                   <p className="font-semibold text-text-primary">{e.position || 'Role'}</p>
                   <p className="text-text-secondary">{[e.company, e.period].filter(Boolean).join(' · ')}</p>
+                  {venueLine(e) && <p className="mt-0.5 font-medium text-accent-text">{venueLine(e)}</p>}
                   {e.description && <p className="mt-1 text-text-primary">{e.description}</p>}
                 </li>
               ))}

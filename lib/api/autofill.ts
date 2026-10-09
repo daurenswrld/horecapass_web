@@ -9,6 +9,17 @@ import { fileToBase64 } from './ai';
  * что в нём написано; человек проверяет и правит поля сам.
  */
 
+export interface CvExperience {
+  company: string | null;
+  position: string | null;
+  /** YYYY-MM */
+  start_date: string | null;
+  end_date: string | null;
+  venue_type: string | null;
+  venue_level: string | null;
+  cuisine: string | null;
+}
+
 export interface CvFields {
   full_name: string | null;
   email: string | null;
@@ -21,6 +32,7 @@ export interface CvFields {
   skills: string[];
   certificates: string[];
   summary: string | null;
+  experiences: CvExperience[];
 }
 
 export interface VacancyFields {
