@@ -129,7 +129,7 @@ function JobsInner() {
   return (
     <>
       <PageHeader
-        title="Jobs"
+        title="Your pass to hospitality jobs in GCC"
         subtitle={loading ? undefined : `Found: ${items.length}`}
         actions={
           <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ function JobsInner() {
                     : 'bg-surface-muted text-text-secondary hover:text-text-primary',
                 )}
               >
-                {t === 'all' ? 'All' : 'For you'}
+                {t === 'all' ? 'All jobs' : 'For you'}
               </button>
             ))}
           </div>
@@ -242,7 +242,7 @@ function JobsInner() {
         )}
       </div>
 
-      <div className="grid gap-4 px-5 pb-8 md:px-8 lg:grid-cols-[minmax(0,460px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 px-5 pb-8 md:px-8 lg:grid-cols-[minmax(0,460px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
         <div
           className={cn(
             'space-y-3 lg:block lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto lg:pr-1 scroll-slim',
@@ -282,6 +282,7 @@ function JobsInner() {
               <VacancyCard
                 vacancy={v}
                 selected={selected?.id === v.id}
+                onChanged={patch}
                 onSelect={(x) => {
                   setSelected(x);
                   setOpen(true);
