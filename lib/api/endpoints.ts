@@ -91,6 +91,11 @@ export const API = {
     materialDownload: (id: string | number, materialId: string | number) =>
       `/api/applications/company/${id}/materials/${materialId}/`,
     status: (id: string | number) => `/api/applications/${id}/status/`,
+    /** Полное CV откликнувшегося; заодно отмечает отклик просмотренным. */
+    companyResume: (id: string | number) => `/api/applications/company/${id}/resume/`,
+    shortlist: (id: string | number) => `/api/applications/company/${id}/shortlist/`,
+    shortlistGroups: "/api/applications/shortlist-groups/",
+    shortlistGroup: (id: string | number) => `/api/applications/shortlist-groups/${id}/`,
     interview: (id: string | number) => `/api/applications/${id}/interview/`,
     interviewAnswers: (id: string | number) =>
       `/api/applications/${id}/interview/answers/`,

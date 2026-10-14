@@ -7,31 +7,30 @@ import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { ListSkeleton, riseStyle } from '@/components/ui/motion';
 import {
   applicationsApi,
-  FUNNEL,
-  funnelStage,
+  CANDIDATE_FUNNEL,
+  CANDIDATE_STATUS_LABEL,
+  CANDIDATE_STATUS_TONE,
   RELOCATION_LABEL,
   salaryLabel,
-  STATUS_LABEL,
-  STATUS_TONE,
   type ApplicantApplication,
-  type ApplicationStatus,
+  type CandidateStatus,
 } from '@/lib/api/applications';
 import { cn, plural } from '@/lib/utils';
 
 /**
  * Applications соискателя — экран applicant_responses_screen.dart мобилки.
  *
- * Раздел заказчица не правила: прозрачность статусов ей как раз нравится,
- * поэтому здесь ровно то же поведение, что в приложении, только в раскладке
- * под широкий экран.
+ * Статусы — те, что видит кандидат (N-06c/N-17): Sent → Viewed → Shortlisted →
+ * Interview → Offer → Hired, или Not selected. Десять внутренних этапов
+ * работодателя сервер сворачивает в эти семь — так же, как в мобилке.
  */
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
-function StatusBadge({ status }: { status: ApplicationStatus }) {
+function StatusBadge({ status }: { status: CandidateStatus }) {
   return (
-    <span className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium', STATUS_TONE[status])}>
-      {STATUS_LABEL[status]}
+    <span className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium', CANDIDATE_STATUS_TONE[status])}>
+      {CANDIDATE_STATUS_LABEL[status]}
     </span>
   );
 }
@@ -46,8 +45,8 @@ function StatusBadge({ status }: { status: ApplicationStatus }) {
  *
  * Отказ рисуем отдельной строкой: он не «шаг вперёд» по воронке.
  */
-function Funnel({ status }: { status: ApplicationStatus }) {
-  if (status === 'REJECTED') {
+function Funnel({ status }: { status: CandidateStatus }) {
+  if (status === 'NOT_SELECTED') {
     return (
       <p className="mt-4 flex items-center gap-2 rounded-sm bg-danger-surface px-3 py-2 text-sm text-danger">
         <X size={15} className="shrink-0" />
@@ -56,7 +55,7 @@ function Funnel({ status }: { status: ApplicationStatus }) {
     );
   }
 
-  const current = FUNNEL.indexOf(funnelStage(status));
+  const current = CANDIDATE_FUNNEL.indexOf(status);
   if (current < 0) return null;
   return <FunnelTrack current={current} />;
 }
@@ -94,7 +93,7 @@ function FunnelTrack({ current }: { current: number }) {
       className="scroll-slim -mx-1 mt-4 flex items-start gap-0 overflow-x-auto px-1 pb-1"
       aria-label="Application stages"
     >
-      {FUNNEL.map((step, i) => {
+      {CANDIDATE_FUNNEL.map((step, i) => {
         const done = i < current;
         const active = i === current;
         return (
@@ -114,7 +113,7 @@ function FunnelTrack({ current }: { current: number }) {
                 {done && <Check size={11} className="text-on-accent" strokeWidth={3} />}
                 {active && <span className="h-2 w-2 rounded-full bg-accent" />}
               </span>
-              <span className={cn('h-0.5 flex-1 rounded-full', i === FUNNEL.length - 1 ? 'bg-transparent' : done ? 'bg-accent' : 'bg-surface-alt')} />
+              <span className={cn('h-0.5 flex-1 rounded-full', i === CANDIDATE_FUNNEL.length - 1 ? 'bg-transparent' : done ? 'bg-accent' : 'bg-surface-alt')} />
             </span>
             <span
               className={cn(
@@ -122,7 +121,7 @@ function FunnelTrack({ current }: { current: number }) {
                 active ? 'font-semibold text-text-primary' : 'text-text-secondary',
               )}
             >
-              {STATUS_LABEL[step]}
+              {CANDIDATE_STATUS_LABEL[step]}
             </span>
           </li>
         );
@@ -142,7 +141,7 @@ function ApplicationCard({ a, index = 0 }: { a: ApplicantApplication; index?: nu
           <h2 className="font-semibold text-text-primary">{a.vacancyTitle}</h2>
           <p className="mt-0.5 text-sm text-text-secondary">{a.companyName}</p>
         </div>
-        <StatusBadge status={a.status} />
+        <StatusBadge status={a.candidateStatus} />
       </div>
 
       <p className="mt-3 font-medium text-text-primary">{salaryLabel(a)}</p>
@@ -157,7 +156,7 @@ function ApplicationCard({ a, index = 0 }: { a: ApplicantApplication; index?: nu
         <span>Applied {DATE_FMT.format(a.createdAt)}</span>
       </div>
 
-      <Funnel status={a.status} />
+      <Funnel status={a.candidateStatus} />
 
       {a.coverLetter && (
         <p className="mt-4 whitespace-pre-line border-t border-line pt-3 text-sm leading-relaxed text-text-secondary">

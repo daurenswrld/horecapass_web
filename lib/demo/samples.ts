@@ -43,6 +43,10 @@ function sampleCandidate(
     videoGreetingUrl: null,
     coverLetter,
     relocationStep: null,
+    shortlistGroupId: null,
+    shortlistGroupName: null,
+    viewed: false,
+    contactsLocked: false,
     details: parseApplicantProfile(profile),
     profile,
   };

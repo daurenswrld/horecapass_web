@@ -15,7 +15,9 @@ import {
   type ApplicationStatus,
   type CandidateSummary,
   type CompanyApplication,
+  type ShortlistGroup,
 } from '@/lib/api/applications';
+import { GroupPicker } from '@/components/employer/shortlist';
 import type { CandidateMaterial } from '@/lib/api/materials';
 import { chatsApi } from '@/lib/api/chats';
 import { isSample } from '@/lib/demo/samples';
@@ -71,10 +73,20 @@ export function CandidatePanel({
   app,
   onClose,
   onStatus,
+  onViewed,
+  groups = [],
+  onShortlist,
+  onCreateGroup,
 }: {
   app: CompanyApplication;
   onClose: () => void;
   onStatus: (id: number, status: ApplicationStatus) => void;
+  /** Сервер отметил отклик просмотренным — кандидат видит «Viewed». */
+  onViewed?: () => void;
+  groups?: ShortlistGroup[];
+  /** Возвращает число откликов, которые не удалось обновить. */
+  onShortlist?: (group: number | null) => Promise<number>;
+  onCreateGroup?: (name: string) => Promise<ShortlistGroup>;
 }) {
   const router = useRouter();
   const sample = isSample(app.id);
@@ -91,6 +103,28 @@ export function CandidatePanel({
   const [materials, setMaterials] = React.useState<CandidateMaterial[]>([]);
   const [materialsState, setMaterialsState] = React.useState<'idle' | 'loading' | { error: string }>('idle');
   const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
+  const [shortlisting, setShortlisting] = React.useState(false);
+  const [shortlistError, setShortlistError] = React.useState<string | null>(null);
+
+  // Открыть карточку — значит прочитать CV: сервер отмечает отклик просмотренным
+  // (тот же GET, что «полное CV» в мобилке), и кандидат видит «Viewed».
+  React.useEffect(() => {
+    if (sample || app.viewed) return;
+    companyApplicationsApi
+      .openResume(app.id)
+      .then(() => onViewed?.())
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.id]);
+
+  const pickGroup = async (group: number | null) => {
+    if (!onShortlist) return;
+    setShortlistError(null);
+    setShortlisting(true);
+    const failed = await onShortlist(group);
+    setShortlisting(false);
+    if (failed) setShortlistError('Could not update the shortlist. Please try again.');
+  };
 
   // Esc закрывает, фокус — на кнопку закрытия, страница под панелью не прокручивается.
   React.useEffect(() => {
@@ -315,6 +349,23 @@ export function CandidatePanel({
           )}
         </Section>
 
+        {groups.length > 0 && onCreateGroup && (
+          <Section title="Shortlist">
+            <GroupPicker
+              className="mt-3"
+              groups={groups}
+              current={app.shortlistGroupId}
+              onPick={(g) => void pickGroup(g)}
+              onCreate={onCreateGroup}
+              busy={shortlisting}
+            />
+            <p className="mt-2 text-xs text-text-secondary">
+              Groups are your team&apos;s notes. The candidate only sees that they were shortlisted.
+            </p>
+            {shortlistError && <p className="mt-2 text-sm text-danger">{shortlistError}</p>}
+          </Section>
+        )}
+
         <Section title="Smart summary">
           {!summary && summaryState !== 'loading' && (
             <>
@@ -514,6 +565,15 @@ export function CandidatePanel({
               <Row label="Email" value={d.email} />
               <Row label="Phone" value={d.phone} />
             </dl>
+          </Section>
+        )}
+        {/* Сервер прячет контакты, пока компания не проверена (тот же текст, что в мобилке). */}
+        {app.contactsLocked && !d.email && !d.phone && (
+          <Section title="Contacts">
+            <p className="mt-2 text-sm text-text-secondary">
+              Contacts open once your company is verified (1–3 business days). Until then, write to the candidate in
+              the chat.
+            </p>
           </Section>
         )}
       </div>

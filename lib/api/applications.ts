@@ -53,6 +53,46 @@ export interface ApplicantApplication {
   relocationStep: RelocationStep;
   relocationNote: string;
   expectedArrival: Date | null;
+  /** Что видит кандидат: десять этапов работодателя, свёрнутые в семь (как в мобилке). */
+  candidateStatus: CandidateStatus;
+}
+
+export type CandidateStatus = 'SENT' | 'VIEWED' | 'SHORTLISTED' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'NOT_SELECTED';
+
+/** Подписи — те же, что в мобилке (app_en.arb, rs*). */
+export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
+  SENT: 'Sent',
+  VIEWED: 'Viewed',
+  SHORTLISTED: 'Shortlisted',
+  INTERVIEW: 'Interview',
+  OFFER: 'Offer',
+  HIRED: 'Hired',
+  NOT_SELECTED: 'Not selected',
+};
+
+export const CANDIDATE_STATUS_TONE: Record<CandidateStatus, string> = {
+  SENT: 'bg-surface-muted text-text-secondary',
+  VIEWED: 'bg-info-surface text-on-info-surface',
+  SHORTLISTED: 'bg-accent-muted text-accent-text',
+  INTERVIEW: 'bg-info-surface text-on-info-surface',
+  OFFER: 'bg-accent-muted text-text-primary',
+  HIRED: 'bg-surface-alt text-success',
+  NOT_SELECTED: 'bg-danger-surface text-danger',
+};
+
+/** Порядок для полосы этапов у кандидата. «Not selected» вне порядка. */
+export const CANDIDATE_FUNNEL: readonly CandidateStatus[] = ['SENT', 'VIEWED', 'SHORTLISTED', 'INTERVIEW', 'OFFER', 'HIRED'];
+
+/** Сервер до обновления не шлёт candidate_status — выводим его из статуса так же, как сервер. */
+function parseCandidateStatus(v: unknown, status: ApplicationStatus): CandidateStatus {
+  const s = String(v ?? '').toUpperCase();
+  if (s in CANDIDATE_STATUS_LABEL) return s as CandidateStatus;
+  if (status === 'REJECTED') return 'NOT_SELECTED';
+  if (status === 'HIRED') return 'HIRED';
+  if (status === 'INVITED' || status === 'VISA' || status === 'ONBOARDING') return 'OFFER';
+  if (status === 'INTERVIEW' || status === 'TEST_TASK') return 'INTERVIEW';
+  if (status === 'REVIEWED') return 'VIEWED';
+  return 'SENT';
 }
 
 type Json = Record<string, unknown>;
@@ -69,6 +109,7 @@ const date = (v: unknown): Date | null => {
 };
 
 export function parseApplication(json: Json): ApplicantApplication {
+  const status = parseStatus(json.status);
   return {
     id: Number(json.id),
     vacancyId: Number(json.vacancy ?? 0),
@@ -76,7 +117,8 @@ export function parseApplication(json: Json): ApplicantApplication {
     companyId: json.company_id == null ? null : Number(json.company_id),
     companyName: String(json.company_name ?? 'Company'),
     companyLogoUrl: nonEmpty(json.company_logo),
-    status: parseStatus(json.status),
+    status,
+    candidateStatus: parseCandidateStatus(json.candidate_status, status),
     createdAt: date(json.created_at) ?? new Date(),
     coverLetter: String(json.cover_letter ?? ''),
     salaryMin: json.salary_min == null ? null : String(json.salary_min),
@@ -248,6 +290,12 @@ export interface CompanyApplication {
   videoGreetingUrl: string | null;
   coverLetter: string | null;
   relocationStep: RelocationStep | null;
+  /** Группа отобранных («Interview», «Later» или своя) — null, если не отобран. */
+  shortlistGroupId: number | null;
+  shortlistGroupName: string | null;
+  viewed: boolean;
+  /** Контакты закрыты, пока компания не проверена (сервер шлёт причину). */
+  contactsLocked: boolean;
   details: ApplicantProfile;
   /** Сырой `applicant_profile` — из него открывается карточка кандидата. */
   profile: Record<string, unknown>;
@@ -340,6 +388,10 @@ export function parseCompanyApplication(json: Json): CompanyApplication {
     videoGreetingUrl: nonEmpty(json.video_greeting_url),
     coverLetter: nonEmpty(json.cover_letter),
     relocationStep: json.relocation_step ? (String(json.relocation_step) as RelocationStep) : null,
+    shortlistGroupId: json.shortlist_group == null ? null : Number(json.shortlist_group),
+    shortlistGroupName: nonEmpty(json.shortlist_group_name),
+    viewed: json.viewed_at != null,
+    contactsLocked: !!profile.contacts_locked,
     details: parseApplicantProfile(profile),
     profile,
   };
@@ -354,7 +406,43 @@ export interface CandidateSummary {
   interviewQuestions: string[];
 }
 
+/** Группа отобранных кандидатов. Две стандартные (INTERVIEW, LATER) есть у каждой компании. */
+export interface ShortlistGroup {
+  id: number;
+  name: string;
+  kind: 'INTERVIEW' | 'LATER' | 'CUSTOM';
+  count: number;
+}
+
+const parseGroup = (g: Json): ShortlistGroup => ({
+  id: Number(g.id),
+  name: String(g.name ?? ''),
+  kind: (['INTERVIEW', 'LATER'].includes(String(g.kind)) ? g.kind : 'CUSTOM') as ShortlistGroup['kind'],
+  count: Number(g.count ?? 0),
+});
+
+export const shortlistApi = {
+  async groups(): Promise<ShortlistGroup[]> {
+    return unwrapList(await http.get<unknown>(API.applications.shortlistGroups)).map(parseGroup);
+  },
+  async create(name: string): Promise<ShortlistGroup> {
+    return parseGroup(await http.post<Json>(API.applications.shortlistGroups, { name }));
+  },
+  remove(id: number) {
+    return http.delete<unknown>(API.applications.shortlistGroup(id));
+  },
+  /** Кладёт отклик в группу (из другой — переносит); null убирает из отобранных. */
+  async put(applicationId: number, group: number | null): Promise<CompanyApplication> {
+    return parseCompanyApplication(await http.post<Json>(API.applications.shortlist(applicationId), { group }));
+  },
+};
+
 export const companyApplicationsApi = {
+  /** Открытие полного CV: сервер отмечает отклик просмотренным, кандидат видит «Viewed». */
+  openResume(applicationId: number) {
+    return http.get<unknown>(API.applications.companyResume(applicationId));
+  },
+
   async list(params: { search?: string; vacancy?: number } = {}): Promise<CompanyApplication[]> {
     const data = await http.get<unknown>(API.applications.company, { query: params });
     return unwrapList(data).map(parseCompanyApplication);
