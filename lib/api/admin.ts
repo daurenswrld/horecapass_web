@@ -47,6 +47,25 @@ export interface Overview {
   by_role_city: RoleCityRow[];
 }
 
+export interface QuizOptionStat {
+  id: string;
+  count: number;
+  share: number | null;
+}
+
+export interface QuizRoleStats {
+  started: number;
+  completed: number;
+  completion: number | null;
+  questions: Record<string, { answered: number; options: QuizOptionStat[] }>;
+}
+
+export interface QuizSummary {
+  days: number;
+  total: number;
+  roles: { applicant: QuizRoleStats; company: QuizRoleStats };
+}
+
 export interface FunnelStep {
   key: string;
   label: string;
@@ -202,6 +221,7 @@ export const adminApi = {
     http.get<CandidateFunnel>(API.admin.candidateFunnel, { query: { days } }),
   employerFunnel: (days: number) =>
     http.get<EmployerFunnel>(API.admin.employerFunnel, { query: { days } }),
+  quiz: (days: number) => http.get<QuizSummary>(API.admin.quiz, { query: { days } }),
   candidateFeed: (hours: number) => http.get<Feed>(API.admin.candidateFeed, { query: { hours } }),
   employerFeed: (hours: number) => http.get<Feed>(API.admin.employerFeed, { query: { hours } }),
   vacanciesMonth: (month?: string) =>

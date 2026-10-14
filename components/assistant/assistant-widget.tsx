@@ -39,8 +39,9 @@ interface Msg {
 const MAX_STORED = 30;
 const MAX_SENT = 12;
 const STARTERS = ['Is it free for candidates?', 'How do I post a job?', 'What does Verified mean?'];
-// Страницы, где окно только мешало бы: у мастеров онбординга свой помощник.
-const HIDDEN_ON = ['/admin', '/onboarding', '/company/onboarding'];
+// Страницы, где окно только мешало бы: у мастеров онбординга свой помощник, а в квизе
+// кнопка закрывала бы «Continue».
+const HIDDEN_ON = ['/admin', '/onboarding', '/company/onboarding', '/welcome'];
 
 function readHistory(key: string): Msg[] {
   try {

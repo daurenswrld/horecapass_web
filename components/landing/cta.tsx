@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
  * Специально не по `loading`: ждать ответа, показывая дырку вместо главной
  * кнопки, хуже, чем на мгновение показать гостевую надпись.
  *
+ * Гость сначала попадает в приветственный квиз (/welcome), из него — на регистрацию.
+ *
  * Кнопки ролей равны по весу. Заказчица (голосовое 15.09): «мне не нужно,
  * чтобы какая-то из этих ролей была выделена» — сайт одинаково для кандидата
  * и для работодателя, залитая кнопка у одной из ролей читается как «главная».
@@ -27,13 +29,13 @@ const ROLE_BUTTON =
 
 const ROLES = [
   {
-    href: '/register?role=applicant',
+    href: '/welcome?role=applicant',
     Icon: Briefcase,
     title: 'I am looking for work',
     note: 'Real jobs, verified employers, no agent fees',
   },
   {
-    href: '/register?role=company',
+    href: '/welcome?role=company',
     Icon: Users,
     title: 'I am hiring',
     note: 'Qualified candidates, pre-screened and ready to interview',
@@ -99,7 +101,7 @@ export function SectionCta({ role, label }: { role: 'applicant' | 'company'; lab
 
   return (
     <Link
-      href={user ? homeFor(user) : `/register?role=${role}`}
+      href={user ? homeFor(user) : `/welcome?role=${role}`}
       className="group mt-8 inline-flex items-center gap-2 rounded-full bg-accent-strong px-6 py-3 font-semibold text-on-accent transition-colors hover:brightness-110 focus-ring"
     >
       {user ? 'Open dashboard' : label}
