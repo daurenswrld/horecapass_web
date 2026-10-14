@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Copy } from 'lucide-react';
+import { ExportMenu } from '@/components/admin/export-menu';
 import { AdminHeader, Badge, Empty, ErrorNote, Segmented, shortDate, timeAgo, useLoad } from '@/components/admin/ui';
 import { ListSkeleton, riseStyle } from '@/components/ui/motion';
 import { Card } from '@/components/ui/primitives';
@@ -78,6 +79,23 @@ function FeedInner() {
                 { value: 72, label: '3 days' },
                 { value: 168, label: '7 days' },
               ]}
+            />
+            <ExportMenu
+              disabled={!rows.length}
+              report={() => ({
+                name: `daily-feed-${tab}-${hours}h`,
+                title: `Daily feed: ${tab === 'candidates' ? 'candidates' : 'employers'}`,
+                subtitle: `Registered in the last ${hours} hours${onlyStuck ? ', not finished only' : ''}`,
+                columns: [
+                  { label: 'Name', value: (r: (typeof rows)[number]) => r.name },
+                  { label: 'Email', value: (r: (typeof rows)[number]) => r.email },
+                  { label: 'Stage', value: (r: (typeof rows)[number]) => r.stage_label },
+                  { label: 'Stopped at', value: (r: (typeof rows)[number]) => r.stuck_at },
+                  { label: 'Registered', value: (r: (typeof rows)[number]) => shortDate(r.registered_at) },
+                  { label: 'Last activity', value: (r: (typeof rows)[number]) => shortDate(r.last_activity) },
+                ],
+                rows,
+              })}
             />
           </div>
         }

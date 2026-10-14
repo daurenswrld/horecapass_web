@@ -1,50 +1,77 @@
 'use client';
 
 import * as React from 'react';
+import { ExportMenu } from '@/components/admin/export-menu';
+import { FunnelPeoplePanel } from '@/components/admin/funnel-people';
 import { AdminHeader, ErrorNote, Funnel, Segmented, StatTile, TileSkeletons, useLoad } from '@/components/admin/ui';
 import { Skeleton } from '@/components/ui/motion';
-import { adminApi } from '@/lib/api/admin';
+import { adminApi, type FunnelStep } from '@/lib/api/admin';
 
 /**
  * Воронки кандидата и работодателя. Каждый переход отдельной цифрой, а не
  * общий процент: по общему не видно, где именно течёт (спецификация, п. 2–3).
+ * Цифра открывает людей за ней — с контактами, чтобы вернуть отпавших
+ * (видео заказчицы 14.10); любую таблицу можно скачать.
  */
+
+const PERIODS = [
+  { value: 7, label: '7 days' },
+  { value: 30, label: '30 days' },
+  { value: 90, label: '90 days' },
+  { value: 180, label: '6 months' },
+  { value: 365, label: '12 months' },
+];
+
+const stepsReport = (title: string, name: string, days: number, steps: FunnelStep[]) => () => ({
+  name: `${name}-funnel-${days}d`,
+  title,
+  subtitle: `Registered in the last ${days} days`,
+  columns: [
+    { label: 'Step', value: (s: FunnelStep) => s.label },
+    { label: 'Count', value: (s: FunnelStep) => (s.available ? s.count : 'not tracked') },
+    { label: 'From previous, %', value: (s: FunnelStep) => s.conversion },
+  ],
+  rows: steps,
+});
+
 export default function FunnelsPage() {
   const [days, setDays] = React.useState(30);
+  const [open, setOpen] = React.useState<{ kind: 'candidates' | 'employers'; step: FunnelStep } | null>(null);
   const cand = useLoad(() => adminApi.candidateFunnel(days), [days]);
   const emp = useLoad(() => adminApi.employerFunnel(days), [days]);
   const m = emp.data?.metrics;
+  const close = React.useCallback(() => setOpen(null), []);
 
   return (
     <>
       <AdminHeader
         title="Funnels"
         subtitle="Of the people who registered in the period, how many reached each step"
-        actions={
-          <Segmented
-            label="Registration period"
-            value={days}
-            onChange={setDays}
-            options={[
-              { value: 7, label: '7 days' },
-              { value: 30, label: '30 days' },
-              { value: 90, label: '90 days' },
-            ]}
-          />
-        }
+        actions={<Segmented label="Registration period" value={days} onChange={setDays} options={PERIODS} />}
       />
 
       <div className="space-y-6 px-5 py-6 md:px-8">
         {cand.error && <ErrorNote message={cand.error} onRetry={cand.reload} />}
         {cand.data ? (
-          <Funnel title="Candidate funnel" steps={cand.data.steps} />
+          <Funnel
+            title="Candidate funnel"
+            steps={cand.data.steps}
+            onOpen={(step) => setOpen({ kind: 'candidates', step })}
+            actions={<ExportMenu report={stepsReport('Candidate funnel', 'candidate', days, cand.data.steps)} />}
+          />
         ) : (
           <Skeleton className="h-72 !rounded-lg" />
         )}
 
         {emp.error && <ErrorNote message={emp.error} onRetry={emp.reload} />}
         {emp.data ? (
-          <Funnel title="Employer funnel" steps={emp.data.steps} unit="companies" />
+          <Funnel
+            title="Employer funnel"
+            steps={emp.data.steps}
+            unit="employers"
+            onOpen={(step) => setOpen({ kind: 'employers', step })}
+            actions={<ExportMenu report={stepsReport('Employer funnel', 'employer', days, emp.data.steps)} />}
+          />
         ) : (
           <Skeleton className="h-56 !rounded-lg" />
         )}
@@ -75,6 +102,10 @@ export default function FunnelsPage() {
           )}
         </section>
       </div>
+
+      {open && (
+        <FunnelPeoplePanel kind={open.kind} step={open.step.key} label={open.step.label} days={days} onClose={close} />
+      )}
     </>
   );
 }
