@@ -55,6 +55,8 @@ export interface VacancyFields {
   responsibilities: string[];
   benefits: string[];
   skills: string[];
+  /** Сколько человек на эту должность — есть только в разборе документа со многими ролями. */
+  headcount?: number | null;
 }
 
 interface DocumentInput {
@@ -87,13 +89,15 @@ export async function readDocument(file: File): Promise<DocumentInput> {
   return { text };
 }
 
-async function run<T>(path: string, input: DocumentInput): Promise<T> {
+async function run<T>(path: string, input: DocumentInput, pick: (res: Record<string, unknown>) => T = (r) => r.fields as T): Promise<T> {
   if (!input.text && !input.file) throw new AutofillError('There is nothing to read yet.');
   try {
-    const res = await http.post<{ fields: T }>(path, { text: input.text?.slice(0, MAX_TEXT), file: input.file });
-    return res.fields;
+    const res = await http.post<Record<string, unknown>>(path, { text: input.text?.slice(0, MAX_TEXT), file: input.file });
+    return pick(res);
   } catch (e) {
     if (e instanceof ApiError) {
+      // Сервер без разбора на несколько ролей: вызывающий откатится на одну вакансию.
+      if (e.status === 404) throw e;
       if (e.status === 429) throw new AutofillError('Too many attempts for now. Please wait a few minutes or fill the form by hand.');
       if (e.status === 503) throw new AutofillError('Autofill is not available right now. You can fill the form by hand.');
       if (e.status === 400) throw new AutofillError('This document is too short to read. Add more text or fill the form by hand.');
@@ -105,4 +109,15 @@ async function run<T>(path: string, input: DocumentInput): Promise<T> {
 export const autofillApi = {
   cv: (input: DocumentInput) => run<CvFields>(API.ai.autofillCv, input),
   vacancy: (input: DocumentInput) => run<VacancyFields>(API.ai.autofillVacancy, input),
+  /** Все должности из документа. Старый сервер (404) → одна вакансия, как раньше. */
+  async vacancies(input: DocumentInput): Promise<VacancyFields[]> {
+    try {
+      return await run<VacancyFields[]>(API.ai.autofillVacancies, input, (r) =>
+        Array.isArray(r.vacancies) ? (r.vacancies as VacancyFields[]) : [],
+      );
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return [await run<VacancyFields>(API.ai.autofillVacancy, input)];
+      throw e;
+    }
+  },
 };

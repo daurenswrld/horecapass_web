@@ -114,6 +114,8 @@ export const API = {
     vacancyBuilderStream: "/api/ai/vacancy-builder/stream/",
     autofillCv: "/api/ai/autofill/cv/",
     autofillVacancy: "/api/ai/autofill/vacancy/",
+    /** Документ со многими должностями → черновик на каждую (открытие ресторана, ~20 позиций). */
+    autofillVacancies: "/api/ai/autofill/vacancies/",
   },
 
   chats: {
