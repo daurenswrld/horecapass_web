@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Arimo } from 'next/font/google';
+import { Arimo, Source_Serif_4 } from 'next/font/google';
 import { AssistantWidget } from '@/components/assistant/assistant-widget';
 import { AuthProvider } from '@/lib/auth/context';
 import './globals.css';
@@ -17,6 +17,15 @@ const arimo = Arimo({
   preload: false,
 });
 
+// Заголовки лендинга — с засечками, как в утверждённом веб-прототипе v2 (L-01, 14.10).
+const serif = Source_Serif_4({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '500', '600'],
+  variable: '--font-serif',
+  display: 'swap',
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: { default: 'HorecaPass', template: '%s · HorecaPass' },
   description: 'Hospitality jobs: vacancies, applications and hiring.',
@@ -24,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={arimo.variable} suppressHydrationWarning>
+    <html lang="en" className={`${arimo.variable} ${serif.variable}`} suppressHydrationWarning>
       <head>
         {/* Тема применяется до первого кадра, иначе страница моргает светлым. */}
         <script
