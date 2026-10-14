@@ -1,5 +1,5 @@
 import { API } from './endpoints';
-import { http } from './client';
+import { ApiError, BASE_URL, http, refreshTokens, tokens } from './client';
 
 /**
  * Клиент админ-панели. Типы повторяют ответы приложения adminpanel на бэкенде.
@@ -72,6 +72,51 @@ export interface FunnelStep {
   count: number | null;
   available: boolean;
   conversion: number | null;
+}
+
+/** Человек за цифрой воронки — с контактами, чтобы менеджер мог написать. */
+export interface FunnelPerson {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  whatsapp: string | null;
+  company: string | null;
+  nationality: string | null;
+  location: string | null;
+  registered_at: string | null;
+  last_activity: string | null;
+}
+
+export interface FunnelPeople {
+  kind: 'candidates' | 'employers';
+  step: string;
+  label: string;
+  window_days: number;
+  dropped: boolean;
+  next_step: string | null;
+  count: number;
+  people: FunnelPerson[];
+}
+
+/** Строка банка резюме (A-05). */
+export interface BankResume {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  whatsapp: string | null;
+  title: string;
+  nationality: string | null;
+  location: string | null;
+  visa_status: string | null;
+  years: number | null;
+  last_job: string | null;
+  languages: string[];
+  applications: number;
+  last_applied_at: string | null;
+  updated_at: string;
 }
 
 export interface CandidateFunnel {
@@ -221,6 +266,25 @@ export const adminApi = {
     http.get<CandidateFunnel>(API.admin.candidateFunnel, { query: { days } }),
   employerFunnel: (days: number) =>
     http.get<EmployerFunnel>(API.admin.employerFunnel, { query: { days } }),
+  funnelPeople: (kind: 'candidates' | 'employers', step: string, days: number, dropped: boolean) =>
+    http.get<FunnelPeople>(API.admin.funnelPeople(kind), { query: { step, days, dropped: dropped ? 1 : undefined } }),
+  resumes: (query: Query) => http.get<Page<BankResume>>(API.admin.resumes, { query }),
+  /** PDF резюме из банка: тот же A4, что скачивает кандидат. Скачивание пишется в журнал. */
+  async resumePdf(id: number, name: string) {
+    const url = `${BASE_URL}${API.admin.resumePdf(id)}`;
+    const send = () => fetch(url, { headers: { Authorization: `Bearer ${tokens.access ?? ''}` } });
+    let response = await send();
+    if (response.status === 401 && (await refreshTokens())) response = await send();
+    if (!response.ok) throw new ApiError(response.status, null);
+    const blobUrl = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `${name.replace(/[^\w .-]+/g, '').trim() || `resume-${id}`}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+  },
   quiz: (days: number) => http.get<QuizSummary>(API.admin.quiz, { query: { days } }),
   candidateFeed: (hours: number) => http.get<Feed>(API.admin.candidateFeed, { query: { hours } }),
   employerFeed: (hours: number) => http.get<Feed>(API.admin.employerFeed, { query: { hours } }),

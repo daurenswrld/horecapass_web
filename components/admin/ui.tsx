@@ -134,11 +134,28 @@ export function StatTile({
  * не считает, рисуется пунктиром и подписан, а не нулём. Под графиком — та же
  * таблица, для чтения без цвета и с клавиатуры.
  */
-export function Funnel({ title, steps, unit = 'people' }: { title: string; steps: FunnelStep[]; unit?: string }) {
+export function Funnel({
+  title,
+  steps,
+  unit = 'people',
+  onOpen,
+  actions,
+}: {
+  title: string;
+  steps: FunnelStep[];
+  unit?: string;
+  /** Цифра открывает список людей за ней (заказчица, видео 14.10). */
+  onOpen?: (step: FunnelStep) => void;
+  actions?: React.ReactNode;
+}) {
   const top = Math.max(1, ...steps.map((s) => s.count ?? 0));
   return (
     <Card className="p-5">
-      <h2 className="text-lg font-semibold text-heading">{title}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-heading">{title}</h2>
+        {actions}
+      </div>
+      {onOpen && <p className="mt-1 text-xs text-text-secondary">Click a step to see the people behind the number.</p>}
       <ol className="mt-4 space-y-2.5">
         {steps.map((s, i) => {
           const width = s.count ? Math.max(2, (s.count / top) * 100) : 0;
@@ -150,7 +167,23 @@ export function Funnel({ title, steps, unit = 'people' }: { title: string; steps
               title={s.available ? `${s.label}: ${s.count} ${unit}${s.conversion !== null ? ` (${s.conversion}% of the previous step)` : ''}` : `${s.label}: not tracked yet`}
             >
               <span className="text-sm text-text-primary">{s.label}</span>
-              {s.available ? (
+              {s.available && onOpen ? (
+                <button
+                  type="button"
+                  onClick={() => onOpen(s)}
+                  aria-label={`${s.label}: ${s.count} ${unit}. Show the list`}
+                  className="group flex items-center gap-2 rounded text-left focus-ring"
+                >
+                  <span
+                    className="bar-grow block h-5 rounded-r-[4px] bg-accent transition-[filter] group-hover:brightness-90"
+                    style={{ width: `${width}%`, minWidth: 4 }}
+                    role="presentation"
+                  />
+                  <span className="text-sm font-semibold tabular-nums text-heading underline decoration-dotted underline-offset-4 group-hover:decoration-solid">
+                    {s.count}
+                  </span>
+                </button>
+              ) : s.available ? (
                 <span className="flex items-center gap-2">
                   <span
                     className="bar-grow block h-5 rounded-r-[4px] bg-accent"
