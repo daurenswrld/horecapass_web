@@ -58,6 +58,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Arial', 'var(--font-arimo)', 'Helvetica', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
       },
       borderRadius: {
         DEFAULT: 'var(--radius)',

@@ -61,9 +61,13 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Wordmark height={26} />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-text-secondary">
-              A hiring platform for hotels, restaurants and catering. The web and mobile app
-              share one account.
+            {/* Тексты подвала — из веб-прототипа v2 (L-01). */}
+            <p className="mt-4 max-w-xs text-sm font-semibold leading-relaxed text-text-primary">
+              Verified hospitality jobs and talent across the GCC. Hire directly on one flat plan, not a commission.
+            </p>
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-text-secondary">
+              For hotels, restaurants, catering and hospitality groups in Saudi Arabia, the UAE, Qatar, Kuwait, Bahrain
+              and Oman.
             </p>
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
@@ -88,7 +92,7 @@ export function Footer() {
             title="For employers"
             links={[
               { label: 'Hiring tools', href: '#employers' },
-              { label: 'Hiring process', href: '#how' },
+              { label: 'Pricing', href: '#pricing' },
               { label: 'Register a company', href: '/register?role=company' },
             ]}
           />
@@ -106,7 +110,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-text-secondary">© {year} HorecaPass</p>
+          <p className="text-sm text-text-secondary">© {year} HorecaPass · Built by Careerteria · Dubai, UAE</p>
           <div className="flex items-center gap-5 text-sm">
             <FooterAccountLink />
           </div>

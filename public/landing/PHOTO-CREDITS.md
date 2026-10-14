@@ -25,3 +25,9 @@ This credit describes these two files only. Existing photographs retain their pr
 Reason for the replacement: the previous recruiter images were AI-generated and visibly so (voice note, 5 October 2026, 20:58 — "видно что ИИ сгенерировано"). The assistant widget needs the same person shown consistently across three framings (full portrait, mid-gesture, small round avatar); real stock photography cannot supply that without hiring a model, so an illustration replaces the photo approach entirely rather than trying to find a closer-looking AI substitute.
 
 No external source, no license required — authored directly as SVG for this repository. Colours match the site's existing accent palette (`--accent`, `--accent-strong`, `--surface-muted` in `app/globals.css`).
+
+# Landing v2 (15 October 2026)
+
+`hero-waiter.webp`: the waitress portrait from the client's approved web prototype (HorecaPass_web_prototype_v2.pdf, page L-01, sent by the client on 14 October 2026), extracted at its embedded size (308 x 296) and converted to WebP. Supplied by the client as part of the approved design; the licence of the original photograph is NOT verified here. Confirm the licence with the designer, or replace the photograph with a licensed one, before relying on it long-term.
+
+`restaurant.webp` (existing file) is reused as the blurred hero background, and `lobby.webp` as the blurred background of the "Built by" block.
