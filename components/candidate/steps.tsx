@@ -41,7 +41,7 @@ import {
 } from '@/lib/demo/candidate';
 import { cvConsent, profileDraft, speechRecognitionAvailable } from '@/lib/demo/storage';
 import { canSyncToServer } from '@/lib/demo/candidate-sync';
-import { candidateApi } from '@/lib/api/candidate';
+import { candidateApi, VenueNotSupportedError } from '@/lib/api/candidate';
 import { AutofillError, autofillApi, readDocument } from '@/lib/api/autofill';
 import { JobDetails } from './job-details';
 import { useAuth } from '@/lib/auth/context';
@@ -342,8 +342,12 @@ export function MaterialsStep({ draft, update, go, upload, resumeId, onBuilt, ac
       setJobsSaved(true);
       autofillSession.set(accountId, { saved: true });
       await onBuilt?.();
-    } catch {
-      setJobsError('Could not save your jobs. Please try again.');
+    } catch (e) {
+      setJobsError(
+        e instanceof VenueNotSupportedError
+          ? 'Your jobs were saved, but the server cannot keep the venue details yet. They will not be shown to employers.'
+          : 'Could not save your jobs. Please try again.',
+      );
     } finally {
       setSavingJobs(false);
     }

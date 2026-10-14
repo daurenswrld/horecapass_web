@@ -17,6 +17,8 @@ import { ApiError, http } from './client';
 
 type Json = Record<string, unknown>;
 
+export class VenueNotSupportedError extends Error {}
+
 export interface ServerExperience {
   company_name: string;
   position: string;
@@ -125,8 +127,16 @@ export const candidateApi = {
     if (input.title && !current?.title.trim()) body.title = input.title;
     if (input.aboutMe && !current?.aboutMe.trim()) body.about_me = input.aboutMe;
     if (input.languages?.length && !current?.languages.length) body.languages = input.languages;
-    if (current) return parseResume(await http.patch<Json>(`${RESUME_MINE}${current.id}/`, body));
-    return parseResume(await http.post<Json>(RESUME_MINE, { title: input.title || 'Hospitality professional', ...body }));
+    const saved = current
+      ? await http.patch<Json>(`${RESUME_MINE}${current.id}/`, body)
+      : await http.post<Json>(RESUME_MINE, { title: input.title || 'Hospitality professional', ...body });
+    // Старый сервер молча отбрасывает тип заведения, уровень и кухню: тогда они не сохранились.
+    const sentVenue = input.experiences.some((e) => e.venue_type || e.venue_level || e.cuisine);
+    const back = Array.isArray(saved.experiences) ? saved.experiences : [];
+    if (sentVenue && back.length && !back.some((e) => e && typeof e === 'object' && 'venue_type' in e)) {
+      throw new VenueNotSupportedError();
+    }
+    return parseResume(saved);
   },
 
   async uploadVideo(file: File) {

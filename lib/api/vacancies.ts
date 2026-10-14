@@ -1,4 +1,6 @@
 import { API } from './endpoints';
+import { parseBrand } from './company-brand';
+import type { CompanyBrand } from '@/lib/demo/storage';
 import { http } from './client';
 
 /**
@@ -46,6 +48,8 @@ export interface Vacancy {
   responsibilities: string[];
   /** Есть только в ленте «Для вас» (/api/vacancies/matches/). */
   matchScore: number | null;
+  /** Что компания рассказывает о себе (кто мы, что предлагаем, как нанимаем). */
+  companyBrand?: CompanyBrand;
 }
 
 type Json = Record<string, unknown>;
@@ -96,6 +100,7 @@ export function parseVacancy(json: Json): Vacancy {
     benefits: stringList(json.benefits),
     responsibilities: stringList(json.responsibilities),
     matchScore: json.match_score == null ? null : Number(json.match_score),
+    companyBrand: parseBrand(json.company_brand),
   };
 }
 
