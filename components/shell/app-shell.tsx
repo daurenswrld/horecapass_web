@@ -227,7 +227,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-label={badge(href) > 0 ? `${label}, ${badge(href)} unread` : label}
               className={cn(
                 'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors active:scale-95 focus-ring',
-                active ? 'text-accent' : 'text-text-secondary',
+                active ? 'text-accent-text' : 'text-text-secondary',
               )}
             >
               <span className="relative">
