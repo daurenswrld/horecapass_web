@@ -29,6 +29,7 @@ export const API = {
     funnelPeople: (kind: 'candidates' | 'employers') => `/api/admin/funnels/${kind}/people/`,
     resumes: "/api/admin/resumes/",
     resumePdf: (id: number) => `/api/admin/resumes/${id}/pdf/`,
+    george: "/api/admin/george/",
     candidateFeed: "/api/admin/feeds/candidates/",
     employerFeed: "/api/admin/feeds/employers/",
     vacanciesMonth: "/api/admin/vacancies/month/",
