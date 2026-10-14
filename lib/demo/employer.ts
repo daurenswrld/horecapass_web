@@ -787,32 +787,33 @@ export const HIRING_STAGES = [
 
 /* Тарифы --------------------------------------------------------------------------------- */
 
-/** Бриф, пункт 14: публикация платная, пейволл — после Smart vacancy review. */
+/** Тарифы ТЗ (E-26) для демо без сервера; на сервере — каталог из админки
+ *  (`/api/billing/products/`), цены те же. */
 export const PLANS = [
   {
     id: 'single',
-    name: 'Single post',
-    price: 149,
-    period: 'one-time',
-    lines: ['1 vacancy', 'Active for 30 days', 'Smart vacancy review'],
+    name: 'One-time vacancy',
+    price: 99,
+    period: 'one-time payment',
+    lines: ['1 job vacancy', 'Visible for 30 days', 'Basic candidate matching', 'Standard support'],
   },
   {
-    id: 'bundle',
-    name: '5-post bundle',
-    price: 449,
-    period: 'one-time',
-    lines: ['5 vacancies, use within 90 days', 'Each active for 30 days', 'Smart vacancy review', '~90 SAR per post'],
+    id: 'subscription',
+    name: 'Subscription',
+    price: 249,
+    period: 'per month',
+    lines: ['Unlimited job vacancies', 'Visible for 30 days each', 'Access to verified candidates', 'Priority support'],
   },
   {
     id: 'premium',
     name: 'Premium',
-    price: 699,
+    price: 499,
     period: 'per month',
     lines: [
-      'Unlimited vacancies',
-      'Priority placement for candidates',
-      'Incognito company mode',
-      'Extended Smart vacancy review with analytics',
+      'Unlimited job vacancies',
+      'Featured placement',
+      'Access to all candidates',
+      'Dedicated account manager',
       'Priority support',
     ],
   },

@@ -2,7 +2,7 @@
 
 import { SuccessMark } from '@/components/ui/motion';
 import * as React from 'react';
-import { StripeTestCheckout } from '@/components/billing/test-checkout';
+import { CvUpgrade } from '@/components/billing/plans';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -718,7 +718,7 @@ export function UpgradeStep({ draft, update, go, name, resumeId }: CProps) {
       </div>
 
       {!live && <DemoNotice what="This preview uses your browser answers. Sign in to build and download your saved CV." />}
-      {live && <StripeTestCheckout plan="cv_download" resourceId={resumeId} />}
+      {live && <CvUpgrade resumeId={resumeId} />}
 
       <div className="flex flex-wrap gap-2">
         {live ? (
