@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Plus, X } from 'lucide-react';
+import { Check, Plus, SkipForward, X } from 'lucide-react';
 import { JobStats } from '@/components/employer/stats';
 import { CURRENCIES, VacancyActions } from '@/components/employer/vacancy-manage';
 import { SetupInvite } from '@/components/employer/setup-invite';
@@ -80,6 +80,7 @@ export default function CompanyVacanciesPage() {
               setCreating(false);
               load();
             }}
+            onPublishedOne={load}
           />
         )}
 
@@ -137,7 +138,35 @@ export default function CompanyVacanciesPage() {
  */
 
 
-function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
+/** Описание вакансии из разобранных полей: обязанности и бонусы — списками, число людей — первой строкой. */
+function composeDescription(f: VacancyFields): string {
+  const bullets = (head: string, list: string[]) => (list.length ? `${head}\n${list.map((x) => `- ${x}`).join('\n')}` : '');
+  return [
+    f.headcount && f.headcount > 1 ? `We are hiring ${f.headcount} people for this role.` : '',
+    f.description ?? '',
+    bullets('Responsibilities:', f.responsibilities),
+    bullets('We offer:', f.benefits),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function CreateVacancyForm({
+  onCancel,
+  onCreated,
+  onPublishedOne,
+}: {
+  onCancel: () => void;
+  onCreated: () => void;
+  /** Опубликована одна из нескольких должностей документа — обновить список, форму не закрывать. */
+  onPublishedOne?: () => void;
+}) {
+  const toast = useToast();
+  /** Должности из документа со многими ролями (заказчица 14.10: «20 позиций… по очереди»). */
+  const [queue, setQueue] = React.useState<VacancyFields[]>([]);
+  const [pos, setPos] = React.useState(0);
+  const [done, setDone] = React.useState<Record<number, 'published' | 'skipped' | 'draft'>>({});
+  const [savingRest, setSavingRest] = React.useState(false);
   const [title, setTitle] = React.useState('');
   const [city, setCity] = React.useState('');
   const [salaryMin, setSalaryMin] = React.useState('');
@@ -147,6 +176,84 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
   const [requirements, setRequirements] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const clearForm = () => {
+    setTitle('');
+    setCity('');
+    setSalaryMin('');
+    setSalaryMax('');
+    setDescription('');
+    setRequirements('');
+    setError(null);
+  };
+
+  /** Документ прочитан: одна должность — сразу в форму, несколько — очередь. */
+  const readDocument = (list: VacancyFields[]): string => {
+    if (list.length <= 1) {
+      setQueue([]);
+      return applyFields(list[0] ?? ({ responsibilities: [], benefits: [], skills: [] } as unknown as VacancyFields));
+    }
+    setQueue(list);
+    setPos(0);
+    setDone({});
+    clearForm();
+    applyFields(list[0]);
+    return `Found ${list.length} positions in this document. We'll go through them one by one: check the first one and publish it.`;
+  };
+
+  /** Следующая не пройденная должность или конец очереди. */
+  const goNext = (from: number, marks: Record<number, 'published' | 'skipped' | 'draft'>) => {
+    const next = queue.findIndex((_, i) => i > from && !marks[i]);
+    if (next === -1) {
+      toast.success('All positions from the document are done.');
+      onCreated();
+      return;
+    }
+    setPos(next);
+    clearForm();
+    applyFields(queue[next]);
+  };
+
+  const skip = () => {
+    const marks = { ...done, [pos]: 'skipped' as const };
+    setDone(marks);
+    goNext(pos, marks);
+  };
+
+  /** Остальные должности — черновиками: их можно дописать и опубликовать позже. */
+  const saveRestAsDrafts = async () => {
+    const rest = queue.map((f, i) => [f, i] as const).filter(([, i]) => !done[i]);
+    if (!rest.length) return;
+    setSavingRest(true);
+    setError(null);
+    const results = await Promise.allSettled(
+      rest.map(([f]) =>
+        vacanciesApi.create({
+          title: (f.title ?? 'Position').slice(0, 120),
+          city: f.city ?? f.address ?? undefined,
+          address: f.city ?? f.address ?? undefined,
+          salary_min: f.salary_min ?? undefined,
+          salary_max: f.salary_max ?? undefined,
+          currency: f.currency && (CURRENCIES as readonly string[]).includes(f.currency) ? f.currency : currency,
+          description: composeDescription(f) || `${f.title ?? 'Position'}: details to be added.`,
+          requirements: f.requirements ?? undefined,
+          status: 'DRAFT',
+        }),
+      ),
+    );
+    setSavingRest(false);
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed) {
+      setError(`${failed} of ${rest.length} drafts could not be saved. Please try again.`);
+      const marks = { ...done };
+      rest.forEach(([, i], k) => results[k].status === 'fulfilled' && (marks[i] = 'draft'));
+      setDone(marks);
+      onPublishedOne?.();
+      return;
+    }
+    toast.success(`${rest.length} ${rest.length === 1 ? 'draft' : 'drafts'} saved. Finish and publish them in Drafts.`);
+    onCreated();
+  };
 
   /** Поля из описания вакансии → форма. Обязанности и бонусы дописываем в описание: отдельных полей тут нет. */
   const applyFields = (f: VacancyFields): string => {
@@ -164,12 +271,7 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
       setCurrency(f.currency as (typeof CURRENCIES)[number]);
       filled += 1;
     }
-    const bullets = (head: string, list: string[]) =>
-      list.length ? `${head}\n${list.map((x) => `- ${x}`).join('\n')}` : '';
-    const desc = [f.description ?? '', bullets('Responsibilities:', f.responsibilities), bullets('We offer:', f.benefits)]
-      .filter(Boolean)
-      .join('\n\n');
-    take(desc, setDescription);
+    take(composeDescription(f), setDescription);
     take(f.requirements, setRequirements);
     return filled
       ? `Filled ${filled} field${filled === 1 ? '' : 's'} from the document. Please check them before publishing.`
@@ -195,6 +297,14 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
         // is_active сервер вычисляет из status при сохранении.
         status: 'ACTIVE',
       });
+      if (queue.length > 1) {
+        const marks = { ...done, [pos]: 'published' as const };
+        setDone(marks);
+        toast.success(`Published: ${title.trim()}`);
+        onPublishedOne?.();
+        goNext(pos, marks);
+        return;
+      }
       onCreated();
     } catch (err) {
       // Показываем, что именно не понравилось серверу: у публикации вакансии
@@ -226,9 +336,53 @@ function CreateVacancyForm({ onCancel, onCreated }: { onCancel: () => void; onCr
           hint="Upload a PDF, DOCX or a photo, or paste the text. We fill the form, you check it."
           allowPaste
           pastePlaceholder="Paste the job description here"
-          onRead={async (input) => applyFields(await autofillApi.vacancy(input))}
+          onRead={async (input) => readDocument(await autofillApi.vacancies(input))}
         />
       </div>
+
+      {queue.length > 1 && (
+        <div className="mt-5 rounded-lg border border-line bg-surface-muted/60 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-text-primary">
+              Position {pos + 1} of {queue.length} from the document
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="secondary" onClick={skip} disabled={busy || savingRest}>
+                <SkipForward size={14} aria-hidden />
+                Skip this one
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => void saveRestAsDrafts()} disabled={busy || savingRest}>
+                {savingRest ? <Spinner className="h-3.5 w-3.5" /> : null}
+                Save the rest as drafts
+              </Button>
+            </div>
+          </div>
+          <ol className="mt-3 flex flex-wrap gap-1.5" aria-label="Positions in the document">
+            {queue.map((f, i) => {
+              const mark = done[i];
+              const current = i === pos && !mark;
+              return (
+                <li
+                  key={i}
+                  className={
+                    current
+                      ? 'inline-flex items-center gap-1 rounded-full bg-accent-strong px-3 py-1 text-sm font-medium text-on-accent dark:bg-accent'
+                      : mark === 'published'
+                        ? 'inline-flex items-center gap-1 rounded-full bg-surface px-3 py-1 text-sm text-success'
+                        : mark
+                          ? 'inline-flex items-center gap-1 rounded-full bg-surface px-3 py-1 text-sm text-text-tertiary line-through'
+                          : 'inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-1 text-sm text-text-secondary'
+                  }
+                >
+                  {mark === 'published' && <Check size={13} aria-hidden />}
+                  {f.title}
+                  {f.headcount && f.headcount > 1 ? ` ×${f.headcount}` : ''}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
 
       <form onSubmit={submit} className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <Field
