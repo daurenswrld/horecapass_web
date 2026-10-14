@@ -319,6 +319,22 @@ export function TeamSection() {
   );
 }
 
+/** Plans and payments live on their own page (/billing). */
+export function BillingSection() {
+  const { user } = useAuth();
+  const employer = isCompany(user?.role);
+  return (
+    <Section
+      title="Plan & billing"
+      lead={employer ? 'Your plan, one-time vacancies and the monthly subscription.' : 'Upgrade your resume to download it and send it anywhere.'}
+    >
+      <Link className="font-semibold text-accent-text underline-offset-4 hover:underline" href="/billing">
+        {employer ? 'Open plans and billing' : 'Upgrade your resume'}
+      </Link>
+    </Section>
+  );
+}
+
 export function AccountSection() {
   const { user, signOut } = useAuth();
   return (

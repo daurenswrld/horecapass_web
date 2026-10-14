@@ -33,7 +33,7 @@ import { useAssistant } from '@/lib/demo/assistant';
 import { CompanyAvatar, CompanyProfileCard, PhotoHeader, VacancyCard } from './cards';
 import { Composer, MessageBubble, Thread, Typing } from './chat';
 import { SignaturePad } from './signature-pad';
-import { StripeTestCheckout } from '@/components/billing/test-checkout';
+import { EmployerPlans } from '@/components/billing/plans';
 import {
   COMPANY_SIZES,
   HIRING_STAGES,
@@ -1273,18 +1273,9 @@ export function AgreementStep({ draft, update, go }: StepProps) {
 /* 6. Оплата — бриф, пункт 14 --------------------------------------------------------------- */
 
 export function PaymentStep({ draft, update, go, server }: StepProps) {
-  const picked = draft.plan ?? 'bundle';
+  const picked = draft.plan ?? 'subscription';
   const [publishing, setPublishing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const testDraft = React.useRef<Promise<number> | null>(null);
-  const prepareTestDraft = () => {
-    if (draft.serverVacancyId) return Promise.resolve(draft.serverVacancyId);
-    testDraft.current ??= saveVacancyDraft(draft).then((id) => {
-      update((d) => ({ ...d, serverVacancyId: id }));
-      return id;
-    }).catch((e) => { testDraft.current = null; throw e; });
-    return testDraft.current;
-  };
 
   // Настоящий вход (вариант «б», 30.09): платёжки ещё нет — на запуске
   // публикуем бесплатно и по-настоящему, тарифы показываем как будущие.
@@ -1306,38 +1297,15 @@ export function PaymentStep({ draft, update, go, server }: StepProps) {
   if (server) {
     return (
       <div className="mx-auto max-w-5xl space-y-8 px-5 py-8 md:px-8 lg:py-12">
-        <StepTitle title="Publish your vacancy" lead="Posting is free while we launch. Paid plans start later — this is what they will look like." />
+        <StepTitle title="Publish your vacancy" lead="Posting is free while we launch. You can already choose a plan — or publish for free now." />
         <div className="rounded-lg border-[1.5px] border-accent-strong bg-accent-muted px-5 py-4 dark:border-accent">
           <p className="font-semibold text-heading">Free during launch</p>
           <p className="mt-1 text-sm text-text-primary">
             Your vacancy goes live now and candidates can apply right away. No card needed.
           </p>
         </div>
-        <div className="grid gap-4 opacity-70 md:grid-cols-3">
-          {PLANS.map((p) => (
-            <div key={p.id} className="flex flex-col rounded-lg border border-line bg-surface p-5">
-              <span className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-heading">{p.name}</span>
-                <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-text-secondary">After launch</span>
-              </span>
-              <span className="mt-3 text-3xl font-bold text-heading">
-                {p.price} <span className="text-base font-semibold">SAR</span>
-              </span>
-              <span className="text-sm text-text-secondary">{p.period}</span>
-              <ul className="mt-4 space-y-1.5 text-sm text-text-primary">
-                {p.lines.map((l) => (
-                  <li key={l} className="flex gap-2">
-                    <Check size={15} aria-hidden className="mt-0.5 shrink-0 text-accent-text" />
-                    {l}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        <EmployerPlans resourceId={draft.serverVacancyId} />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <StripeTestCheckout plan="single" prepareResource={prepareTestDraft} />
-        <StripeTestCheckout plan="bundle" prepareResource={prepareTestDraft} />
         <Continue onClick={publishFree} disabled={publishing}>
           {publishing ? 'Publishing…' : 'Publish for free'}
         </Continue>
@@ -1365,12 +1333,12 @@ export function PaymentStep({ draft, update, go, server }: StepProps) {
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-heading">{p.name}</span>
-                {p.id === 'bundle' && (
-                  <span className="rounded-full bg-accent-muted px-2.5 py-0.5 text-xs font-semibold text-accent-text">Best value</span>
+                {p.id === 'subscription' && (
+                  <span className="rounded-full bg-accent-muted px-2.5 py-0.5 text-xs font-semibold text-accent-text">Popular</span>
                 )}
               </span>
               <span className="mt-3 text-3xl font-bold text-heading">
-                {p.price} <span className="text-base font-semibold">SAR</span>
+                <span className="text-base font-semibold">AED</span> {p.price}
               </span>
               <span className="text-sm text-text-secondary">{p.period}</span>
               <ul className="mt-4 space-y-1.5 text-sm text-text-primary">
@@ -1381,12 +1349,6 @@ export function PaymentStep({ draft, update, go, server }: StepProps) {
                   </li>
                 ))}
               </ul>
-              {/* Бриф: в карточке Premium интерфейс сам показывает выгоду при 5+ постах. */}
-              {p.id === 'premium' && (
-                <span className="mt-4 rounded-md bg-surface-muted px-3 py-2 text-xs leading-relaxed text-text-secondary">
-                  Posting 5+ roles a month? 5 single posts cost 745 SAR — Premium is 699 SAR with no limit.
-                </span>
-              )}
             </button>
           );
         })}
@@ -1407,7 +1369,7 @@ export function PaymentStep({ draft, update, go, server }: StepProps) {
 }
 
 export function DoneStep({ draft, restart, server }: StepProps & { restart: () => void }) {
-  const plan = PLANS.find((p) => p.id === (draft.plan ?? 'bundle'));
+  const plan = PLANS.find((p) => p.id === (draft.plan ?? 'subscription'));
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-5 py-12 text-center md:px-8 lg:py-20">
       <SuccessMark />

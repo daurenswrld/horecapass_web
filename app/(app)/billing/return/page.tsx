@@ -4,27 +4,11 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { FlaskConical, RefreshCcw, XCircle } from 'lucide-react';
-import { billingApi, type BillingOrder, type TestPlan } from '@/lib/api/billing';
+import { billingApi, money, type BillingOrder, type Product } from '@/lib/api/billing';
 import { useAuth } from '@/lib/auth/context';
 import { isCompany } from '@/lib/api/auth';
 import { Button, Card, Spinner } from '@/components/ui/primitives';
 import { SuccessMark } from '@/components/ui/motion';
-
-// Подписи тарифов — то же, что отдаёт /api/billing/config/, чтобы в чеке
-// было «Single vacancy», а не голый код плана.
-const PLAN_LABEL: Record<TestPlan, string> = {
-  single: 'Single vacancy',
-  bundle: 'Five vacancy bundle',
-  cv_download: 'CV download',
-};
-
-function money(cents: number, currency: string) {
-  try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100);
-  } catch {
-    return `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
-  }
-}
 
 function Row({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
@@ -58,36 +42,54 @@ function StatusIcon({ status, cancelled }: { status?: BillingOrder['status']; ca
   );
 }
 
+/** After Stripe Checkout. The address proves nothing: the order is read
+ *  back from the server, which asks Stripe itself. */
 function CheckoutReturn() {
   const search = useSearchParams();
   const { user } = useAuth();
   const id = search.get('order') ?? '';
   const cancelled = search.get('cancelled') === '1';
   const [order, setOrder] = React.useState<BillingOrder | null>(null);
+  const [names, setNames] = React.useState<Record<string, string>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const employer = isCompany(user?.role ?? '');
+
+  React.useEffect(() => {
+    void billingApi
+      .products(employer ? 'employer' : 'candidate')
+      .then((items: Product[]) => setNames(Object.fromEntries(items.map((p) => [p.code, p.name]))))
+      .catch(() => undefined);
+  }, [employer]);
+
   const load = React.useCallback(async () => {
     setError(null);
     try {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error();
-      const value = await billingApi.order(id);
-      if (!value.is_test || value.fulfillment !== 'test_only_no_live_access') throw new Error();
-      setOrder(value);
-    } catch { setError('Could not confirm this test order. Retry; the return address alone does not confirm payment.'); }
-    finally { setLoading(false); }
+      setOrder(await billingApi.order(id));
+    } catch {
+      setError('Could not confirm this order. Retry; the return address alone does not confirm a payment.');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
-  React.useEffect(() => { void load(); }, [load]);
+  React.useEffect(() => {
+    void load();
+  }, [load]);
   React.useEffect(() => {
     if (order?.status !== 'pending' || cancelled || error) return;
     let count = 0;
-    const timer = setInterval(() => { if (++count <= 10) void load(); else clearInterval(timer); }, 3000);
+    const timer = setInterval(() => {
+      if (++count <= 10) void load();
+      else clearInterval(timer);
+    }, 3000);
     return () => clearInterval(timer);
   }, [order?.status, cancelled, error, load]);
 
   if (loading) return <div className="grid place-items-center py-20"><Spinner /></div>;
 
   const title =
-    order?.status === 'paid' ? 'Payment confirmed' :
+    order?.status === 'paid' ? (order.amount === 0 ? 'Activated' : 'Payment Successful!') :
     order?.status === 'refunded' || order?.status === 'partially_refunded' ? 'Refund recorded' :
     cancelled ? 'Checkout closed' :
     order?.status === 'expired' ? 'Checkout expired' :
@@ -96,25 +98,25 @@ function CheckoutReturn() {
   return (
     <div className="mx-auto max-w-md px-5 py-12">
       <Card className="overflow-hidden shadow-lift">
-        {/* Бейдж теста — всегда на виду, не мелким текстом под капотом:
-            честно про каждый чек, что это Stripe test и денег не было. */}
-        <div className="flex items-center gap-2 border-b border-line bg-surface-muted px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-accent-text">
-          <FlaskConical size={14} aria-hidden />
-          Stripe test purchase — no real money charged
-        </div>
+        {order?.is_test && (
+          <div className="flex items-center gap-2 border-b border-line bg-surface-muted px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-accent-text">
+            <FlaskConical size={14} aria-hidden />
+            Stripe test purchase — no real money charged
+          </div>
+        )}
 
         <div className="space-y-5 px-6 py-8 text-center">
           <StatusIcon status={order?.status} cancelled={cancelled} />
           <div>
             <h1 className="text-xl font-bold text-heading">{title}</h1>
-            {order && (
-              <p className="mt-1 text-3xl font-bold tracking-tight text-heading">{money(order.amount, order.currency)}</p>
-            )}
+            {order && <p className="mt-1 text-3xl font-bold tracking-tight text-heading">{money(order.amount, order.currency)}</p>}
           </div>
 
           {order && (
             <div className="divide-y divide-dashed divide-line rounded-lg border border-dashed border-line bg-surface-muted/40 px-4 text-left">
-              <Row label="Item" value={PLAN_LABEL[order.plan] ?? order.plan} />
+              <Row label="Item" value={names[order.plan] ?? order.plan} />
+              {order.subscription && <Row label="Billing" value="Monthly, until you cancel" />}
+              {order.promo_code && <Row label="Promo code" value={`${order.promo_code} (−${money(order.discount, order.currency)})`} />}
               <Row label="Status" value={order.status} />
               {order.refunded_amount > 0 && <Row label="Refunded" value={money(order.refunded_amount, order.currency)} />}
               <Row label="Order" value={order.id} mono />
@@ -123,17 +125,27 @@ function CheckoutReturn() {
 
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           {order?.status === 'pending' && !error && (
-            <p className="text-sm text-text-secondary">Waiting for Stripe confirmation. Closing checkout does not prove that a payment failed.</p>
+            <p className="text-sm text-text-secondary">Waiting for Stripe to confirm. Closing the payment page does not prove that a payment failed.</p>
           )}
-          <p className="text-xs text-text-secondary">No live vacancy or paid feature is activated by this purchase.</p>
+          {order?.status === 'paid' && order.fulfillment === 'granted' && (
+            <p className="text-sm text-text-secondary">
+              {employer ? 'Your plan is active.' : 'Your professional resume is unlocked — you can download it now.'}
+            </p>
+          )}
+          {order?.status === 'paid' && order.fulfillment !== 'granted' && order.is_test && (
+            <p className="text-xs text-text-secondary">A test payment does not unlock paid features on this server.</p>
+          )}
 
           <div className="flex flex-wrap justify-center gap-3 pt-1">
-            <Button variant="secondary" onClick={() => void load()}>Check again</Button>
+            {order?.status === 'pending' && <Button variant="secondary" onClick={() => void load()}>Check again</Button>}
+            <Link className="inline-flex items-center font-semibold text-accent-text underline-offset-4 hover:underline" href="/billing">
+              Plan &amp; billing
+            </Link>
             <Link
               className="inline-flex items-center font-semibold text-accent-text underline-offset-4 hover:underline"
-              href={isCompany(user?.role ?? '') ? '/company/onboarding?step=payment' : '/onboarding?step=upgrade'}
+              href={employer ? '/company/vacancies' : '/profile'}
             >
-              Return to your profile
+              {employer ? 'Go to dashboard' : 'Go to my profile'}
             </Link>
           </div>
         </div>

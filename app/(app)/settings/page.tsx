@@ -1,7 +1,7 @@
 'use client';
 
 import { PageHeader } from '@/components/shell/app-shell';
-import { AccountSection, AssistantSection, VoiceSection, ConsentSection } from '@/components/settings/sections';
+import { AccountSection, BillingSection, AssistantSection, VoiceSection, ConsentSection } from '@/components/settings/sections';
 
 /** Настройки кандидата: помощник, согласие (с отзывом), аккаунт. */
 export default function SettingsPage() {
@@ -12,6 +12,7 @@ export default function SettingsPage() {
         <AssistantSection />
         <VoiceSection />
         <ConsentSection />
+        <BillingSection />
         <AccountSection />
       </div>
     </>
