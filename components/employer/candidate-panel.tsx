@@ -405,9 +405,23 @@ export function CandidatePanel({
               {d.experiences.map((e, i) => (
                 <li key={i} className="text-sm">
                   <p className="font-semibold text-text-primary">{e.position || 'Role'}</p>
-                  <p className="text-text-secondary">{[e.company, e.period].filter(Boolean).join(' · ')}</p>
+                  <p className="text-text-secondary">{[e.company, e.location, e.period].filter(Boolean).join(' · ')}</p>
                   {venueLine(e) && <p className="mt-0.5 font-medium text-accent-text">{venueLine(e)}</p>}
-                  {e.description && <p className="mt-1 text-text-primary">{e.description}</p>}
+                  {e.about && <p className="mt-1 whitespace-pre-line text-text-secondary">{e.about}</p>}
+                  {e.responsibilities.length === 0 && e.achievements.length === 0 && e.description && <p className="mt-1 text-text-primary">{e.description}</p>}
+                  {e.responsibilities.length > 0 && (
+                    <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-primary">
+                      {e.responsibilities.map((line) => <li key={line}>{line}</li>)}
+                    </ul>
+                  )}
+                  {e.achievements.length > 0 && (
+                    <>
+                      <p className="mt-1.5 font-semibold text-text-primary">Achievements</p>
+                      <ul className="mt-0.5 list-disc space-y-0.5 pl-5 text-text-primary">
+                        {e.achievements.map((line) => <li key={line}>{line}</li>)}
+                      </ul>
+                    </>
+                  )}
                 </li>
               ))}
             </ol>

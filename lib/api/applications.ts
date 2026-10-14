@@ -207,6 +207,10 @@ export interface ApplicantExperience {
   venueType: string;
   venueLevel: string;
   cuisine: string;
+  location: string;
+  about: string;
+  responsibilities: string[];
+  achievements: string[];
 }
 
 /** Карточка кандидата из `applicant_profile` — только то, что прислал сервер. */
@@ -302,6 +306,10 @@ export function parseApplicantProfile(p: Record<string, unknown>): ApplicantProf
         venueType: String(x.venue_type ?? '').trim(),
         venueLevel: String(x.venue_level ?? '').trim(),
         cuisine: String(x.cuisine ?? '').trim(),
+        location: String(x.location ?? '').trim(),
+        about: String(x.about ?? '').trim(),
+        responsibilities: Array.isArray(x.responsibilities) ? x.responsibilities.map(String).filter(Boolean) : [],
+        achievements: Array.isArray(x.achievements) ? x.achievements.map(String).filter(Boolean) : [],
       };
     }),
     educations: list(p.educations),

@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import { Bubble } from '@/components/landing/bubble';
 import { DemoNotice } from '@/components/demo-notice';
-import { CvTemplate, type CvData } from '@/components/cv/cv-template';
+import { CvTemplate } from '@/components/cv/cv-template';
+import { cvFromDraft } from '@/lib/candidate/cv-data';
 import { PublishConsent } from '@/components/cv/publish-consent';
 import { Composer, MessageBubble, Thread } from '@/components/employer/chat';
 import { VoiceButton } from '@/components/onboarding/answer-input';
@@ -631,32 +632,7 @@ export function CheckStep({ draft, update, go }: CProps) {
 
 /* Резюме под GCC: сначала результат, потом предложение скачать -------------------------------- */
 
-export function buildCv(d: CandidateDraft, name: { first: string; last: string }): CvData {
-  const certs = d.certificates.map((c) => (c.type === 'Other' ? c.name.replace(/\.[a-z]+$/i, '') : c.type));
-  const fromCheck = d.check.certs ? [d.check.certs] : [];
-  const role = d.role;
-  return {
-    firstName: name.first || 'Your',
-    lastName: name.last || 'Name',
-    role,
-    nationality: d.nationality || null,
-    years: d.years,
-    location: d.location || null,
-    summary:
-      [
-        role ? `${role}` : 'Hospitality professional',
-        d.years !== null ? `with ${d.years}+ years of experience` : null,
-        d.countries.length ? `open to roles in ${d.countries.join(', ')}` : null,
-      ]
-        .filter(Boolean)
-        .join(' ') + '.',
-    skills: [],
-    work: d.check.achievement ? [{ title: role ?? 'Most recent role', place: null, dates: null, bullets: [d.check.achievement] }] : [],
-    education: [],
-    languages: d.check.languages ? [d.check.languages] : [],
-    certificates: [...certs, ...fromCheck],
-  };
-}
+export const buildCv = cvFromDraft;
 
 /**
  * Созвон 29.09: адаптированное под GCC резюме есть у каждого кандидата и его

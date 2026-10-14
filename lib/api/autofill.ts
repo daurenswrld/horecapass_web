@@ -18,6 +18,9 @@ export interface CvExperience {
   venue_type: string | null;
   venue_level: string | null;
   cuisine: string | null;
+  location: string | null;
+  responsibilities: string[];
+  achievements: string[];
 }
 
 export interface CvFields {
