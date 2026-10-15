@@ -119,6 +119,22 @@ export interface BankResume {
   updated_at: string;
 }
 
+/** Список, который Джордж прикладывает к ответу: [ключ, подпись] колонок и строки. */
+export interface GeorgeTable {
+  title: string;
+  columns: [string, string][];
+  rows: Record<string, unknown>[];
+  total: number | null;
+}
+
+export interface GeorgeAnswer {
+  reply: string;
+  tools: string[];
+  /** Все списки, найденные для ответа (старый сервер шлёт только последний в `table`). */
+  tables?: GeorgeTable[];
+  table: GeorgeTable | null;
+}
+
 export interface CandidateFunnel {
   window_days: number;
   steps: FunnelStep[];
@@ -269,6 +285,8 @@ export const adminApi = {
   funnelPeople: (kind: 'candidates' | 'employers', step: string, days: number, dropped: boolean) =>
     http.get<FunnelPeople>(API.admin.funnelPeople(kind), { query: { step, days, dropped: dropped ? 1 : undefined } }),
   resumes: (query: Query) => http.get<Page<BankResume>>(API.admin.resumes, { query }),
+  george: (messages: { role: 'user' | 'assistant'; text: string }[]) =>
+    http.post<GeorgeAnswer>(API.admin.george, { messages }),
   /** PDF резюме из банка: тот же A4, что скачивает кандидат. Скачивание пишется в журнал. */
   async resumePdf(id: number, name: string) {
     const url = `${BASE_URL}${API.admin.resumePdf(id)}`;

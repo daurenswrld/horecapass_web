@@ -14,10 +14,12 @@ import {
   ListChecks,
   LogOut,
   ShieldCheck,
+  Sparkles,
   Users,
   UserCog,
 } from 'lucide-react';
 import { Wordmark } from '@/components/brand';
+import { GeorgeLauncher } from '@/components/admin/george';
 import { Spinner } from '@/components/ui/primitives';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ToastProvider } from '@/components/ui/toast';
@@ -52,6 +54,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: '/admin', label: 'Overview', Icon: Gauge },
+  { href: '/admin/george', label: 'George (AI)', Icon: Sparkles },
   { href: '/admin/funnels', label: 'Funnels', Icon: Activity },
   { href: '/admin/feed', label: 'Daily feed', Icon: ClipboardList },
   { href: '/admin/vacancies', label: 'Vacancies', Icon: Briefcase },
@@ -203,6 +206,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </nav>
             {children}
           </main>
+          <GeorgeLauncher />
         </div>
       </ToastProvider>
     </StaffContext.Provider>
